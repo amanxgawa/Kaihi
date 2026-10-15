@@ -1,0 +1,23 @@
+package app.kaihi.android.feature.settings.impl.ui.navigation
+
+import androidx.compose.runtime.Composable
+import app.kaihi.android.feature.dashboard.XrayLogsKey
+import app.kaihi.android.feature.hello.AdvancedModeIntroKey
+import app.kaihi.android.feature.settings.SettingsKey
+import app.kaihi.android.feature.settings.impl.ui.screen.SettingsScreen
+import app.kaihi.android.platform.navigation.Destination
+import app.kaihi.android.platform.navigation.LocalAppNavigator
+import javax.inject.Inject
+
+class SettingsDestination @Inject constructor() : Destination<SettingsKey> {
+
+    @Composable
+    override fun Content(key: SettingsKey) {
+        val navigator = LocalAppNavigator.current
+
+        SettingsScreen(
+            onNavigateToLogs = { navigator.navigate(XrayLogsKey) },
+            onNavigateToAdvancedModeIntro = { navigator.navigate(AdvancedModeIntroKey) },
+        )
+    }
+}

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+   secure_storage backs AppStorage's encrypted domains (SSH_TRUST, XRAY_PROFILES; see StorageDomain).
+   Every value in it is AES/GCM-encrypted under a non-exportable Keystore key that never leaves the
+   device, so a restored or transferred copy is undecryptable ciphertext on the receiving side:
+   no restore value, and not worth shipping off-device for something holding SSH credentials.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="secure_storage.xml"/>
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="secure_storage.xml"/>
+    </device-transfer>
+</data-extraction-rules>

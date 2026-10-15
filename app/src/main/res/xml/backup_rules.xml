@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+   Pre-API-31 counterpart of data_extraction_rules.xml: same exclusion through Auto Backup's older
+   full-backup-content format, so a device still on that path does not ship secure_storage either.
+-->
+<full-backup-content>
+    <exclude domain="sharedpref" path="secure_storage.xml"/>
+</full-backup-content>

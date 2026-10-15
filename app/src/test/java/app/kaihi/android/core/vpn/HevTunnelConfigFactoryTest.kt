@@ -1,0 +1,47 @@
+package app.kaihi.android.core.vpn
+
+import app.kaihi.android.core.vpn.internal.HevTunnelConfigFactory
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+/** hev reads this config by indentation. username/password one level short of `socks5:` parse
+ *  as top-level keys, the proxy falls back to no-auth, and xray refuses the connection. */
+class HevTunnelConfigFactoryTest {
+
+    @Test
+    fun `credentials nest under socks5, not at top level`() {
+        val endpoint = SocksEndpoint("127.0.0.1", 10_808, "kaihi", "secret")
+
+        val lines = HevTunnelConfigFactory.build(endpoint).lines()
+        val socks5Index = lines.indexOf("socks5:")
+        val usernameIndex = lines.indexOfFirst { it.trimStart().startsWith("username:") }
+        val passwordIndex = lines.indexOfFirst { it.trimStart().startsWith("password:") }
+
+        assertEquals("  username: 'kaihi'", lines[usernameIndex])
+        assertEquals("  password: 'secret'", lines[passwordIndex])
+        assertTrue("username must come after socks5:", usernameIndex > socks5Index)
+        assertTrue("password must come after socks5:", passwordIndex > socks5Index)
+    }
+
+    @Test
+    fun `an embedded single quote in a credential is doubled, not left to close the scalar early`() {
+        val endpoint = SocksEndpoint("127.0.0.1", 10_808, "nuke'michi", "sec'ret")
+
+        val lines = HevTunnelConfigFactory.build(endpoint).lines()
+
+        assertEquals("  username: 'nuke''michi'", lines.first { it.trimStart().startsWith("username:") })
+        assertEquals("  password: 'sec''ret'", lines.first { it.trimStart().startsWith("password:") })
+    }
+
+    @Test
+    fun `no credentials means no auth lines at all`() {
+        val endpoint = SocksEndpoint("127.0.0.1", 10_808)
+
+        val config = HevTunnelConfigFactory.build(endpoint)
+
+        assertFalse(config.contains("username"))
+        assertFalse(config.contains("password"))
+    }
+}

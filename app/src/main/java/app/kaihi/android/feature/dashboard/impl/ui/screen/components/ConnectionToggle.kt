@@ -1,0 +1,55 @@
+package app.kaihi.android.feature.dashboard.impl.ui.screen.components
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import app.kaihi.android.core.vpn.XrayEngineState
+import app.kaihi.android.feature.dashboard.impl.ui.mvi.DashboardContract
+import app.kaihi.android.feature.dashboard.impl.ui.mvi.isBusy
+import app.kaihi.android.feature.dashboard.impl.ui.mvi.isConnected
+import app.kaihi.android.platform.ui.icons.KaihiIcons
+import app.kaihi.android.platform.ui.theme.size.dimens
+
+@Composable
+internal fun ConnectionToggle(
+    state: DashboardContract.State,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val dimens = MaterialTheme.dimens
+    val containerColor = when {
+        state.isConnected -> MaterialTheme.colorScheme.primary
+        state.engineState == XrayEngineState.ERROR -> MaterialTheme.colorScheme.errorContainer
+        else -> MaterialTheme.colorScheme.surfaceContainerHigh
+    }
+    val iconColor = if (state.isConnected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+
+    Box(
+        modifier = modifier
+            .size(dimens.xxl + dimens.xxl)
+            .clip(CircleShape)
+            .background(containerColor)
+            .clickable(enabled = !state.isBusy, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (state.isBusy) {
+            CircularProgressIndicator(color = iconColor)
+        } else {
+            Icon(
+                imageVector = if (state.isConnected) KaihiIcons.Outlined.Shield else KaihiIcons.Outlined.Cable,
+                contentDescription = null,
+                tint = iconColor,
+                modifier = Modifier.size(dimens.xxl),
+            )
+        }
+    }
+}

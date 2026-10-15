@@ -1,0 +1,29 @@
+Kaihi bundles data and fonts from third-party sources, in addition to its own code (see LICENSE).
+
+## GeoIP country data (app/src/main/assets/geoip.dat)
+
+Derived from the DB-IP "country-lite" database (https://db-ip.com), used under the
+Creative Commons Attribution 4.0 International License (CC BY 4.0):
+https://creativecommons.org/licenses/by/4.0/
+
+IP-to-country geolocation by DB-IP.com.
+
+Repackaged into Xray's geoip.dat format by v2fly/geoip (https://github.com/v2fly/geoip), used
+under the Creative Commons Attribution-ShareAlike 4.0 International License (CC BY-SA 4.0):
+https://creativecommons.org/licenses/by-sa/4.0/
+Trimmed to a small set of countries via the pinned generator config at
+tools/geoip-dat/config.json.
+
+## Geosite domain data (bundled at build time as geosite.dat)
+
+Downloaded from v2fly/domain-list-community (https://github.com/v2fly/domain-list-community),
+MIT License.
+
+## Fonts (app/src/main/res/font/)
+
+Sora, Copyright 2019 The Sora Project Authors (https://github.com/sora-xor/sora-font), and
+JetBrains Mono, Copyright 2020 The JetBrains Mono Project Authors
+(https://github.com/JetBrains/JetBrainsMono), both used under the SIL Open Font License,
+Version 1.1: https://openfontlicense.org
+
+Full license texts: licenses/OFL-Sora.txt and licenses/OFL-JetBrainsMono.txt

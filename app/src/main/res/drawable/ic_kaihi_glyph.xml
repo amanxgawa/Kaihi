@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The launcher K (see ic_launcher_foreground) on its own, enlarged to fill a 24dp icon, since the
+    launcher version carries adaptive-icon padding that would leave it tiny here. Meant to be tinted:
+    the status bar and KaihiMark both colour it, so only its alpha matters.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:pivotX="52"
+        android:pivotY="54"
+        android:scaleX="1.25"
+        android:scaleY="1.25"
+        android:translateX="2">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M38.5,24 A5.5,5.5 0 0,1 49.5,24 L49.5,30.28 L38.5,36.78 Z" />
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M38.5,71.22 L49.5,77.72 L49.5,84 A5.5,5.5 0 0,1 38.5,84 Z" />
+        <path
+            android:fillColor="#00000000"
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="11"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"
+            android:pathData="M74,28 L30,54 L74,80" />
+    </group>
+</vector>

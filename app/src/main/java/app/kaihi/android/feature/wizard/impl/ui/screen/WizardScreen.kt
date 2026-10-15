@@ -1,0 +1,264 @@
+package app.kaihi.android.feature.wizard.impl.ui.screen
+
+import android.app.Activity
+import android.net.VpnService
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.kaihi.android.R
+import app.kaihi.android.feature.wizard.impl.ui.model.WizardStep
+import app.kaihi.android.feature.wizard.impl.ui.model.rememberWizardState
+import app.kaihi.android.feature.wizard.impl.ui.mvi.ConnectionCheckState
+import app.kaihi.android.feature.wizard.impl.ui.mvi.DeploymentPhase
+import app.kaihi.android.feature.wizard.impl.ui.mvi.WizardContract
+import app.kaihi.android.feature.wizard.impl.ui.mvi.WizardContract.Intent
+import app.kaihi.android.feature.wizard.impl.ui.mvi.WizardContract.Intent.SetupStrategyChanged
+import app.kaihi.android.feature.wizard.impl.ui.mvi.WizardViewModel
+import app.kaihi.android.feature.wizard.impl.ui.mvi.isInProgress
+import app.kaihi.android.feature.wizard.impl.ui.mvi.isSshValid
+import app.kaihi.android.feature.wizard.impl.ui.screen.components.WizardContainer
+import app.kaihi.android.feature.wizard.impl.ui.screen.components.WizardTopBar
+import app.kaihi.android.feature.wizard.impl.ui.screen.pages.ConfirmationPage
+import app.kaihi.android.feature.wizard.impl.ui.screen.pages.DeploymentProgressPage
+import app.kaihi.android.feature.wizard.impl.ui.screen.pages.ServerDataEntryPage
+import app.kaihi.android.feature.wizard.impl.ui.screen.pages.StrategyChoicePage
+import app.kaihi.android.platform.mode.AppMode
+import app.kaihi.android.platform.navigation.LocalAppNavigator
+import app.kaihi.android.platform.ui.components.ConfirmDialog
+import app.kaihi.android.platform.ui.components.LoadingDialog
+import app.kaihi.android.platform.ui.components.MessageDialog
+import app.kaihi.android.platform.ui.icons.KaihiIcons
+import app.kaihi.android.platform.ui.util.CollectAsEffect
+import app.kaihi.android.platform.ui.util.UiSecret
+import app.kaihi.android.platform.ui.util.UiText
+import app.kaihi.android.platform.ui.util.asString
+import kotlinx.collections.immutable.persistentListOf
+
+private const val PAGE_STRATEGY = 0
+private const val PAGE_SERVER_DATA = 1
+private const val PAGE_DEPLOYMENT = 3
+private const val PAGE_COUNT = 4
+
+@Composable
+internal fun WizardScreen(
+    targetSubscriptionId: String?,
+    onNavigateBack: () -> Unit,
+    onNavigateToDashboard: (selectServerId: String) -> Unit,
+    viewModel: WizardViewModel = hiltViewModel<WizardViewModel, WizardViewModel.Factory>(
+        creationCallback = { factory -> factory.create(targetSubscriptionId) },
+    ),
+) {
+    val uiState by viewModel.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val vpnPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        viewModel.processIntent(
+            if (result.resultCode == Activity.RESULT_OK) Intent.VpnPermissionGranted
+            else Intent.VpnPermissionDenied
+        )
+    }
+
+    val wizardState = rememberWizardState(pageCount = PAGE_COUNT)
+    val navigator = LocalAppNavigator.current
+    var isAdvancedSheetOpen by remember { mutableStateOf(false) }
+
+    viewModel.effect.CollectAsEffect { effect ->
+        when (effect) {
+            is WizardContract.Effect.GoToNextPage -> wizardState.next()
+            is WizardContract.Effect.NavigateBack -> onNavigateBack()
+            is WizardContract.Effect.NavigateToDashboard -> onNavigateToDashboard(effect.selectServerId)
+            is WizardContract.Effect.RequestVpnPermission -> {
+                VpnService.prepare(context)?.let(vpnPermissionLauncher::launch)
+                    ?: viewModel.processIntent(Intent.VpnPermissionGranted)
+            }
+        }
+    }
+
+    val wizardSteps = persistentListOf(
+        WizardStep(title = UiText.Resource(R.string.wizard_strategy_choice)) {
+            StrategyChoicePage(
+                onStrategySelected = { strategy ->
+                    viewModel.processIntent(SetupStrategyChanged(strategy))
+                },
+                selectedStrategy = uiState.setupStrategy,
+                isAdvancedMode = uiState.appMode == AppMode.ADVANCED,
+            )
+        },
+        WizardStep(title = UiText.Resource(R.string.wizard_server_data_entry)) {
+            ServerDataEntryPage(
+                serverAddress = uiState.serverAddress,
+                onServerAddressChange = {
+                    viewModel.processIntent(Intent.ServerAddressChanged(it))
+                },
+                authMethod = uiState.serverAuthMethod,
+                onAuthMethodChange = {
+                    viewModel.processIntent(Intent.ServerAuthMethodChanged(it))
+                },
+                password = uiState.password.value,
+                onPasswordChange = {
+                    viewModel.processIntent(Intent.PasswordChanged(UiSecret(it)))
+                },
+                sshKey = uiState.sshKey.value,
+                onSshKeyChange = {
+                    viewModel.processIntent(Intent.SshKeyChanged(UiSecret(it)))
+                },
+                port = uiState.sshPort,
+                onPortChange = {
+                    viewModel.processIntent(Intent.SshPortChanged(it))
+                },
+                username = uiState.username,
+                onUsernameChange = {
+                    viewModel.processIntent(Intent.UsernameChanged(it))
+                },
+                sshFingerprint = uiState.sshFingerprint,
+                onSshFingerprintChange = { viewModel.processIntent(Intent.SshFingerprintChanged(it)) },
+                isAdvancedSheetOpen = isAdvancedSheetOpen,
+                onAdvancedSheetDismiss = { isAdvancedSheetOpen = false },
+                onAdvancedSettingsClick = { isAdvancedSheetOpen = true },
+            )
+        },
+        WizardStep(title = UiText.Resource(R.string.wizard_step_confirmation)) {
+            ConfirmationPage(
+                serverAddress = uiState.serverAddress,
+                sshPort = uiState.sshPort,
+                username = uiState.username,
+                authMethod = uiState.serverAuthMethod,
+                setupStrategy = uiState.setupStrategy,
+            )
+        },
+        WizardStep(title = UiText.Resource(R.string.wizard_step_deployment)) {
+            DeploymentProgressPage(
+                deployment = uiState.deployment,
+                onToggleTerminal = { viewModel.processIntent(Intent.ToggleTerminalVisibility) },
+                onRetry = { viewModel.processIntent(Intent.RetryDeployment) },
+                onBack = {
+                    viewModel.processIntent(Intent.CancelDeployment)
+                    previous()
+                },
+                onFinish = { viewModel.processIntent(Intent.FinishAndStartVpn) },
+            )
+        }
+    )
+
+    val isDeploymentPage = wizardState.currentPage == PAGE_DEPLOYMENT
+
+    BackHandler(enabled = isDeploymentPage) {
+        (context as? Activity)?.finish()
+    }
+
+    WizardContainer(
+        state = wizardState,
+        steps = wizardSteps,
+        isNextEnabled = when (wizardState.currentPage) {
+            PAGE_SERVER_DATA -> uiState.isSshValid
+            else -> true
+        },
+        isLoading = uiState.isLoading || uiState.deployment.phase == DeploymentPhase.InProgress,
+        isTopBarVisible = !isDeploymentPage,
+        isBottomBarVisible = !isDeploymentPage,
+        onNavIconClick = { viewModel.processIntent(Intent.OnCloseWizardClicked) },
+        onNextClick = { viewModel.processIntent(Intent.OnNextClicked(wizardState.currentPage)) },
+        topBar = {
+            WizardTopBar(
+                steps = wizardSteps,
+                state = wizardState,
+                onNavIconClick = { viewModel.processIntent(Intent.OnCloseWizardClicked) },
+                navIconDescription = UiText.Resource(R.string.wizard_nav_icon_description),
+            )
+        },
+    )
+
+    if (uiState.connectionCheck.isInProgress) {
+        LoadingDialog(
+            message = UiText.Resource(
+                if (uiState.connectionCheck is ConnectionCheckState.StillChecking) {
+                    R.string.wizard_connection_check_still_checking
+                } else {
+                    R.string.wizard_connection_check_checking
+                }
+            ),
+            onCancel = if (uiState.connectionCheck is ConnectionCheckState.StillChecking) {
+                { viewModel.processIntent(Intent.CancelConnectionCheck) }
+            } else {
+                null
+            },
+        )
+    }
+
+    val connectionError = uiState.connectionCheck as? ConnectionCheckState.Failed
+    if (connectionError != null) {
+        val detail = connectionError.reason.asString()
+        val body = stringResource(R.string.wizard_connection_check_failed_message) +
+            (detail.takeIf(String::isNotBlank)?.let { "\n\n${stringResource(R.string.wizard_connection_check_failed_detail_prefix)}$it" } ?: "")
+
+        MessageDialog(
+            title = UiText.Resource(R.string.wizard_connection_check_failed_title),
+            body = UiText.Raw(body),
+            onConfirm = { viewModel.processIntent(Intent.DismissConnectionErrorDialog) },
+        )
+    }
+
+    HostKeyDialog(
+        state = uiState.connectionCheck,
+        onAccept = { fingerprint -> viewModel.processIntent(Intent.TrustHostAndRetry(fingerprint)) },
+        onDecline = { viewModel.processIntent(Intent.DismissConnectionErrorDialog) },
+    )
+}
+
+/** The three ways a host key can stop a connection, as one dialog: they differ only in copy. */
+@Composable
+private fun HostKeyDialog(
+    state: ConnectionCheckState,
+    onAccept: (fingerprint: String) -> Unit,
+    onDecline: () -> Unit,
+) {
+    when (state) {
+        is ConnectionCheckState.UntrustedHost -> ConfirmDialog(
+            title = UiText.Resource(R.string.wizard_untrusted_host_title),
+            body = UiText.Resource(R.string.wizard_untrusted_host_body, state.fingerprint),
+            confirmText = UiText.Resource(R.string.wizard_untrusted_host_trust),
+            onConfirm = { onAccept(state.fingerprint) },
+            onDismiss = onDecline,
+        )
+
+        is ConnectionCheckState.HostKeyUnverifiable -> ConfirmDialog(
+            icon = KaihiIcons.Filled.Lock,
+            title = UiText.Resource(R.string.wizard_host_key_unverifiable_title),
+            body = UiText.Resource(R.string.wizard_host_key_unverifiable_body, state.fingerprint),
+            confirmText = UiText.Resource(R.string.wizard_host_key_unverifiable_confirm),
+            onConfirm = { onAccept(state.fingerprint) },
+            onDismiss = onDecline,
+        )
+
+        // Accept stays on the confirm button rather than swapping with cancel: a tap outside and a
+        // back press already dismiss, so the label is what carries the warning.
+        is ConnectionCheckState.HostKeyChanged -> ConfirmDialog(
+            icon = KaihiIcons.Filled.Shield,
+            title = UiText.Resource(R.string.wizard_host_key_changed_title),
+            body = UiText.Resource(
+                R.string.wizard_host_key_changed_body,
+                state.expectedFingerprint,
+                state.fingerprint,
+            ),
+            confirmText = UiText.Resource(R.string.wizard_host_key_changed_replace),
+            onConfirm = { onAccept(state.fingerprint) },
+            dismissText = UiText.Resource(R.string.wizard_host_key_changed_stop),
+            onDismiss = onDecline,
+        )
+
+        ConnectionCheckState.Idle,
+        ConnectionCheckState.Checking,
+        ConnectionCheckState.StillChecking,
+        is ConnectionCheckState.Failed -> Unit
+    }
+}

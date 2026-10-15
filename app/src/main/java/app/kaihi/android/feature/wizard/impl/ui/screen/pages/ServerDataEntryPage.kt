@@ -1,0 +1,289 @@
+package app.kaihi.android.feature.wizard.impl.ui.screen.pages
+
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import app.kaihi.android.R
+import app.kaihi.android.feature.wizard.impl.ui.mvi.WizardContract.ServerAuthMethod
+import app.kaihi.android.feature.wizard.impl.ui.screen.components.WizardPage
+import app.kaihi.android.platform.ui.components.KaihiTextField
+import app.kaihi.android.platform.ui.icons.KaihiIcons
+import app.kaihi.android.platform.ui.theme.size.dimens
+import app.kaihi.android.platform.ui.util.UiText
+import app.kaihi.android.platform.ui.util.asString
+
+@Composable
+internal fun ServerDataEntryPage(
+    serverAddress: String,
+    onServerAddressChange: (String) -> Unit,
+    authMethod: ServerAuthMethod,
+    onAuthMethodChange: (ServerAuthMethod) -> Unit,
+    password: String,
+    onPasswordChange: (String) -> Unit,
+    sshKey: String,
+    onSshKeyChange: (String) -> Unit,
+    port: String,
+    onPortChange: (String) -> Unit,
+    username: String,
+    onUsernameChange: (String) -> Unit,
+    sshFingerprint: String,
+    onSshFingerprintChange: (String) -> Unit,
+    isAdvancedSheetOpen: Boolean,
+    onAdvancedSheetDismiss: () -> Unit,
+    onAdvancedSettingsClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val dimens = MaterialTheme.dimens
+    var isPasswordVisible by rememberSaveable { mutableStateOf(false) }
+
+    WizardPage(modifier = modifier) {
+        Text(
+            text = stringResource(R.string.wizard_server_data_description),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Spacer(modifier = Modifier.height(dimens.l))
+
+        SectionHeader(
+            icon = KaihiIcons.Outlined.Dns,
+            title = UiText.Resource(R.string.wizard_server_data_connection_title)
+        )
+
+        Spacer(modifier = Modifier.height(dimens.m))
+
+        KaihiTextField(
+            value = serverAddress,
+            onValueChange = onServerAddressChange,
+            modifier = Modifier.fillMaxWidth(),
+            label = UiText.Resource(R.string.wizard_server_data_address),
+            monospace = true,
+            placeholder = UiText.Raw("192.168.1.100"),
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+        )
+
+        Spacer(modifier = Modifier.height(dimens.l))
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        Spacer(modifier = Modifier.height(dimens.l))
+
+        SectionHeader(
+            icon = KaihiIcons.Filled.Lock,
+            title = UiText.Resource(R.string.wizard_server_data_authentication)
+        )
+
+        Spacer(modifier = Modifier.height(dimens.m))
+
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            SegmentedButton(
+                selected = authMethod == ServerAuthMethod.PASSWORD,
+                onClick = { onAuthMethodChange(ServerAuthMethod.PASSWORD) },
+                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                label = { Text(stringResource(R.string.wizard_server_data_password)) }
+            )
+            SegmentedButton(
+                selected = authMethod == ServerAuthMethod.SSH_KEY,
+                onClick = { onAuthMethodChange(ServerAuthMethod.SSH_KEY) },
+                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                label = { Text(stringResource(R.string.wizard_server_data_ssh_key)) }
+            )
+        }
+
+        Spacer(modifier = Modifier.height(dimens.m))
+
+        AnimatedContent(
+            targetState = authMethod,
+            label = "authentication_method",
+            // Resizing between the one-line password field and the taller key field clips by default,
+            // which saws the field's rounded corners off square mid-transition.
+            transitionSpec = { (fadeIn() togetherWith fadeOut()).using(SizeTransform(clip = false)) },
+        ) { method ->
+            when (method) {
+                ServerAuthMethod.PASSWORD -> {
+                    KaihiTextField(
+                        value = password,
+                        onValueChange = onPasswordChange,
+                        modifier = Modifier.fillMaxWidth(),
+                        label = UiText.Resource(R.string.wizard_server_data_password),
+                        singleLine = true,
+                        visualTransformation = if (isPasswordVisible) {
+                            VisualTransformation.None
+                        } else {
+                            PasswordVisualTransformation()
+                        },
+                        trailingIcon = {
+                            IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                                Icon(
+                                    imageVector = if (isPasswordVisible) {
+                                        KaihiIcons.Filled.VisibilityOff
+                                    } else {
+                                        KaihiIcons.Filled.Visibility
+                                    },
+                                    contentDescription = null,
+                                )
+                            }
+                        },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    )
+                }
+
+                ServerAuthMethod.SSH_KEY -> {
+                    KaihiTextField(
+                        value = sshKey,
+                        onValueChange = onSshKeyChange,
+                        modifier = Modifier.fillMaxWidth(),
+                        label = UiText.Resource(R.string.wizard_server_data_ssh_key),
+                        monospace = true,
+                        placeholder = UiText.Raw("-----BEGIN OPENSSH PRIVATE KEY-----"),
+                        minLines = 6,
+                        maxLines = 10,
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(dimens.l))
+
+        TextButton(
+            onClick = onAdvancedSettingsClick,
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+        ) {
+            Text(stringResource(R.string.wizard_server_data_advanced_settings))
+        }
+    }
+
+    if (isAdvancedSheetOpen) {
+        AdvancedSettingsSheet(
+            port = port,
+            onPortChange = onPortChange,
+            username = username,
+            onUsernameChange = onUsernameChange,
+            sshFingerprint = sshFingerprint,
+            onSshFingerprintChange = onSshFingerprintChange,
+            onDismiss = onAdvancedSheetDismiss,
+        )
+    }
+}
+
+@Composable
+private fun SectionHeader(
+    icon: ImageVector,
+    title: UiText,
+    modifier: Modifier = Modifier,
+) {
+    val dimens = MaterialTheme.dimens
+
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(dimens.s)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            text = title.asString(),
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+            color = MaterialTheme.colorScheme.primary
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AdvancedSettingsSheet(
+    port: String,
+    onPortChange: (String) -> Unit,
+    username: String,
+    onUsernameChange: (String) -> Unit,
+    sshFingerprint: String,
+    onSshFingerprintChange: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val dimens = MaterialTheme.dimens
+    val sheetState = rememberModalBottomSheetState()
+
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = dimens.l, vertical = dimens.l)
+        ) {
+            Text(
+                text = stringResource(R.string.wizard_server_data_advanced_settings),
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            Spacer(modifier = Modifier.height(dimens.l))
+
+            KaihiTextField(
+                value = port,
+                onValueChange = onPortChange,
+                modifier = Modifier.fillMaxWidth(),
+                label = UiText.Resource(R.string.wizard_server_data_port),
+                monospace = true,
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            )
+
+            Spacer(modifier = Modifier.height(dimens.m))
+
+            KaihiTextField(
+                value = username,
+                onValueChange = onUsernameChange,
+                modifier = Modifier.fillMaxWidth(),
+                label = UiText.Resource(R.string.wizard_server_data_username),
+                monospace = true,
+                singleLine = true,
+            )
+
+            Spacer(modifier = Modifier.height(dimens.m))
+
+            KaihiTextField(
+                value = sshFingerprint,
+                onValueChange = onSshFingerprintChange,
+                modifier = Modifier.fillMaxWidth(),
+                label = UiText.Resource(R.string.wizard_server_data_fingerprint),
+                monospace = true,
+                singleLine = true,
+            )
+        }
+    }
+}
