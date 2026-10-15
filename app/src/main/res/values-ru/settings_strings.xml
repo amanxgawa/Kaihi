@@ -1,0 +1,11 @@
+<resources>
+    <string name="settings_title">Настройки</string>
+
+    <string name="settings_general_section_title">Основное</string>
+    <string name="settings_view_logs_title">Просмотреть журнал</string>
+    <string name="settings_view_logs_description">Что делал Xray за последнее время.</string>
+
+    <string name="settings_danger_zone_title">Опасная зона</string>
+    <string name="settings_advanced_mode_toggle_title">Расширенный режим</string>
+    <string name="settings_advanced_mode_toggle_description">Ручная настройка транспорта, маскировки и конфига. Обычно это не нужно.</string>
+</resources>

@@ -1,0 +1,179 @@
+package app.kaihi.android.feature.wizard.impl.domain.usecase
+
+import app.kaihi.android.core.ssh.SshConnection
+import app.kaihi.android.core.ssh.ext.execute
+import app.kaihi.android.core.vpn.configfactory.XrayServerConfigFactory
+import app.kaihi.android.feature.wizard.impl.domain.deployment.XrayOpenRcServiceFactory
+import app.kaihi.android.feature.wizard.impl.domain.deployment.XraySystemdServiceFactory
+import app.kaihi.android.feature.wizard.impl.domain.model.DeploymentEvent
+import app.kaihi.android.feature.wizard.impl.domain.model.DeploymentStep
+import app.kaihi.android.feature.wizard.impl.domain.model.PackageManager
+import app.kaihi.android.feature.wizard.impl.domain.model.SniSelector
+import app.kaihi.android.feature.wizard.impl.domain.model.XrayServerCredentials
+import app.kaihi.android.feature.wizard.impl.domain.model.XrayServerSecrets
+import app.kaihi.android.feature.wizard.impl.domain.ssh.DetectPackageManagerCommand
+import app.kaihi.android.feature.wizard.impl.domain.ssh.DetectServerCountryCommand
+import app.kaihi.android.feature.wizard.impl.domain.ssh.GenerateXrayServerSecretsCommand
+import app.kaihi.android.feature.wizard.impl.domain.ssh.InstallXrayRuntimeCommand
+import app.kaihi.android.feature.wizard.impl.domain.ssh.ScanSniCommand
+import app.kaihi.android.feature.wizard.impl.domain.ssh.StartXrayServiceCommand
+import app.kaihi.android.feature.wizard.impl.domain.ssh.VerifySniCandidateCommand
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.FlowCollector
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.flow
+import javax.inject.Inject
+import timber.log.Timber
+
+internal class DeployXrayServerUseCase @Inject constructor() {
+
+    operator fun invoke(connection: SshConnection, architecture: String): Flow<DeploymentEvent> =
+        flow {
+            val packageManager = runStep(DeploymentStep.INSTALL_RUNTIME) {
+                val detected = connection.execute(DetectPackageManagerCommand()).getOrThrow()
+                emit(DeploymentEvent.LogLine(DeploymentStep.INSTALL_RUNTIME, "Package manager: ${detected.token}"))
+
+                connection.execute(
+                    InstallXrayRuntimeCommand(detected, InstallXrayRuntimeCommand.releaseAssetFor(architecture)),
+                    onOutputLine = { line -> emit(DeploymentEvent.LogLine(DeploymentStep.INSTALL_RUNTIME, line)) },
+                ).getOrThrow()
+                detected
+            }
+
+            val sni = runStep(DeploymentStep.FIND_SNI) {
+                val candidates = connection.execute(ScanSniCommand(architecture)).getOrThrow()
+                emit(DeploymentEvent.LogLine(DeploymentStep.FIND_SNI, "Nearby candidates: ${candidates.size}"))
+                findStableCandidate(connection, candidates)
+                    ?: error("No suitable REALITY SNI found near this VPS.")
+            }
+
+            val secrets = runStep(DeploymentStep.GENERATE_SECRETS) {
+                connection.execute(
+                    GenerateXrayServerSecretsCommand(),
+                    // This step's output carries secrets, but the UI reducer redacts every log line
+                    // anyway, so it streams like the rest instead of being the one that goes silent.
+                    onOutputLine = { line -> emit(DeploymentEvent.LogLine(DeploymentStep.GENERATE_SECRETS, line)) },
+                ).getOrThrow()
+            }
+
+            val credentials = runStep(DeploymentStep.WRITE_CONFIGURATION) {
+                uploadConfiguration(connection, secrets, sni, packageManager)
+            }
+
+            runStep(DeploymentStep.START_SERVICE) {
+                connection.execute(
+                    StartXrayServiceCommand(packageManager),
+                    onOutputLine = { line -> emit(DeploymentEvent.LogLine(DeploymentStep.START_SERVICE, line)) },
+                ).getOrThrow()
+            }
+
+            emit(DeploymentEvent.Completed(credentials.copy(countryCode = detectCountryCode(connection))))
+        }.catch { error ->
+            // A failed step has already emitted StepFailed. Everything else, cancellation
+            // included, belongs to the caller.
+            if (error !is StepAborted) throw error
+        }
+
+    private suspend fun FlowCollector<DeploymentEvent>.findStableCandidate(
+        connection: SshConnection,
+        candidates: List<String>,
+    ): String? {
+        val allowed = candidates.filter(SniSelector::isAllowed).shuffled()
+        for (candidate in allowed.take(MAX_SNI_VERIFICATION_ATTEMPTS)) {
+            val isStable = connection.execute(VerifySniCandidateCommand(candidate)).getOrDefault(false)
+            if (isStable) return candidate
+            emit(DeploymentEvent.LogLine(DeploymentStep.FIND_SNI, "$candidate failed a stability check, trying another candidate"))
+        }
+        return null
+    }
+
+    private suspend fun FlowCollector<DeploymentEvent>.uploadConfiguration(
+        connection: SshConnection,
+        secrets: XrayServerSecrets,
+        realityServerName: String,
+        packageManager: PackageManager,
+    ): XrayServerCredentials {
+        val serverConfigJson = XrayServerConfigFactory.build(
+            uuid = secrets.uuid,
+            privateKey = secrets.privateKey,
+            shortId = secrets.shortId,
+            realityServerName = realityServerName,
+        ).toJson()
+        emit(
+            DeploymentEvent.LogLine(
+                DeploymentStep.WRITE_CONFIGURATION,
+                "Uploading /usr/local/etc/xray/config.json"
+            )
+        )
+        connection.upload(
+            CONFIG_PATH,
+            serverConfigJson.toByteArray(),
+            permissions = CONFIG_PERMISSIONS
+        ).getOrThrow()
+
+        if (packageManager == PackageManager.APK) {
+            emit(DeploymentEvent.LogLine(DeploymentStep.WRITE_CONFIGURATION, "Uploading OpenRC service"))
+            connection.upload(
+                OPENRC_SERVICE_PATH,
+                XrayOpenRcServiceFactory.create().toByteArray(),
+                permissions = OPENRC_SERVICE_PERMISSIONS,
+            ).getOrThrow()
+        } else {
+            emit(DeploymentEvent.LogLine(DeploymentStep.WRITE_CONFIGURATION, "Uploading systemd unit"))
+            connection.upload(SYSTEMD_UNIT_PATH, XraySystemdServiceFactory.create().toByteArray())
+                .getOrThrow()
+        }
+
+        return XrayServerCredentials(
+            uuid = secrets.uuid,
+            publicKey = secrets.publicKey,
+            shortId = secrets.shortId,
+            realityServerName = realityServerName,
+        )
+    }
+
+    /** The flag it feeds is cosmetic, so a failed lookup must not fail a deployment that already succeeded. */
+    private suspend fun detectCountryCode(connection: SshConnection): String? = try {
+        connection.execute(DetectServerCountryCommand()).getOrNull()
+    } catch (error: CancellationException) {
+        throw error
+    } catch (error: Exception) {
+        Timber.w(error, "Detecting the server's country failed")
+        null
+    }
+
+    /**
+     * Reports the step around [block] and, on failure, ends the deployment. Aborting by exception
+     * rather than by a null return keeps every caller a plain assignment: a step that returns
+     * normally has succeeded, so nothing downstream has to re-check it.
+     */
+    private suspend fun <T> FlowCollector<DeploymentEvent>.runStep(
+        step: DeploymentStep,
+        block: suspend () -> T,
+    ): T {
+        emit(DeploymentEvent.StepStarted(step))
+        val value = try {
+            block()
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Throwable) {
+            emit(DeploymentEvent.StepFailed(step, error))
+            throw StepAborted(error)
+        }
+        emit(DeploymentEvent.StepSucceeded(step))
+        return value
+    }
+
+    private companion object {
+        const val CONFIG_PATH = "/usr/local/etc/xray/config.json"
+        const val SYSTEMD_UNIT_PATH = "/etc/systemd/system/kaihi-xray.service"
+        const val OPENRC_SERVICE_PATH = "/etc/init.d/kaihi-xray"
+        const val OPENRC_SERVICE_PERMISSIONS = 0b111_101_101 // rwxr-xr-x (0755)
+        const val CONFIG_PERMISSIONS = 0b110_000_000 // rw------- (0600)
+        const val MAX_SNI_VERIFICATION_ATTEMPTS = 5
+    }
+}
+
+/** Ends the deployment flow after a step has reported its own failure. */
+private class StepAborted(cause: Throwable) : Exception(cause)

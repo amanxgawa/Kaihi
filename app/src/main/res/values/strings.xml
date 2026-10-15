@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">Kaihi</string>
+
+    <string name="next">Next</string>
+    <string name="finish">Finish</string>
+    <string name="back">Back</string>
+    <string name="cancel">Cancel</string>
+    <string name="ok">OK</string>
+    <string name="badge_soon">Soon</string>
+
+    <string name="notification_vpn_title">Kaihi VPN</string>
+    <string name="notification_vpn_content">Connected</string>
+    <string name="notification_vpn_disconnect">Disconnect</string>
+</resources>

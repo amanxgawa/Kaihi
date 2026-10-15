@@ -1,0 +1,11 @@
+package app.kaihi.android.feature.wizard.impl.ui.model
+
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
+import app.kaihi.android.platform.ui.util.UiText
+
+@Stable
+data class WizardStep(
+    val title: UiText = UiText.Empty,
+    val content: @Composable WizardScope.() -> Unit
+)

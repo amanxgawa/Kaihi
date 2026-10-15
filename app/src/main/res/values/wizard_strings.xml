@@ -1,0 +1,99 @@
+<resources>
+    <string name="wizard_nav_icon_description">Server setup wizard</string>
+    <string name="wizard_strategy_choice">Setup type</string>
+    <string name="wizard_step_confirmation">Review</string>
+    <string name="wizard_step_deployment">Deployment</string>
+
+    <!-- Strategy Choice Page -->
+    <string name="wizard_strategy_description">Choose how to set it up. You can redeploy with a different option any time.</string>
+
+    <string name="wizard_strategy_fast_start_title">Fast start</string>
+    <string name="wizard_strategy_fast_start_desc">You bring the server. Everything else is set up for you.</string>
+
+    <string name="wizard_strategy_resilience_title">Maximum resilience</string>
+    <string name="wizard_strategy_resilience_desc">Heavier disguise for stricter networks. Needs a domain name pointed at your server.</string>
+
+    <!-- Tags -->
+    <string name="wizard_tag_domain">domain</string>
+    <string name="wizard_tag_recommended">Recommended</string>
+
+    <!-- What each option needs from you, in place of an invented time and difficulty. -->
+    <string name="wizard_requirement_fast_start">A server you have root SSH access to</string>
+    <string name="wizard_requirement_resilience">A server and a domain name</string>
+
+    <!-- Server Data Entry Page -->
+    <string name="wizard_server_data_description">Enter your server\'s address and how to connect to it.</string>
+    <string name="wizard_server_data_connection_title">Connection</string>
+    <string name="wizard_server_data_address">Server address</string>
+    <string name="wizard_server_data_authentication">Authentication</string>
+    <string name="wizard_server_data_password">Password</string>
+    <string name="wizard_server_data_ssh_key">SSH key</string>
+    <string name="wizard_server_data_advanced_settings">Advanced settings</string>
+    <string name="wizard_server_data_port">Port</string>
+    <string name="wizard_server_data_username">Username</string>
+    <string name="wizard_server_data_entry">Server details</string>
+    <string name="wizard_server_data_fingerprint">SSH host key fingerprint (optional; you\'ll confirm it on first connect)</string>
+
+    <!-- Connection check dialog -->
+    <string name="wizard_connection_check_checking">Checking connection to your server…</string>
+    <string name="wizard_connection_check_still_checking">This is taking longer than usual…</string>
+    <string name="wizard_connection_check_failed_title">Couldn\'t connect</string>
+    <string name="wizard_connection_check_failed_message">We couldn\'t reach your server. This can happen for a few reasons:\n\n• Wrong address or port\n• A firewall or security group is blocking the port\n• Wrong username, password or SSH key\n• The server is offline\n• The server\'s SSH host key isn\'t trusted yet</string>
+    <string name="wizard_connection_check_failed_detail_prefix">Details: </string>
+
+    <string name="wizard_untrusted_host_title">First connection to this server</string>
+    <string name="wizard_untrusted_host_body">If you created this server yourself, go ahead. If someone else gave you these details, check with them that this is the right server.\n\nHost key fingerprint: %1$s</string>
+    <string name="wizard_untrusted_host_trust">Trust and continue</string>
+
+    <string name="wizard_host_key_changed_title">This server\'s identity changed</string>
+    <string name="wizard_host_key_changed_body">The server is presenting a different SSH host key than the one saved the last time you connected.\n\nIf you rebuilt or reinstalled this server, that is expected. If you did not, someone may be sitting between you and it, and continuing would hand them your password or key.\n\nSaved: %1$s\nNow: %2$s</string>
+    <string name="wizard_host_key_changed_replace">I rebuilt it, replace the key</string>
+    <string name="wizard_host_key_changed_stop">Stop</string>
+
+    <string name="wizard_host_key_unverifiable_title">Can\'t check this server\'s identity</string>
+    <string name="wizard_host_key_unverifiable_body">This server was confirmed before, but the saved fingerprint can no longer be read. That normally means the screen lock changed, or this is a restore onto a different device, not that anything is wrong with the server.\n\nConfirm the fingerprint against your hosting panel before continuing, and it will be saved again.\n\nHost key fingerprint: %1$s</string>
+    <string name="wizard_host_key_unverifiable_confirm">Confirm and save again</string>
+
+    <!-- Confirmation Page -->
+    <string name="wizard_confirmation_summary_title">Summary</string>
+    <string name="wizard_confirmation_server_label">Server</string>
+    <string name="wizard_confirmation_auth_label">Authentication</string>
+    <string name="wizard_confirmation_strategy_label">Strategy</string>
+    <string name="wizard_confirmation_note_title">Good to know</string>
+    <string name="wizard_confirmation_note_body">Closing the app mid-install is safe. The server stays usable, and running setup again starts over cleanly.</string>
+
+    <!-- Errors -->
+    <string name="wizard_error_vpn_permission_required">Kaihi needs VPN permission to start the connection.</string>
+    <string name="wizard_error_incomplete_ssh_details">Fill in your server connection details first.</string>
+    <string name="wizard_error_strategy_unsupported">This setup method isn\'t available yet. Go back and pick another one.</string>
+    <string name="wizard_error_architecture_unknown">The server\'s architecture is unknown. Go back and check the connection again.</string>
+    <string name="wizard_error_unknown">Unknown error</string>
+    <string name="wizard_error_save_failed">Couldn\'t save the server details.</string>
+    <string name="wizard_error_start_failed">Couldn\'t start the VPN.</string>
+
+    <!-- Deployment progress page -->
+    <string name="wizard_deployment_step_install_runtime">Installing the VPN engine</string>
+    <string name="wizard_deployment_step_find_sni">Finding cover for your traffic</string>
+    <string name="wizard_deployment_step_generate_secrets">Creating secret data to protect the connection</string>
+    <string name="wizard_deployment_step_write_configuration">Applying settings</string>
+    <string name="wizard_deployment_step_start_service">Turning on the VPN</string>
+
+    <string name="wizard_deployment_terminal_show">Show install log</string>
+    <string name="wizard_deployment_terminal_hide">Hide install log</string>
+    <string name="wizard_deployment_terminal_copy">Copy log</string>
+    <string name="wizard_deployment_terminal_copied">Copied</string>
+    <string-array name="wizard_deployment_idle_messages">
+        <item>Working on it…</item>
+        <item>Building your tunnel…</item>
+        <item>Locking things down…</item>
+        <item>Making sure no one\'s watching…</item>
+        <item>Almost there…</item>
+    </string-array>
+
+    <string name="wizard_deployment_error_title">Installation stopped</string>
+    <string name="wizard_deployment_retry">Retry</string>
+
+    <string name="wizard_deployment_success_title">Installation complete</string>
+    <string name="wizard_deployment_success_body">You can browse securely now.</string>
+    <string name="wizard_deployment_success_cta">Start using the VPN</string>
+</resources>

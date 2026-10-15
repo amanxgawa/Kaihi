@@ -1,0 +1,312 @@
+package app.kaihi.android.feature.wizard.impl.ui.screen.components
+
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
+import app.kaihi.android.R
+import app.kaihi.android.feature.wizard.impl.ui.model.WizardScopeImpl
+import app.kaihi.android.feature.wizard.impl.ui.model.WizardState
+import app.kaihi.android.feature.wizard.impl.ui.model.WizardStep
+import app.kaihi.android.platform.ui.icons.KaihiIcons
+import app.kaihi.android.platform.ui.theme.size.dimens
+import app.kaihi.android.platform.ui.util.UiText
+import app.kaihi.android.platform.ui.util.asString
+import kotlinx.collections.immutable.ImmutableList
+
+private const val WIZARD_ANIMATION_DURATION = 350
+
+private val slideAnimationSpec = tween<IntOffset>(
+    durationMillis = WIZARD_ANIMATION_DURATION,
+    easing = FastOutSlowInEasing
+)
+private val fadeAnimationSpec = tween<Float>(
+    durationMillis = WIZARD_ANIMATION_DURATION,
+    easing = FastOutSlowInEasing
+)
+
+@Composable
+internal fun WizardContainer(
+    modifier: Modifier = Modifier,
+    state: WizardState,
+    steps: ImmutableList<WizardStep>,
+    onNavIconClick: () -> Unit,
+    onNextClick: () -> Unit,
+    isLoading: Boolean = false,
+    isNextEnabled: Boolean = true,
+    disabledReasonText: UiText = UiText.Empty,
+    nextButtonText: UiText = UiText.Resource(R.string.next),
+    finishButtonText: UiText = UiText.Resource(R.string.finish),
+    backButtonText: UiText = UiText.Resource(R.string.back),
+    isTopBarVisible: Boolean = true,
+    isBottomBarVisible: Boolean = true,
+    topBar: @Composable () -> Unit = {
+        WizardTopBar(steps = steps, state = state, onNavIconClick = onNavIconClick)
+    }
+) {
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val dimens = MaterialTheme.dimens
+    val scope = remember(state) { WizardScopeImpl(state) }
+    val saveableStateHolder = rememberSaveableStateHolder()
+
+    BackHandler(enabled = !state.isFirstPage && !isLoading && isBottomBarVisible) {
+        keyboardController?.hide()
+        state.previous()
+    }
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .animateContentSize()
+            .windowInsetsPadding(WindowInsets.systemBars)
+    ) {
+        AnimatedVisibility(
+            visible = isTopBarVisible,
+            enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
+            exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut()
+        ) {
+            topBar()
+        }
+
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+        ) {
+            AnimatedContent(
+                targetState = state.currentPage,
+                label = "wizard_screen_transition",
+                transitionSpec = {
+                    val direction = if (targetState > initialState) 1 else -1
+                    (
+                            slideInHorizontally(animationSpec = slideAnimationSpec) { width -> width * direction } +
+                                    fadeIn(animationSpec = fadeAnimationSpec)
+                            ).togetherWith(
+                            slideOutHorizontally(animationSpec = slideAnimationSpec) { width -> -width * direction } +
+                                    fadeOut(animationSpec = fadeAnimationSpec)
+                        ).using(SizeTransform(clip = false))
+                },
+                modifier = Modifier.fillMaxSize()
+            ) { page ->
+                saveableStateHolder.SaveableStateProvider(key = page) {
+                    steps.getOrNull(page)?.content?.invoke(scope)
+                }
+            }
+        }
+
+        AnimatedVisibility(
+            visible = isBottomBarVisible,
+            enter = expandVertically(expandFrom = Alignment.Bottom) + fadeIn(),
+            exit = shrinkVertically(shrinkTowards = Alignment.Bottom) + fadeOut()
+        ) {
+            WizardBottomBar(
+                state = state,
+                isLoading = isLoading,
+                isNextEnabled = isNextEnabled,
+                disabledReasonText = disabledReasonText,
+                nextButtonText = if (state.isLastPage) finishButtonText else nextButtonText,
+                backButtonText = backButtonText,
+                onBackClick = {
+                    keyboardController?.hide()
+                    state.previous()
+                },
+                onNextClick = {
+                    keyboardController?.hide()
+                    onNextClick()
+                }
+            )
+        }
+    }
+}
+
+@Composable
+internal fun WizardTopBar(
+    steps: ImmutableList<WizardStep>,
+    state: WizardState,
+    isNavButtonVisible: Boolean = true,
+    onNavIconClick: () -> Unit,
+    navIconDescription: UiText = UiText.Empty,
+) {
+    val navIcon =
+        if (state.isFirstPage) KaihiIcons.Outlined.ArrowBack else KaihiIcons.Outlined.Close
+    val dimens = MaterialTheme.dimens
+    val density = LocalDensity.current
+    val slideOffsetPx = remember(density) { with(density) { dimens.xl.roundToPx() } }
+
+    val progress by animateFloatAsState(
+        targetValue = (state.currentPage + 1).toFloat() / state.pageCount,
+        animationSpec = tween(400),
+        label = "progress_animation"
+    )
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = dimens.s, start = dimens.m, end = dimens.l),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (isNavButtonVisible) {
+            IconButton(onClick = onNavIconClick) {
+                Icon(
+                    navIcon,
+                    contentDescription = navIconDescription.asString().takeIf { it.isNotEmpty() },
+                    tint = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+        } else {
+            Spacer(modifier = Modifier.width(dimens.l))
+        }
+
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
+            AnimatedContent(
+                targetState = state.currentPage,
+                label = "step_title_transition",
+                transitionSpec = {
+                    val direction = if (targetState > initialState) 1 else -1
+                    (
+                            slideInHorizontally(animationSpec = slideAnimationSpec) { slideOffsetPx * direction } +
+                                    fadeIn(animationSpec = fadeAnimationSpec)
+                            ).togetherWith(
+                            slideOutHorizontally(animationSpec = slideAnimationSpec) { -slideOffsetPx * direction } +
+                                    fadeOut(animationSpec = fadeAnimationSpec)
+                        ).using(SizeTransform(clip = false))
+                },
+            ) { page ->
+                Text(
+                    text = (steps.getOrNull(page)?.title ?: UiText.Empty).asString(),
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            Spacer(modifier = Modifier.height(dimens.m))
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(dimens.scrollIndicatorHeight)
+                    .clip(CircleShape),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun WizardBottomBar(
+    state: WizardState,
+    isLoading: Boolean,
+    isNextEnabled: Boolean,
+    disabledReasonText: UiText,
+    nextButtonText: UiText,
+    backButtonText: UiText,
+    onBackClick: () -> Unit,
+    onNextClick: () -> Unit
+) {
+    val dimens = MaterialTheme.dimens
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = dimens.l)
+            .padding(top = dimens.m, bottom = dimens.xl),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        AnimatedVisibility(
+            visible = !isNextEnabled && disabledReasonText !is UiText.Empty && !isLoading,
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically()
+        ) {
+            Text(
+                text = disabledReasonText.asString(),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.error,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(bottom = dimens.m)
+            )
+        }
+
+        Box(modifier = Modifier.fillMaxWidth()) {
+            if (!state.isFirstPage) {
+                TextButton(
+                    onClick = onBackClick,
+                    enabled = !isLoading,
+                    modifier = Modifier.align(Alignment.CenterStart)
+                ) {
+                    Text(text = backButtonText.asString())
+                }
+            }
+
+            Button(
+                onClick = onNextClick,
+                enabled = isNextEnabled && !isLoading,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .fillMaxWidth(0.5f)
+                    // Clipped to the button's own shape, so swapping label for spinner never squares its ends.
+                    .clip(ButtonDefaults.shape)
+                    .animateContentSize()
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(dimens.l),
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        strokeWidth = dimens.xs
+                    )
+                } else {
+                    Text(text = nextButtonText.asString())
+                }
+            }
+        }
+    }
+}

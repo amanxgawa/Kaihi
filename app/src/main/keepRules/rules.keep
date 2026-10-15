@@ -1,0 +1,37 @@
+# Add project specific R8 rules here.
+# AGP will combine all keep rule files in src/main/keepRules to pass to R8
+#
+# For more details, see
+#   https://d.android.com/r/tools/r8/keep-rules
+
+# kotlinx.serialization: XrayConfigModels/XrayVpnProfile/etc. are serialized via reflection on
+# generated `serializer()` companions, which R8 strips without explicit keep rules.
+# https://github.com/Kotlin/kotlinx.serialization/blob/master/rules/common.pro
+-keepattributes *Annotation*, InnerClasses
+-dontnote kotlinx.serialization.AnnotationsKt
+
+-keepclassmembers class kotlinx.serialization.json.** {
+    *** Companion;
+}
+-keepclasseswithmembers class kotlinx.serialization.json.** {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+
+-keep,includedescriptorclasses class app.kaihi.android.**$$serializer { *; }
+-keepclassmembers class app.kaihi.android.** {
+    *** Companion;
+}
+-keepclasseswithmembers class app.kaihi.android.** {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+
+# sshj + Bouncy Castle: reflection-based provider/algorithm lookup for SSH auth/crypto.
+-keep class net.schmizz.** { *; }
+-dontwarn net.schmizz.**
+-keep class org.bouncycastle.** { *; }
+-dontwarn org.bouncycastle.**
+
+# hev-socks5-tunnel's native JNI_OnLoad does FindClass() by the hardcoded package/class name
+# baked into Android.mk's PKGNAME cFlag. R8 renaming this class breaks that lookup with JNI_ERR
+# at library load, since native code cannot see through obfuscation.
+-keep class app.kaihi.android.core.vpn.internal.TProxyService { *; }
