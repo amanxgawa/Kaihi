@@ -1,0 +1,26 @@
+name: PR branch name
+
+# The prefixes in CONTRIBUTING.md are checked here because repository rulesets cannot restrict
+# branch names on this plan. A head branch cannot be renamed under an open pull request, so there is
+# no `edited` trigger: fixing the name means reopening from a new branch, which runs this again.
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Branch name
+    runs-on: ubuntu-latest
+    steps:
+      # Submodules stay off (the default): this job needs one script, not the native sources.
+      - uses: actions/checkout@v4
+
+      - name: Check the branch name against the convention
+        env:
+          # Via the environment, never interpolated into the script: a branch name is
+          # attacker-controlled text on a fork PR, and `${{ }}` would paste it into the shell.
+          HEAD_REF: ${{ github.head_ref }}
+        run: bash .github/workflows/conventional-branch.sh "$HEAD_REF"
