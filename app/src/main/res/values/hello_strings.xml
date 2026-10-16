@@ -1,7 +1,7 @@
 <resources>
     <string name="hello_header_title">Your very own VPN, %1$s</string>
     <string name="hello_header_title_highlight">chaos omitted</string>
-    <string name="hello_header_subtitle">Your server. Your VPN. Kaihi just sets it up.</string>
+    <string name="hello_header_subtitle">Kaihi does the setup. The server stays yours.</string>
 
     <string name="hello_setup_title">Set up my own server</string>
     <string name="hello_setup_description">Give the app access to your server. It installs everything, sets it up, and hides your traffic from filters.</string>

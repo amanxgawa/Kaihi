@@ -1,7 +1,7 @@
 <resources>
     <string name="hello_header_title">Свой VPN, %1$s</string>
     <string name="hello_header_title_highlight">без хаоса</string>
-    <string name="hello_header_subtitle">Ваш сервер. Ваш VPN. Kaihi только настраивает его.</string>
+    <string name="hello_header_subtitle">Kaihi берёт настройку на себя. Сервер остаётся вашим.</string>
 
     <string name="hello_setup_title">Развернуть свой сервер</string>
     <string name="hello_setup_description">Дайте приложению доступ к серверу. Оно всё установит, настроит и спрячет ваш трафик от фильтров.</string>
