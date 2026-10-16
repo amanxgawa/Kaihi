@@ -1,0 +1,31 @@
+# Driven by mock-vps.sh, which also sets the root password and the adb reverse forwards.
+name: kaihi-mock-vps
+
+services:
+  vps:
+    build: .
+    image: kaihi-mock-vps
+    container_name: kaihi-mock-vps
+    hostname: mock-vps
+    restart: "no"
+
+    # systemd as PID 1 needs a writable cgroup tree and tmpfs mounts for /run. Not /tmp: Docker mounts
+    # tmpfs noexec, and the wizard runs the RealiTLScanner binary it downloads into `mktemp -d`
+    # (exit 126, "Permission denied"). Debian 12 keeps /tmp on the root filesystem anyway.
+    cgroup: host
+    cap_add: [SYS_ADMIN]
+    security_opt: ["apparmor=unconfined"]
+    tmpfs: [/run, /run/lock]
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+      - hostkeys:/var/lib/mock-vps/hostkeys
+    stop_signal: SIGRTMIN+3
+
+    # Loopback only by default: this is an SSH server that accepts a root password. Set
+    # MOCK_VPS_BIND=0.0.0.0 only to reach it from a phone over Wi-Fi, on a network you trust.
+    ports:
+      - "${MOCK_VPS_BIND:-127.0.0.1}:${MOCK_VPS_SSH_PORT:-2222}:22"
+      - "${MOCK_VPS_BIND:-127.0.0.1}:${MOCK_VPS_XRAY_PORT:-443}:443"
+
+volumes:
+  hostkeys: {}
