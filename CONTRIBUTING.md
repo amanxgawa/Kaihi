@@ -59,7 +59,9 @@ job: it is slow locally and proves nothing that CI will not.
 | `release/<X.Y>` | release stabilisation |
 | `hotfix/<X.Y>-<short-desc>` | fix on top of a released `release/X.Y` |
 
-kebab-case, English, no issue numbers.
+kebab-case, English, no issue numbers. The `Branch name` check enforces the prefix, kebab-case and
+the version on `release/` and `hotfix/`; English and issue numbers are left to review.
+[`conventional-branch.sh`](.github/workflows/conventional-branch.sh) is the source of truth.
 
 ## Commits and pull request titles
 
@@ -100,8 +102,9 @@ reason and the consequence, not a restatement of the diff.
 
 ## Pull requests
 
-`master` takes no direct pushes. Every change goes through a pull request that must pass `verify`,
-`release-build` and `Conventional Commits`, and must be up to date with `master` before merging.
+`master` takes no direct pushes and no force pushes, and the rule applies to admins too. Every
+change goes through a pull request that must pass `verify`, `release-build`, `Conventional Commits`
+and `Branch name`, and must be up to date with `master` before merging.
 
 That last rule exists because of *semantic conflicts*: two branches touching different files merge
 cleanly and still fail to compile. A green check from before the base moved proves nothing, so the
