@@ -24,6 +24,8 @@ access to.
   systemd-based distros, `/etc/init.d/kaihi-xray` (OpenRC) on Alpine.
 - A temporary copy of [RealiTLScanner](https://github.com/XTLS/RealiTLScanner/releases), used once
   during setup to find a masking domain and deleted afterward (`mktemp -d` + `trap ... EXIT`).
+- Any of `ca-certificates`, `curl`, `unzip` and `openssl` that the server lacks, installed with its
+  package manager. The "How to remove everything" steps below do not uninstall them.
 
 Nothing else is touched. Re-running the setup wizard against the same server overwrites the config
 and service unit cleanly rather than accumulating leftovers.
@@ -32,6 +34,14 @@ and service unit cleanly rather than accumulating leftovers.
 
 - **On the server**, during setup: Xray-core and RealiTLScanner release binaries from their GitHub
   Releases pages (exact versions are pinned in `InstallXrayRuntimeCommand`/`ScanSniCommand`).
+- **Also from the server**, during setup: `https://api.ipify.org`, to learn its own public IPv4
+  address so it can scan the surrounding /24 for a masking domain (`ScanSniCommand`); a few HTTPS
+  requests to each candidate masking domain it found nearby, to check it is stable
+  (`VerifySniCandidateCommand`); `https://ipinfo.io/country`, falling back to
+  `https://ifconfig.co/country-iso`, for the server's country code shown as a flag (optional; a
+  failed lookup does not fail the setup, `DetectServerCountryCommand`); and the distro's own
+  package mirrors, for the packages listed above. These requests leave from the server, so the
+  phone never tells a third party which server it uses.
 - **On your phone**, at build time (not runtime): `libv2ray.aar` from
   [2dust/AndroidLibXrayLite releases](https://github.com/2dust/AndroidLibXrayLite/releases), a
   `gomobile bind` wrapper that runs Xray-core in-process. Verified against a pinned SHA-256 before
