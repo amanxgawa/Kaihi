@@ -11,8 +11,9 @@ git clone --recurse-submodules https://github.com/amanxgawa/Kaihi.git
 ```
 
 `hev-socks5-tunnel` is a submodule, so after a plain clone run
-`git submodule update --init --recursive`. You need JDK 17, the Android NDK (SDK Manager), and
-`minSdk` 26. Open in Android Studio and run the `app` module.
+`git submodule update --init --recursive`. You need JDK 21 for the Gradle daemon (the sources
+compile to Java 17 bytecode), the Android NDK (SDK Manager), and `minSdk` 26. Open in Android
+Studio and run the `app` module.
 
 The build downloads `libv2ray.aar` and verifies it against a pinned SHA-256; a mismatch fails the
 build rather than warning. It does the same for `geosite.dat` (domain-based direct routing for a
@@ -122,9 +123,10 @@ Konsist stands in for the module boundaries the packages are written as if they 
 - Every `*Key` needs a registered `Destination<Key>`, or navigation fails at runtime instead of at
   build time.
 - `core` is effectively the data layer: a feature's `domain` uses it, and UI models stay out of it.
-  `core.security.Secret` is a data-layer type; UI state holds `core.ui.util.UiSecret` instead, and
-  the conversion happens in the state mappers.
-- `domain` never imports Compose or `core.ui`. `core` never imports `feature`.
+  `core.security.Secret` is a data-layer type; UI state holds `platform.ui.util.UiSecret` instead,
+  and the conversion happens in the state mappers.
+- `domain` imports no Compose, `platform.ui` or `platform.navigation`. `core` never imports
+  `feature`.
 
 Never hardcode a dispatcher, inject a `CoroutineDispatcher`. Flows must handle cancellation
 without swallowing `CancellationException`.
