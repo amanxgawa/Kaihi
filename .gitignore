@@ -117,6 +117,11 @@ google-services.json
 
 # Claude Code project instructions (local, not versioned)
 .claude/
+CLAUDE.local.md
+
+# Agent run logs and tasks (local, not versioned)
+.agent-logs/
+.agent-tasks/
 
 # Release signing material (see signingConfigs in app/build.gradle.kts)
 keystore.properties
