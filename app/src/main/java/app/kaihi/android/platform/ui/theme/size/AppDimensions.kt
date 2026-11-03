@@ -10,7 +10,6 @@ import androidx.compose.ui.unit.dp
 
 @Immutable
 data class AppDimensions(
-    // Spacing scale. Every step doubles, so a layout can only land on the scale or off it.
     val xs: Dp = 2.dp,
     val s: Dp = 4.dp,
     val m: Dp = 8.dp,
@@ -18,8 +17,6 @@ data class AppDimensions(
     val xl: Dp = 32.dp,
     val xxl: Dp = 64.dp,
 
-    // Sizes that are not spacing. Named by role so they stay off the scale above, which has no
-    // meaningful half-steps.
     val cornerRadius: Dp = 12.dp,
     val icon: Dp = 24.dp,
     val control: Dp = 40.dp,

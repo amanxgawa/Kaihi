@@ -42,7 +42,6 @@ internal fun DeploymentSuccessCelebration(
     val buttonAlpha = remember { Animatable(0f) }
 
     LaunchedEffect(Unit) {
-        // A stamp: down from slightly oversized and tilted to rest, no bounce.
         badgeAlpha.animateTo(1f, tween(120))
         badgeScale.animateTo(1f, tween(220, easing = FastOutSlowInEasing))
         badgeRotation.animateTo(0f, tween(220, easing = FastOutSlowInEasing))

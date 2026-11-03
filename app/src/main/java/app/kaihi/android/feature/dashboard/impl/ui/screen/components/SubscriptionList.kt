@@ -12,7 +12,6 @@ import kotlinx.collections.immutable.ImmutableList
 
 private const val SUBSCRIPTION_CONTENT_TYPE = "subscription"
 
-/** One lazy item per subscription: per-server items would pop in and out whole instead of reflowing. */
 internal fun LazyListScope.subscriptionItems(
     subscriptions: ImmutableList<SubscriptionUi>,
     onToggleExpanded: (subscriptionId: String) -> Unit,

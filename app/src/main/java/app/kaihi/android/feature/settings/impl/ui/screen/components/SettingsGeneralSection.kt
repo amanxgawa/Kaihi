@@ -13,7 +13,6 @@ import androidx.compose.ui.res.stringResource
 import app.kaihi.android.R
 import app.kaihi.android.platform.ui.theme.size.dimens
 
-// Visible in every AppMode: viewing logs isn't an expert-only action.
 @Composable
 internal fun SettingsGeneralSection(
     onViewLogsClick: () -> Unit,
