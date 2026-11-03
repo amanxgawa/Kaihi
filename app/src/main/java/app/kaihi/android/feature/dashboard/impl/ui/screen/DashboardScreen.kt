@@ -172,6 +172,9 @@ internal fun DashboardScreen(
             onMuxEnabledChanged = { enabled ->
                 viewModel.processIntent(DashboardContract.Intent.MuxEnabledChanged(details.id, enabled))
             },
+            onFragmentEnabledChanged = { enabled ->
+                viewModel.processIntent(DashboardContract.Intent.FragmentEnabledChanged(details.id, enabled))
+            },
             onMuxConcurrencyChanged = { value ->
                 viewModel.processIntent(DashboardContract.Intent.MuxConcurrencyChanged(details.id, value))
             },

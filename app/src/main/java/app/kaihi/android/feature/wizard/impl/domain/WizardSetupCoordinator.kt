@@ -63,6 +63,7 @@ internal class WizardSetupCoordinator @Inject constructor(
             ),
             deployedAtMillis = System.currentTimeMillis(),
             countryCode = draft.countryCode,
+            muxEnabled = true,
         )
         return try {
             val stored = subscriptionStore.update { subscriptions ->

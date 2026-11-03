@@ -65,6 +65,7 @@ internal class DashboardViewModel @AssistedInject constructor(
             }
             is Intent.FingerprintChanged -> coordinator.setFingerprint(intent.serverId, intent.value)
             is Intent.MuxEnabledChanged -> coordinator.setMuxEnabled(intent.serverId, intent.enabled)
+            is Intent.FragmentEnabledChanged -> coordinator.setFragmentEnabled(intent.serverId, intent.enabled)
             is Intent.MuxConcurrencyChanged -> coordinator.setMuxConcurrency(intent.serverId, intent.value)
         }
     }
