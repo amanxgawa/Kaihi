@@ -39,13 +39,14 @@ object XrayClientConfigFactory {
     private const val FAKE_DNS_POOL_SIZE = 65_535
     private const val SOCKS_CREDENTIAL_BYTES = 18
 
-    fun createRuntimeConfig(profile: XrayVpnProfile): XrayRuntimeConfig {
+    fun createRuntimeConfig(profile: XrayVpnProfile, ipv6Enabled: Boolean): XrayRuntimeConfig {
         // See SocksEndpoint for why this can't be "noauth".
         val socksCredential = generateSocksCredential()
         return XrayRuntimeConfig(
-            rawJson = build(profile, socksCredential).toJson(),
+            rawJson = build(profile, socksCredential, ipv6Enabled).toJson(),
             socksEndpoint = SocksEndpoint(LOOPBACK, SOCKS_PORT, socksCredential.user, socksCredential.pass),
             serverId = profile.id,
+            ipv6Enabled = ipv6Enabled,
         )
     }
 
@@ -53,9 +54,14 @@ object XrayClientConfigFactory {
      * The config [createRuntimeConfig] would run, for previewing or testing the generated JSON
      * without threading a throwaway SOCKS credential through.
      */
-    fun build(profile: XrayVpnProfile): XrayConfig = build(profile, generateSocksCredential())
+    fun build(profile: XrayVpnProfile, ipv6Enabled: Boolean = false): XrayConfig =
+        build(profile, generateSocksCredential(), ipv6Enabled)
 
-    private fun build(profile: XrayVpnProfile, socksCredential: SocksCredential): XrayConfig {
+    private fun build(
+        profile: XrayVpnProfile,
+        socksCredential: SocksCredential,
+        ipv6Enabled: Boolean,
+    ): XrayConfig {
         val proxyOutbound = OutboundObject(
             protocol = "vless",
             tag = PROXY_OUTBOUND_TAG,
@@ -109,6 +115,7 @@ object XrayClientConfigFactory {
             routing = XrayRoutingFactory.build(
                 socksInboundTag = SOCKS_IN_TAG,
                 proxyOutboundTag = PROXY_OUTBOUND_TAG,
+                ipv6Enabled = ipv6Enabled,
             ),
             // Gives xray's own accounting a health signal for the stuck-dial failure mode
             // (XTLS/Xray-core#6590). See XrayHealthWatchdog for the actual detection.

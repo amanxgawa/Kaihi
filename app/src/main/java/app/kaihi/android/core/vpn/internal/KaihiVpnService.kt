@@ -123,9 +123,9 @@ internal class KaihiVpnService : VpnService() {
                     teardown()
                     telemetry.stopping()
                     telemetry.starting()
-                    val establishedTun = establishTun()
+                    val establishedTun = establishTun(config.ipv6Enabled)
                     try {
-                        hevSocks5Tunnel.start(establishedTun, config.socksEndpoint)
+                        hevSocks5Tunnel.start(establishedTun, config.socksEndpoint, config.ipv6Enabled)
                     } catch (error: Throwable) {
                         establishedTun.close()
                         throw error
@@ -215,13 +215,19 @@ internal class KaihiVpnService : VpnService() {
             runCatching { XrayJson.default.decodeFromString<XrayRuntimeConfig>(payload) }.getOrNull()
         }
 
-    private fun establishTun(): ParcelFileDescriptor = checkNotNull(
+    private fun establishTun(ipv6Enabled: Boolean): ParcelFileDescriptor = checkNotNull(
         Builder()
             .addAddress(VpnTunnelDefaults.VPN_ADDRESS, VpnTunnelDefaults.VPN_PREFIX_LENGTH)
             .addRoute("0.0.0.0", 0)
-            // No IPv6 address or route on the interface, so apps see no IPv6 path at all and go
-            // straight to IPv4 instead of dialing out, timing out, then falling back. xray's own
-            // routing still blackholes ::/0 from the socks inbound as defense in depth regardless.
+            // By default there is no IPv6 address or route, so apps go straight to IPv4 instead
+            // of timing out before falling back. Xray also blackholes ::/0 as defense in depth
+            // unless the user opted in to carrying IPv6 through the tunnel.
+            .apply {
+                if (ipv6Enabled) {
+                    addAddress(VpnTunnelDefaults.VPN_ADDRESS_V6, VpnTunnelDefaults.VPN_PREFIX_LENGTH_V6)
+                    addRoute("::", 0)
+                }
+            }
             .addDnsServer("1.1.1.1")
             .addDisallowedApplication(packageName)
             .setMtu(VpnTunnelDefaults.VPN_MTU)

@@ -2,31 +2,37 @@ package app.kaihi.android.core.vpn
 
 import app.kaihi.android.core.vpn.configfactory.XrayClientConfigFactory
 import app.kaihi.android.core.vpn.spec.XraySecurity
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class XrayRuntimeConfigFactoryTest {
+    private fun profile() = XrayVpnProfile(
+        id = "server-1",
+        name = "test",
+        sshHost = "ssh.example",
+        sshPort = 22,
+        sshUsername = "root",
+        serverAddress = "proxy.example",
+        serverPort = 443,
+        uuid = "123e4567-e89b-12d3-a456-426614174000",
+        security = XraySecurity.Reality(
+            serverName = "www.example.com",
+            publicKey = "public-key",
+            shortId = "abcd",
+        ),
+        deployedAtMillis = 0L,
+    )
+
     @Test
     fun `creates a local SOCKS endpoint`() {
-        val profile = XrayVpnProfile(
-            id = "server-1",
-            name = "test",
-            sshHost = "ssh.example",
-            sshPort = 22,
-            sshUsername = "root",
-            serverAddress = "proxy.example",
-            serverPort = 443,
-            uuid = "123e4567-e89b-12d3-a456-426614174000",
-            security = XraySecurity.Reality(
-                serverName = "www.example.com",
-                publicKey = "public-key",
-                shortId = "abcd",
-            ),
-            deployedAtMillis = 0L,
-        )
+        val config = XrayClientConfigFactory.createRuntimeConfig(profile(), ipv6Enabled = false)
 
-        val config = XrayClientConfigFactory.createRuntimeConfig(profile)
-
+        assertFalse(config.ipv6Enabled)
         assertTrue(config.rawJson.contains("\"protocol\":\"vless\""))
         assertTrue(config.rawJson.contains("proxy.example"))
         assertTrue(config.rawJson.contains("\"method\":\"xhttp\""))
@@ -39,5 +45,45 @@ class XrayRuntimeConfigFactoryTest {
         assertTrue(config.socksEndpoint.password != null)
         assertTrue(config.rawJson.contains("\"auth\":\"password\""))
         assertTrue(config.rawJson.contains(config.socksEndpoint.password!!))
+    }
+
+    @Test
+    fun `IPv6 enabled runtime config carries its choice and lifts the IPv6 blackhole`() {
+        val config = XrayClientConfigFactory.createRuntimeConfig(profile(), ipv6Enabled = true)
+        val rules = XrayJson.default.parseToJsonElement(config.rawJson).jsonObject
+            .getValue("routing").jsonObject.getValue("rules").jsonArray.map { it.jsonObject }
+
+        assertTrue(config.ipv6Enabled)
+        assertEquals(5, rules.size)
+        assertFalse(rules.any { it["ip"]?.jsonArray?.any { ip -> ip.jsonPrimitive.content == "::/0" } == true })
+
+        // Restart intents serialize the whole config, preserving the session's original choice.
+        val restarted = XrayJson.default.decodeFromString<XrayRuntimeConfig>(XrayJson.default.encodeToString(config))
+        assertEquals(config, restarted)
+        assertTrue(restarted.ipv6Enabled)
+    }
+
+    @Test
+    fun `restart payload without an IPv6 choice defaults to disabled`() {
+        val payload = """
+            {
+              "rawJson": "{}",
+              "socksEndpoint": {
+                "host": "127.0.0.1",
+                "port": 10808,
+                "username": "kaihi",
+                "password": "secret"
+              },
+              "statusIntervalMillis": 1000,
+              "serverId": "server-1"
+            }
+        """.trimIndent()
+
+        val config = XrayJson.default.decodeFromString<XrayRuntimeConfig>(payload)
+
+        assertFalse(config.ipv6Enabled)
+        assertEquals("server-1", config.serverId)
+        assertEquals(SocksEndpoint("127.0.0.1", 10_808, "kaihi", "secret"), config.socksEndpoint)
+        assertFalse(XrayJson.default.encodeToString(config).contains("ipv6Enabled"))
     }
 }

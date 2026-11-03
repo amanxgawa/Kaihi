@@ -22,6 +22,7 @@ import app.kaihi.android.feature.settings.impl.ui.mvi.SettingsContract
 import app.kaihi.android.feature.settings.impl.ui.mvi.SettingsViewModel
 import app.kaihi.android.feature.settings.impl.ui.screen.components.SettingsDangerZoneSection
 import app.kaihi.android.feature.settings.impl.ui.screen.components.SettingsGeneralSection
+import app.kaihi.android.feature.settings.impl.ui.screen.components.SettingsNetworkSection
 import app.kaihi.android.platform.mode.AppMode
 import app.kaihi.android.platform.ui.theme.size.dimens
 import app.kaihi.android.platform.ui.util.CollectAsEffect
@@ -48,6 +49,9 @@ internal fun SettingsScreen(
         onAdvancedModeToggled = { enabled ->
             viewModel.processIntent(SettingsContract.Intent.AdvancedModeToggled(enabled))
         },
+        onIpv6Toggled = { enabled ->
+            viewModel.processIntent(SettingsContract.Intent.Ipv6Toggled(enabled))
+        },
         modifier = modifier,
     )
 }
@@ -57,9 +61,11 @@ private fun SettingsContent(
     state: SettingsContract.State,
     onViewLogsClick: () -> Unit,
     onAdvancedModeToggled: (Boolean) -> Unit,
+    onIpv6Toggled: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val dimens = MaterialTheme.dimens
+    val advancedModeEnabled = state.mode == AppMode.ADVANCED
 
     Column(
         modifier = modifier
@@ -77,8 +83,15 @@ private fun SettingsContent(
 
         SettingsGeneralSection(onViewLogsClick = onViewLogsClick)
 
+        if (advancedModeEnabled) {
+            SettingsNetworkSection(
+                ipv6Enabled = state.ipv6Enabled,
+                onIpv6Toggled = onIpv6Toggled,
+            )
+        }
+
         SettingsDangerZoneSection(
-            advancedModeEnabled = state.mode == AppMode.ADVANCED,
+            advancedModeEnabled = advancedModeEnabled,
             onAdvancedModeToggled = onAdvancedModeToggled,
         )
     }

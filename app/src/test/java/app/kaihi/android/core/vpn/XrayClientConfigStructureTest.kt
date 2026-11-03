@@ -75,6 +75,64 @@ class XrayClientConfigStructureTest {
         assertEquals("tcp,udp", rules[5].getValue("network").jsonPrimitive.content)
     }
 
+    @Test
+    fun `IPv6 opt-in removes only its blackhole and keeps the catch-all last`() {
+        val rules = config(ipv6Enabled = true).routing().getValue("rules").jsonArray.map { it.jsonObject }
+
+        assertEquals(5, rules.size)
+        assertFalse(
+            "no rule may blackhole all IPv6 after opt-in",
+            rules.any { rule -> rule["ip"]?.jsonArray?.any { it.jsonPrimitive.content == "::/0" } == true },
+        )
+        assertTrue(
+            "UDP/443 must remain blocked",
+            rules.any {
+                it.outboundTag() == "block" &&
+                    it["network"]?.jsonPrimitive?.content == "udp" &&
+                    it["port"]?.jsonPrimitive?.content == "443"
+            },
+        )
+        assertEquals("balancer_proxy", rules.last().getValue("balancerTag").jsonPrimitive.content)
+        assertEquals("tcp,udp", rules.last().getValue("network").jsonPrimitive.content)
+        assertNull(rules.last()["outboundTag"])
+
+        assertEquals("dns-out", rules[0].outboundTag())
+        assertEquals("udp", rules[0].getValue("network").jsonPrimitive.content)
+        assertEquals(53, rules[0].getValue("port").jsonPrimitive.content.toInt())
+        assertEquals("direct", rules[2].outboundTag())
+        assertEquals(
+            listOf("geosite:category-ru", "geosite:cn", "geosite:category-ir", "geosite:category-tm"),
+            rules[2].getValue("domain").jsonArray.map { it.jsonPrimitive.content },
+        )
+        assertEquals("direct", rules[3].outboundTag())
+        assertEquals(
+            listOf("geoip:ru", "geoip:by", "geoip:ir", "geoip:cn", "geoip:tm"),
+            rules[3].getValue("ip").jsonArray.map { it.jsonPrimitive.content },
+        )
+    }
+
+    @Test
+    fun `explicitly disabling IPv6 keeps the blackhole from the socks inbound`() {
+        val rules = config(ipv6Enabled = false).routing().getValue("rules").jsonArray.map { it.jsonObject }
+        val blackhole = rules.single { it["ip"]?.jsonArray?.any { ip -> ip.jsonPrimitive.content == "::/0" } == true }
+
+        assertEquals("block", blackhole.outboundTag())
+        assertEquals(listOf("socks-in"), blackhole.getValue("inboundTag").jsonArray.map { it.jsonPrimitive.content })
+    }
+
+    @Test
+    fun `IPv6 opt-in keeps FakeDNS IPv4 only and the socks inbound authenticated`() {
+        val config = config(ipv6Enabled = true)
+        val fakeDns = config.getValue("fakedns").jsonArray.single().jsonObject
+        val socksSettings = config.getValue("inbounds").jsonArray.single().jsonObject.getValue("settings").jsonObject
+        val account = socksSettings.getValue("accounts").jsonArray.single().jsonObject
+
+        assertEquals("198.18.0.0/15", fakeDns.getValue("ipPool").jsonPrimitive.content)
+        assertEquals("password", socksSettings.getValue("auth").jsonPrimitive.content)
+        assertTrue(account.getValue("user").jsonPrimitive.content.isNotEmpty())
+        assertTrue(account.getValue("pass").jsonPrimitive.content.isNotEmpty())
+    }
+
     /** Second line of defence behind the TUN exposing no IPv6 path at all. */
     @Test
     fun `the IPv6 blackhole is matched before the catch-all`() {
@@ -126,8 +184,8 @@ class XrayClientConfigStructureTest {
     /** Every app on the device can reach 127.0.0.1, and a constant credential would be no better than none. */
     @Test
     fun `the socks inbound requires a freshly generated credential`() {
-        val first = XrayClientConfigFactory.createRuntimeConfig(profile())
-        val second = XrayClientConfigFactory.createRuntimeConfig(profile())
+        val first = XrayClientConfigFactory.createRuntimeConfig(profile(), ipv6Enabled = false)
+        val second = XrayClientConfigFactory.createRuntimeConfig(profile(), ipv6Enabled = false)
 
         assertNotEquals(first.socksEndpoint.password, second.socksEndpoint.password)
 
@@ -171,8 +229,10 @@ class XrayClientConfigStructureTest {
         deployedAtMillis = 0L,
     )
 
-    private fun config(transport: XrayTransport = XrayTransport.Xhttp()): JsonObject =
-        Json.parseToJsonElement(XrayClientConfigFactory.build(profile(transport)).toJson()).jsonObject
+    private fun config(
+        transport: XrayTransport = XrayTransport.Xhttp(),
+        ipv6Enabled: Boolean = false,
+    ): JsonObject = Json.parseToJsonElement(XrayClientConfigFactory.build(profile(transport), ipv6Enabled).toJson()).jsonObject
 
     private fun JsonObject.routing(): JsonObject = getValue("routing").jsonObject
 

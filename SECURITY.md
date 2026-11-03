@@ -88,8 +88,9 @@ Stated because knowing them may change how you use this, not because they are op
   anywhere you could compare it against. When it is not available, the meaningful check is whether
   the connection details reached you from a source you trust, not the hex string itself.
 - **IPv6 is disabled by default.** Partly to avoid the leak of an unproxied path, partly because a
-  dual-stack fingerprint is itself something DPI can key on. This is a current default rather than
-  a permanent property; it is intended to become configurable.
+  dual-stack fingerprint is itself something DPI can key on. Advanced mode has a Settings option,
+  off by default, to route IPv6 through the tunnel on the next connect. When enabled, the TUN gets
+  an IPv6 route so IPv6 still cannot bypass the tunnel, and the client's `::/0` blackhole is lifted.
 
 ## A note for users at risk
 

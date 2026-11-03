@@ -17,9 +17,9 @@ internal class HevSocks5Tunnel @Inject constructor(
     // Deleted in stop(), not at the end of start(): native_start_service returns as soon as its
     // worker thread is spawned, and that worker reads the config afterwards. native_stop_service
     // joins the thread, so stop() is the first point where nothing can still be reading the file.
-    fun start(tunInterface: ParcelFileDescriptor, socksEndpoint: SocksEndpoint) {
+    fun start(tunInterface: ParcelFileDescriptor, socksEndpoint: SocksEndpoint, ipv6Enabled: Boolean) {
         check(!TProxyService.TProxyIsRunning()) { "hev SOCKS5 tunnel is already running." }
-        val configFile = writeConfig(socksEndpoint)
+        val configFile = writeConfig(socksEndpoint, ipv6Enabled)
         check(TProxyService.TProxyStartService(configFile.absolutePath, tunInterface.fd)) {
             "Unable to start hev SOCKS5 tunnel."
         }
@@ -38,10 +38,10 @@ internal class HevSocks5Tunnel @Inject constructor(
 
     private fun configFile(): File = File(context.filesDir, CONFIG_RELATIVE_PATH)
 
-    private fun writeConfig(socksEndpoint: SocksEndpoint): File =
+    private fun writeConfig(socksEndpoint: SocksEndpoint, ipv6Enabled: Boolean): File =
         configFile().also { file ->
             file.parentFile?.mkdirs()
-            file.writeText(HevTunnelConfigFactory.build(socksEndpoint))
+            file.writeText(HevTunnelConfigFactory.build(socksEndpoint, ipv6Enabled))
         }
 
     private companion object {
