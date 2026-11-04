@@ -9,9 +9,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import app.kaihi.android.R
 
-// Settings, and Advanced mode inside it, is deliberately not linked from here: with no server set
-// up there is nothing in it to see, and surfacing "advanced mode" before someone has connected once
-// reads as a hidden, more-powerful option. Reachable from Dashboard once a server exists.
 @Composable
 internal fun HelloBottomActions(
     onViewSourceCodeClick: () -> Unit,

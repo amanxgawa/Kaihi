@@ -4,7 +4,6 @@ import app.kaihi.android.core.vpn.XrayVpnProfile
 import app.kaihi.android.core.vpn.spec.XraySecurity
 import app.kaihi.android.core.vpn.spec.XrayTransport
 
-// Protocol names, not prose: identical in every locale.
 internal fun XrayVpnProfile.stackLabel(): String = listOfNotNull(
     "VLESS",
     when (transport) {

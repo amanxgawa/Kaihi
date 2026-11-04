@@ -175,5 +175,4 @@ internal class DeployXrayServerUseCase @Inject constructor() {
     }
 }
 
-/** Ends the deployment flow after a step has reported its own failure. */
 private class StepAborted(cause: Throwable) : Exception(cause)

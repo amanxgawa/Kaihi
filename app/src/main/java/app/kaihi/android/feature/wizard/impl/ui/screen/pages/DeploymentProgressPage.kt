@@ -97,8 +97,6 @@ private fun DeploymentInProgressContent(
 
         AnimatedVisibility(
             visible = deployment.phase is DeploymentPhase.Failed,
-            // A reveal clips to its animated height; rounding it keeps the banner's own corners intact
-            // instead of squaring them off while it grows.
             modifier = Modifier.clip(MaterialTheme.shapes.large),
             enter = fadeIn() + expandVertically(),
             exit = fadeOut() + shrinkVertically(),

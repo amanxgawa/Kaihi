@@ -4,7 +4,6 @@ import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.spring
 
 // Material 3's standard motion scheme, spelled out because material3 1.4 keeps MotionScheme internal:
-// spatial for anything that moves or resizes, effects for colour and opacity.
 
 private const val SPATIAL_DAMPING_RATIO = 0.9f
 private const val SPATIAL_STIFFNESS = 700f

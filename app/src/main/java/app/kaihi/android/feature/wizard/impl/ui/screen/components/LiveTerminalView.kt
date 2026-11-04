@@ -89,7 +89,6 @@ internal fun LiveTerminalView(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            // Clipped to the button's own pill, so a changing label never squares its ends off.
             TextButton(
                 onClick = onToggleExpanded,
                 modifier = Modifier
@@ -186,8 +185,6 @@ private fun IdlePlaceholder(message: String, modifier: Modifier = Modifier) {
                         .graphicsLayer { translationY = -bounce * IDLE_BOUNCE_PX },
                 )
             }
-            // SizeTransform eases the text block, and the mark above it, between messages of
-            // different length instead of snapping to the new height.
             AnimatedContent(
                 targetState = message,
                 transitionSpec = { (fadeIn() togetherWith fadeOut()).using(SizeTransform(clip = false)) },

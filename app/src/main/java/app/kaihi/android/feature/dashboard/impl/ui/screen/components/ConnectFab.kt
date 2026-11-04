@@ -22,7 +22,6 @@ import app.kaihi.android.feature.dashboard.impl.ui.mvi.isConnected
 import app.kaihi.android.platform.ui.icons.KaihiIcons
 import app.kaihi.android.platform.ui.theme.size.dimens
 
-/** Height of [ConnectFab] plus the margin the Scaffold leaves around it. */
 internal val connectFabClearance: Dp
     @Composable get() = with(MaterialTheme.dimens) { xxl + l + m }
 
@@ -33,7 +32,6 @@ internal fun ConnectFab(
     modifier: Modifier = Modifier,
 ) {
     val dimens = MaterialTheme.dimens
-    // The toggle's surfaceContainerHigh would barely separate from the rows scrolling underneath.
     val containerColor = if (state.isConnected) {
         MaterialTheme.colorScheme.primary
     } else {
@@ -42,7 +40,6 @@ internal fun ConnectFab(
 
     ExtendedFloatingActionButton(
         onClick = { if (!state.isBusy) onClick() },
-        // Clipped to the FAB's own shape, so the pill keeps its rounded ends while the label's width changes.
         modifier = modifier
             .clip(FloatingActionButtonDefaults.extendedFabShape)
             .animateContentSize(animationSpec = dashboardSpatialSpec()),

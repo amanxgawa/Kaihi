@@ -215,7 +215,6 @@ internal fun WizardScreen(
     )
 }
 
-/** The three ways a host key can stop a connection, as one dialog: they differ only in copy. */
 @Composable
 private fun HostKeyDialog(
     state: ConnectionCheckState,

@@ -20,7 +20,6 @@ import app.kaihi.android.R
 import app.kaihi.android.platform.ui.icons.KaihiIcons
 import app.kaihi.android.platform.ui.theme.size.dimens
 
-/** The group's last segment: a named action, where a bare + in the header said nothing about what it adds. */
 @Composable
 internal fun AddServerRow(
     shape: Shape,
@@ -43,7 +42,6 @@ internal fun AddServerRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(dimens.l),
         ) {
-            // Same slot width as a server's flag, so the label lines up with the server names above it.
             Box(modifier = Modifier.size(dimens.control), contentAlignment = Alignment.Center) {
                 Icon(imageVector = KaihiIcons.Outlined.Add, contentDescription = null)
             }

@@ -79,7 +79,6 @@ internal fun rememberIsConnectionToggleScrolledAway(listState: LazyListState): S
 @Composable
 private fun ColumnScope.SlowTransitionHint(state: DashboardContract.State) {
     val dimens = MaterialTheme.dimens
-    // Reset on every engine state change, so the hint folds away as soon as the transition it describes ends.
     var isSlow by remember(state.engineState) { mutableStateOf(false) }
     LaunchedEffect(state.engineState) {
         if (state.isBusy) {

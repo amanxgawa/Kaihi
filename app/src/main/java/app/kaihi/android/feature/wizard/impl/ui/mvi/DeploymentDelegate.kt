@@ -18,8 +18,6 @@ internal class DeploymentDelegate @Inject constructor(
     private var job: Job? = null
 
     fun start() {
-        // Both used to leave the user on a deployment page that never started. Neither is
-        // recoverable from here, so say so on the page itself.
         if (currentState.setupStrategy != WizardContract.SetupStrategy.FAST_START) {
             failBeforeStarting(R.string.wizard_error_strategy_unsupported)
             return

@@ -115,7 +115,6 @@ internal fun DashboardScreen(
 
     Scaffold(
         modifier = modifier,
-        // Unlike the default system bars, safeDrawing also keeps the list clear of a display cutout.
         contentWindowInsets = WindowInsets.safeDrawing,
         topBar = {
             TopAppBar(
@@ -137,7 +136,6 @@ internal fun DashboardScreen(
             )
         },
         floatingActionButton = {
-            // The toggle at the top of the list and this FAB are the same control; exactly one is on screen.
             AnimatedVisibility(
                 visible = isToggleScrolledAway && state.subscriptions.isNotEmpty(),
                 enter = scaleIn() + fadeIn(),
@@ -205,7 +203,6 @@ private fun DashboardContent(
             start = innerPadding.calculateStartPadding(layoutDirection) + dimens.l,
             end = innerPadding.calculateEndPadding(layoutDirection) + dimens.l,
             top = innerPadding.calculateTopPadding(),
-            // Room for the FAB, so the last row can scroll clear of it.
             bottom = innerPadding.calculateBottomPadding() + connectFabClearance,
         ),
     ) {

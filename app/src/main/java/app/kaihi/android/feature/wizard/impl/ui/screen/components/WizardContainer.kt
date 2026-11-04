@@ -293,7 +293,6 @@ private fun WizardBottomBar(
                 modifier = Modifier
                     .align(Alignment.Center)
                     .fillMaxWidth(0.5f)
-                    // Clipped to the button's own shape, so swapping label for spinner never squares its ends.
                     .clip(ButtonDefaults.shape)
                     .animateContentSize()
             ) {

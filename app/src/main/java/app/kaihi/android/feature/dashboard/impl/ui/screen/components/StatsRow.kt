@@ -53,9 +53,6 @@ internal fun StatsRow(
     }
 }
 
-// Each card reveals behind its own rounded clip: one clip across the row would leave the middle card's
-// corners sawn off square while the row grows.
-// Plain String, not UiText: file-local literal labels + formatted numbers, no reuse.
 @Composable
 private fun StatCard(visible: Boolean, label: String, value: String, modifier: Modifier = Modifier) {
     val dimens = MaterialTheme.dimens
@@ -79,7 +76,6 @@ private fun StatCardContent(label: String, value: String) {
 
     Column(
         modifier = Modifier
-            // Its own top spacing, so the gap above the cards appears and disappears with them.
             .padding(top = dimens.xl)
             .clip(RoundedCornerShape(dimens.cornerRadius))
             .background(MaterialTheme.colorScheme.surfaceContainerLow)

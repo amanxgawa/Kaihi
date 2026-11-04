@@ -175,8 +175,6 @@ internal fun StrategyCard(
                 if (badgeText != null) {
                     StatusBadge(
                         text = badgeText,
-                        // "Recommended" is a positive nudge and "Soon" is a neutral status.
-                        // Same component; the tint is what tells them apart.
                         containerColor = if (enabled) {
                             MaterialTheme.colorScheme.primaryContainer
                         } else {

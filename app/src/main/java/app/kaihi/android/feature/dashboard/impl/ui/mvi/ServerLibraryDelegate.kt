@@ -29,7 +29,6 @@ internal class ServerLibraryDelegate @Inject constructor(
                     copy(
                         isLibraryLoaded = true,
                         subscriptions = latest.toSubscriptionsUi(),
-                        // An open sheet follows edits to its subject and closes once that subject is gone.
                         serverDetails = serverDetails?.let { latest.subscriptions.findServer(it.id)?.toDetailsUi() },
                         subscriptionEditor = subscriptionEditor?.takeIf { latest.subscriptions.findSubscription(it.id) != null },
                     )
