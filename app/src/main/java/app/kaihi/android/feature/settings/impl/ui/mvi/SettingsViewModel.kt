@@ -1,6 +1,7 @@
 package app.kaihi.android.feature.settings.impl.ui.mvi
 
 import androidx.compose.runtime.Stable
+import app.kaihi.android.core.vpn.VpnPreferences
 import app.kaihi.android.platform.mode.AppMode
 import app.kaihi.android.platform.mode.AppModeRepository
 import app.kaihi.android.platform.ui.mvi.MviViewModel
@@ -13,13 +14,21 @@ import kotlinx.coroutines.flow.onEach
 @HiltViewModel
 internal class SettingsViewModel @Inject constructor(
     private val appModeRepository: AppModeRepository,
+    private val vpnPreferences: VpnPreferences,
 ) : MviViewModel<SettingsContract.State, SettingsContract.Intent, SettingsContract.Effect>(
-    SettingsContract.State(mode = appModeRepository.mode.value)
+    SettingsContract.State(
+        mode = appModeRepository.mode.value,
+        ipv6Enabled = vpnPreferences.ipv6Enabled.value,
+    )
 ) {
 
     init {
         appModeRepository.mode
             .onEach { mode -> reduce { copy(mode = mode) } }
+            .launchIn(scope)
+
+        vpnPreferences.ipv6Enabled
+            .onEach { enabled -> reduce { copy(ipv6Enabled = enabled) } }
             .launchIn(scope)
     }
 
@@ -31,6 +40,7 @@ internal class SettingsViewModel @Inject constructor(
                 appModeRepository.setMode(AppMode.NORMAL)
             }
 
+            is SettingsContract.Intent.Ipv6Toggled -> vpnPreferences.setIpv6Enabled(intent.enabled)
             SettingsContract.Intent.ViewLogsRequested -> sendEffect(SettingsContract.Effect.NavigateToLogs)
         }
     }
