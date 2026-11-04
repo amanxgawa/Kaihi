@@ -6,10 +6,12 @@ internal object SettingsContract {
 
     data class State(
         val mode: AppMode = AppMode.NORMAL,
+        val ipv6Enabled: Boolean = false,
     )
 
     sealed interface Intent {
         data class AdvancedModeToggled(val enabled: Boolean) : Intent
+        data class Ipv6Toggled(val enabled: Boolean) : Intent
         data object ViewLogsRequested : Intent
     }
 

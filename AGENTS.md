@@ -98,7 +98,8 @@ module, Screen). Reference test: `StoredAppModeRepositoryTest`.
 - Rename or move `core/vpn/internal/TProxyService` or its package: native code binds to it by name
   (`-DPKGNAME` in `app/build.gradle.kts`, keep rule in `app/src/main/keepRules/rules.keep`).
 - Persist SSH passwords or keys. Store a host fingerprint only after authentication succeeds.
-- Drop the SOCKS credentials or the blackhole rules (`::/0`, UDP/443) from the client Xray config.
+- Drop the SOCKS credentials or the UDP/443 blackhole from the client Xray config. Omit the `::/0`
+  blackhole only when the user's IPv6 setting (`VpnPreferences`) is on; keep it when off.
 - Read, print or commit `keystore.properties`, `local.properties` or any `*.jks`.
 - Run `./gradlew regenerateGeoipDat` (maintainer-only, needs Go and network) or
   `./gradlew assembleRelease` (CI's job).

@@ -14,7 +14,7 @@ class HevTunnelConfigFactoryTest {
     fun `credentials nest under socks5, not at top level`() {
         val endpoint = SocksEndpoint("127.0.0.1", 10_808, "kaihi", "secret")
 
-        val lines = HevTunnelConfigFactory.build(endpoint).lines()
+        val lines = HevTunnelConfigFactory.build(endpoint, ipv6Enabled = false).lines()
         val socks5Index = lines.indexOf("socks5:")
         val usernameIndex = lines.indexOfFirst { it.trimStart().startsWith("username:") }
         val passwordIndex = lines.indexOfFirst { it.trimStart().startsWith("password:") }
@@ -29,7 +29,7 @@ class HevTunnelConfigFactoryTest {
     fun `an embedded single quote in a credential is doubled, not left to close the scalar early`() {
         val endpoint = SocksEndpoint("127.0.0.1", 10_808, "nuke'michi", "sec'ret")
 
-        val lines = HevTunnelConfigFactory.build(endpoint).lines()
+        val lines = HevTunnelConfigFactory.build(endpoint, ipv6Enabled = false).lines()
 
         assertEquals("  username: 'nuke''michi'", lines.first { it.trimStart().startsWith("username:") })
         assertEquals("  password: 'sec''ret'", lines.first { it.trimStart().startsWith("password:") })
@@ -39,9 +39,61 @@ class HevTunnelConfigFactoryTest {
     fun `no credentials means no auth lines at all`() {
         val endpoint = SocksEndpoint("127.0.0.1", 10_808)
 
-        val config = HevTunnelConfigFactory.build(endpoint)
+        val config = HevTunnelConfigFactory.build(endpoint, ipv6Enabled = false)
 
         assertFalse(config.contains("username"))
         assertFalse(config.contains("password"))
+    }
+
+    @Test
+    fun `IPv6 disabled preserves the original IPv4 config byte for byte`() {
+        val endpoint = SocksEndpoint("127.0.0.1", 10_808, "kaihi", "secret")
+
+        val config = HevTunnelConfigFactory.build(endpoint, ipv6Enabled = false)
+
+        assertEquals(
+            """
+            tunnel:
+              name: kaihi
+              mtu: 1500
+              ipv4: 10.8.0.2
+            socks5:
+              address: 127.0.0.1
+              port: 10808
+              udp: 'udp'
+              username: 'kaihi'
+              password: 'secret'
+            misc:
+              log-level: warn
+            """.trimIndent(),
+            config,
+        )
+        assertFalse(config.contains("ipv6:"))
+    }
+
+    @Test
+    fun `IPv6 enabled adds the quoted ULA immediately after the IPv4 address`() {
+        val endpoint = SocksEndpoint("127.0.0.1", 10_808, "kaihi", "secret")
+
+        val config = HevTunnelConfigFactory.build(endpoint, ipv6Enabled = true)
+
+        assertEquals(
+            """
+            tunnel:
+              name: kaihi
+              mtu: 1500
+              ipv4: 10.8.0.2
+              ipv6: 'fd00:6b61:6968::2'
+            socks5:
+              address: 127.0.0.1
+              port: 10808
+              udp: 'udp'
+              username: 'kaihi'
+              password: 'secret'
+            misc:
+              log-level: warn
+            """.trimIndent(),
+            config,
+        )
     }
 }

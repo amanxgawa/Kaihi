@@ -5,6 +5,7 @@ import app.kaihi.android.R
 import app.kaihi.android.core.storage.AppStorage
 import app.kaihi.android.core.storage.ExperienceKeys
 import app.kaihi.android.core.storage.StorageDomain
+import app.kaihi.android.core.vpn.VpnPreferences
 import app.kaihi.android.core.vpn.XrayControl
 import app.kaihi.android.core.vpn.XrayVpnProfile
 import app.kaihi.android.core.vpn.configfactory.XrayClientConfigFactory
@@ -29,6 +30,7 @@ internal class WizardViewModel @AssistedInject constructor(
     @Assisted private val targetSubscriptionId: String?,
     private val coordinator: WizardSetupCoordinator,
     private val xrayControl: XrayControl,
+    private val vpnPreferences: VpnPreferences,
     private val appStorage: AppStorage,
     private val appModeRepository: AppModeRepository,
     private val connectionCheckDelegate: ConnectionCheckDelegate,
@@ -105,7 +107,10 @@ internal class WizardViewModel @AssistedInject constructor(
                 return
             }
         reduce { copy(isLoading = true, errorMessage = null) }
-        processStartResult(profile, xrayControl.start(XrayClientConfigFactory.createRuntimeConfig(profile)))
+        processStartResult(
+            profile,
+            xrayControl.start(XrayClientConfigFactory.createRuntimeConfig(profile, vpnPreferences.ipv6Enabled.value)),
+        )
     }
 
     private fun processStartResult(profile: XrayVpnProfile, result: Result<Unit>) {

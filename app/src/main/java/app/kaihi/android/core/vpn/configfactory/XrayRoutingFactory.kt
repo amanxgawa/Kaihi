@@ -9,9 +9,9 @@ import app.kaihi.android.core.vpn.spec.StrategySettingsObject
 internal object XrayRoutingFactory {
     private const val PROXY_BALANCER_TAG = "balancer_proxy"
 
-    fun build(socksInboundTag: String, proxyOutboundTag: String): RoutingObject = RoutingObject(
+    fun build(socksInboundTag: String, proxyOutboundTag: String, ipv6Enabled: Boolean): RoutingObject = RoutingObject(
         domainStrategy = "IPIfNonMatch",
-        rules = listOf(
+        rules = listOfNotNull(
             RuleObject(
                 type = "field",
                 inboundTag = listOf(socksInboundTag),
@@ -19,7 +19,8 @@ internal object XrayRoutingFactory {
                 network = "udp",
                 outboundTag = "dns-out",
             ),
-            RuleObject(
+            // Lift the IPv6 blackhole only when the user has opted in.
+            if (ipv6Enabled) null else RuleObject(
                 type = "field",
                 inboundTag = listOf(socksInboundTag),
                 ip = listOf("::/0"),

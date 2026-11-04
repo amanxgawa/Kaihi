@@ -3,6 +3,7 @@ package app.kaihi.android.feature.dashboard.impl.ui.mvi
 import android.content.Context
 import android.net.VpnService
 import app.kaihi.android.R
+import app.kaihi.android.core.vpn.VpnPreferences
 import app.kaihi.android.core.vpn.XrayEngineState
 import app.kaihi.android.core.vpn.XrayServiceProvider
 import app.kaihi.android.core.vpn.XrayVpnProfile
@@ -21,6 +22,7 @@ import timber.log.Timber
 internal class ConnectionDelegate @Inject constructor(
     @ApplicationContext private val appContext: Context,
     private val serviceProvider: XrayServiceProvider,
+    private val vpnPreferences: VpnPreferences,
     private val coordinator: ServerLibraryCoordinator,
 ) : ViewModelDelegate<DashboardContract.State, DashboardContract.Effect>() {
 
@@ -129,7 +131,9 @@ internal class ConnectionDelegate @Inject constructor(
 
     /** Only whether the start reached the service; the session itself is confirmed later over IPC. */
     private suspend fun start(server: XrayVpnProfile, stateOnDispatchFailure: XrayEngineState): Boolean =
-        serviceProvider.control.start(XrayClientConfigFactory.createRuntimeConfig(server))
+        serviceProvider.control.start(
+            XrayClientConfigFactory.createRuntimeConfig(server, vpnPreferences.ipv6Enabled.value),
+        )
             .onFailure { error ->
                 Timber.e(error, "start() dispatch failed")
                 reduce {

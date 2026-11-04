@@ -6,7 +6,7 @@ internal object HevTunnelConfigFactory {
 
     private const val MAX_PORT = 65_535
 
-    fun build(socksEndpoint: SocksEndpoint): String {
+    fun build(socksEndpoint: SocksEndpoint, ipv6Enabled: Boolean): String {
         require(socksEndpoint.host.isNotBlank()) { "Xray SOCKS host must not be blank." }
         require(socksEndpoint.port in 1..MAX_PORT) { "Invalid Xray SOCKS port: ${socksEndpoint.port}" }
 
@@ -15,6 +15,9 @@ internal object HevTunnelConfigFactory {
             add("  name: kaihi")
             add("  mtu: ${VpnTunnelDefaults.VPN_MTU}")
             add("  ipv4: ${VpnTunnelDefaults.VPN_ADDRESS}")
+            if (ipv6Enabled) {
+                add("  ipv6: '${VpnTunnelDefaults.VPN_ADDRESS_V6}'")
+            }
             add("socks5:")
             add("  address: ${socksEndpoint.host}")
             add("  port: ${socksEndpoint.port}")
