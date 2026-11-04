@@ -1,10 +1,37 @@
 package app.kaihi.android.core.vpn
 
 import app.kaihi.android.core.vpn.configfactory.XrayServerConfigFactory
+import app.kaihi.android.core.vpn.XrayJson
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class XrayServerConfigFactoryTest {
+    @Test
+    fun `defaults server inbound listen address to IPv4 wildcard`() {
+        val config = parsedConfig()
+
+        assertEquals("0.0.0.0", config.getValue("inbounds").jsonArray.single().jsonObject
+            .getValue("listen").jsonPrimitive.content)
+    }
+
+    @Test
+    fun `dual-stack listen address changes only inbound listen address`() {
+        val defaultConfig = parsedConfig()
+        val dualStackConfig = parsedConfig(XrayServerConfigFactory.DUAL_STACK_ANY)
+        val defaultInbound = defaultConfig.getValue("inbounds").jsonArray.single().jsonObject
+        val dualStackInbound = dualStackConfig.getValue("inbounds").jsonArray.single().jsonObject
+
+        assertEquals("::", dualStackInbound.getValue("listen").jsonPrimitive.content)
+        assertEquals(
+            defaultInbound.getValue("streamSettings").jsonObject.getValue("realitySettings"),
+            dualStackInbound.getValue("streamSettings").jsonObject.getValue("realitySettings"),
+        )
+    }
+
     @Test
     fun `creates a REALITY server config with resolved secrets`() {
         val config = XrayServerConfigFactory.build(
@@ -43,4 +70,15 @@ class XrayServerConfigFactoryTest {
             config.contains("\"target\":\"www.cloudflare.com:443\""),
         )
     }
+
+    private fun parsedConfig(listenAddress: String = XrayServerConfigFactory.IPV4_ANY) =
+        XrayJson.default.parseToJsonElement(
+            XrayServerConfigFactory.build(
+                uuid = "123e4567-e89b-12d3-a456-426614174000",
+                privateKey = "server-private-key",
+                shortId = "abcd1234",
+                realityServerName = "www.cloudflare.com",
+                listenAddress = listenAddress,
+            ).toJson(),
+        ).jsonObject
 }

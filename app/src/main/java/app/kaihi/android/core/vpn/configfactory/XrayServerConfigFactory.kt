@@ -11,6 +11,9 @@ import app.kaihi.android.core.vpn.spec.toJsonObject
 
 object XrayServerConfigFactory {
     const val DEFAULT_SERVER_PORT = 443
+    const val IPV4_ANY = "0.0.0.0"
+    // Linux treats "::" as dual-stack, but binding it fails when the kernel has no IPv6 support.
+    const val DUAL_STACK_ANY = "::"
 
     // The port REALITY dials on the site it impersonates. Not serverPort: that is where our own
     // inbound listens, and the masking host answers TLS on 443 regardless of what we picked.
@@ -21,12 +24,13 @@ object XrayServerConfigFactory {
         privateKey: String,
         shortId: String,
         serverPort: Int = DEFAULT_SERVER_PORT,
-        realityServerName: String
+        realityServerName: String,
+        listenAddress: String = IPV4_ANY,
     ): XrayConfig = XrayConfig(
         log = LogObject(loglevel = "warning"),
         inbounds = listOf(
             InboundObject(
-                listen = "0.0.0.0",
+                listen = listenAddress,
                 port = intPrimitive(serverPort),
                 protocol = "vless",
                 settings = VlessInboundSettings(
