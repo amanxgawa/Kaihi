@@ -83,7 +83,6 @@ internal fun SubscriptionHeaderRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(dimens.l),
         ) {
-            // Same slot width as a server's flag, so group and server names line up.
             Box(modifier = Modifier.size(dimens.control), contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = KaihiIcons.Outlined.ExpandMore,

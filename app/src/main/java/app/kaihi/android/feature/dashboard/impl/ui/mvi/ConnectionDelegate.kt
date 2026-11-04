@@ -28,7 +28,6 @@ internal class ConnectionDelegate @Inject constructor(
     // STOPPING/STOPPED/IDLE states as a manual disconnect, with nothing else to tell them apart.
     private var autoReconnecting = false
 
-    // From :vpn rather than remembered here: a UI process recreated underneath a live tunnel would forget it.
     private var sessionServerId: String? = null
 
     fun observe() {
@@ -37,7 +36,6 @@ internal class ConnectionDelegate @Inject constructor(
         serviceProvider.monitoring.sessionServerId
             .onEach { serverId ->
                 sessionServerId = serverId
-                // A highlight that disagrees with where traffic actually goes is worse than one the user did not pick.
                 serverId?.let(coordinator::select)
             }
             .launchIn(scope)
@@ -83,7 +81,6 @@ internal class ConnectionDelegate @Inject constructor(
         reduce { copy(errorMessage = UiText.Resource(R.string.dashboard_error_vpn_permission_denied)) }
     }
 
-    /** A stopped engine picks the selection up on its next start instead. */
     suspend fun followSelection() {
         if (currentState.engineState != XrayEngineState.RUNNING) return
         val server = coordinator.selectedServer() ?: return

@@ -129,8 +129,6 @@ internal fun ServerDataEntryPage(
         AnimatedContent(
             targetState = authMethod,
             label = "authentication_method",
-            // Resizing between the one-line password field and the taller key field clips by default,
-            // which saws the field's rounded corners off square mid-transition.
             transitionSpec = { (fadeIn() togetherWith fadeOut()).using(SizeTransform(clip = false)) },
         ) { method ->
             when (method) {
