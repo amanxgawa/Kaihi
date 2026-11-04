@@ -5,6 +5,7 @@ import app.kaihi.android.core.ssh.SshConnection
 import app.kaihi.android.core.ssh.command.SshCommand
 import app.kaihi.android.core.ssh.model.CommandEvent
 import app.kaihi.android.core.ssh.model.CommandResult
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,6 +14,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 
 /**
@@ -21,6 +23,22 @@ import org.junit.Test
  * skipping `parseOutput` entirely, rather than a bogus success scraped out of error output.
  */
 class SshConnectionExtTest {
+
+    @Test
+    fun `propagates cancellation from a command parser`() = runTest {
+        val connection = FakeSshConnection(CommandEvent.Exit(0))
+        val command = object : SshCommand<Unit> {
+            override val command = "true"
+            override fun parseOutput(result: CommandResult) = throw CancellationException("Parsing cancelled")
+        }
+
+        try {
+            connection.execute(command)
+            fail("Cancellation was swallowed")
+        } catch (error: CancellationException) {
+            assertEquals("Parsing cancelled", error.message)
+        }
+    }
 
     @Test
     fun `parses output when the command exits zero`() = runTest {

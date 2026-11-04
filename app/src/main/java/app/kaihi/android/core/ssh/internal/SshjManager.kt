@@ -20,6 +20,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import net.schmizz.sshj.SSHClient
+import net.schmizz.sshj.userauth.password.PasswordUtils
 import timber.log.Timber
 import java.util.Locale
 import kotlin.time.Duration.Companion.milliseconds
@@ -27,6 +28,7 @@ import kotlin.time.Duration.Companion.milliseconds
 internal class SshjManager(
     private val ioDispatcher: CoroutineDispatcher,
     private val appStorage: AppStorage,
+    private val clientFactory: () -> SSHClient = { SSHClient() },
 ) : SshManager {
 
     private val sessionsMutex = Mutex()
@@ -124,31 +126,42 @@ internal class SshjManager(
             // indistinguishable from a first connection.
             val verifier = PinnedHostKeyVerifier(pin = pin, acceptedFingerprint = explicitFingerprint)
 
-            val client = SSHClient()
-            client.addHostKeyVerifier(verifier)
-            client.connectTimeout = CONNECT_TIMEOUT_MS
-            client.timeout = SOCKET_TIMEOUT_MS
-            client.connect(config.host, config.port)
-            client.connection.timeoutMs = SOCKET_TIMEOUT_MS
+            val client = clientFactory()
+            try {
+                client.addHostKeyVerifier(verifier)
+                client.connectTimeout = CONNECT_TIMEOUT_MS
+                client.timeout = SOCKET_TIMEOUT_MS
+                client.connect(config.host, config.port)
+                client.connection.timeoutMs = SOCKET_TIMEOUT_MS
 
-            when (auth) {
-                is SshAuth.Password -> client.authPassword(config.username, auth.password.value)
-                is SshAuth.PrivateKey -> {
-                    val keyProvider = client.loadKeys(auth.content.value, auth.passphrase?.value?.toCharArray())
-                    client.authPublickey(config.username, keyProvider)
+                when (auth) {
+                    is SshAuth.Password -> client.authPassword(config.username, auth.password.value)
+                    is SshAuth.PrivateKey -> {
+                        val keyProvider = client.loadKeys(
+                            auth.content.value,
+                            null,
+                            auth.passphrase?.let { PasswordUtils.createOneOff(it.value.toCharArray()) },
+                        )
+                        client.authPublickey(config.username, keyProvider)
+                    }
                 }
-            }
 
-            verifier.verifiedFingerprint?.let { verified ->
-                if (pin != HostKeyPin.Known(verified)) {
-                    appStorage.putString(StorageDomain.SSH_TRUST, trustedHostKey, verified)
-                    Timber.i("Stored trusted fingerprint for %s:%d", config.host, config.port)
+                verifier.verifiedFingerprint?.let { verified ->
+                    if (pin != HostKeyPin.Known(verified)) {
+                        appStorage.putString(StorageDomain.SSH_TRUST, trustedHostKey, verified)
+                        Timber.i("Stored trusted fingerprint for %s:%d", config.host, config.port)
+                    }
                 }
-            }
 
-            Timber.i("SSH connect success: %s@%s:%d", config.username, config.host, config.port)
-            SshjConnection(client, ioDispatcher)
+                Timber.i("SSH connect success: %s@%s:%d", config.username, config.host, config.port)
+                SshjConnection(client, ioDispatcher)
+            } catch (error: Throwable) {
+                runCatching { client.close() }
+                    .onFailure { error.addSuppressed(it) }
+                throw error
+            }
         }.onFailure { error ->
+            if (error is CancellationException) throw error
             Timber.e(
                 error,
                 "SSH connect failed: %s@%s:%d",

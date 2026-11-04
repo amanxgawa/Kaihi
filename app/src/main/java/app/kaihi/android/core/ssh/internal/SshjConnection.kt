@@ -137,6 +137,7 @@ internal class SshjConnection(
             }
             Timber.i("SSH upload completed: %s (%d bytes)", remotePath, content.size)
         }.onFailure { error ->
+            if (error is CancellationException) throw error
             Timber.e(error, "SSH upload failed: %s", remotePath)
         }
     }
@@ -146,21 +147,27 @@ internal class SshjConnection(
             val localhost = InetAddress.getByName("127.0.0.1")
             val serverSocket = ServerSocket(0, 50, localhost)
 
-            val params = Parameters(
-                "127.0.0.1",
-                serverSocket.localPort,
-                "127.0.0.1",
-                remotePort
-            )
+            try {
+                val params = Parameters(
+                    "127.0.0.1",
+                    serverSocket.localPort,
+                    "127.0.0.1",
+                    remotePort
+                )
 
-            val forwarder = client.newLocalPortForwarder(params, serverSocket)
+                val forwarder = client.newLocalPortForwarder(params, serverSocket)
 
-            val handle = SshjLpfHandle(serverSocket, forwarder, ioDispatcher)
-            handle.start()
+                val handle = SshjLpfHandle(serverSocket, forwarder, ioDispatcher)
+                handle.start()
 
-            lpfsMutex.withLock { activeLpfs.add(handle) }
-            handle
-        }
+                lpfsMutex.withLock { activeLpfs.add(handle) }
+                handle
+            } catch (error: Throwable) {
+                runCatching { serverSocket.close() }
+                    .onFailure { error.addSuppressed(it) }
+                throw error
+            }
+        }.onFailure { error -> if (error is CancellationException) throw error }
     }
 
     override suspend fun disconnect() = withContext(ioDispatcher) {
