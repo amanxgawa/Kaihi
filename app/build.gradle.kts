@@ -3,7 +3,7 @@ import java.util.Properties
 // The task types below live in buildSrc/src/main/kotlin/. Bump procedure: CONTRIBUTING.md.
 
 // xray-core, as a prebuilt gomobile Android library (AndroidLibXrayLite release).
-val libv2rayVersion = "v26.8.20"
+val libv2rayVersion = "v26.10.31"
 // The version is in the filename so a bump always misses the cache; otherwise a stale build/
 // artifact satisfies the task's "already staged" check and is never re-verified.
 val downloadedLibv2rayAarFile = layout.buildDirectory.file("generated/libv2ray/libv2ray-$libv2rayVersion.aar")
@@ -11,20 +11,20 @@ val downloadLibV2ray = tasks.register<DownloadLibV2rayTask>("downloadLibV2ray") 
     group = "build setup"
     description = "Downloads and verifies the libv2ray.aar xray-core Android library"
     version.set(libv2rayVersion)
-    sha256.set("670cf11d9d10a6bb6548ac4f593acfa4339155732f6f8de4d45923f30a74deed") // bump together with libv2rayVersion
+    sha256.set("2efdf731b1ed624eb1cb0d5a4d0aa95c0672e89f9702226d1ba2dc90308630b6") // bump together with libv2rayVersion
     outputFile.set(downloadedLibv2rayAarFile)
 }
 val libv2rayAar: Provider<RegularFile> = downloadedLibv2rayAarFile
 
 // geosite.dat: domain-based half of the direct-routing rules in XrayRoutingFactory (v2fly/domain-list-community release).
-val geositeVersion = "20260908094002"
+val geositeVersion = "20261103081536"
 val geositeStagingDir = layout.buildDirectory.dir("generated/geosite/$geositeVersion") // same cache-bust reasoning as libv2ray above
 val downloadedGeositeDatFile = geositeStagingDir.map { it.file("geosite.dat") }
 val downloadGeositeDat = tasks.register<DownloadGeositeDatTask>("downloadGeositeDat") {
     group = "build setup"
     description = "Downloads and verifies geosite.dat (v2fly/domain-list-community) for country-based direct routing"
     version.set(geositeVersion)
-    sha256.set("35ed26a24cafa1256bd7261414224b7bcef5c944cea7760e172b030a8b266450") // bump together with geositeVersion
+    sha256.set("4c64d3eecd7231e63c66a1be33fe0cd9d4e0e942d6284ab2553e9ee242756879") // bump together with geositeVersion
     outputFile.set(downloadedGeositeDatFile)
 }
 
