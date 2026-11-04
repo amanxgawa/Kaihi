@@ -39,5 +39,4 @@ val KaihiTypography = Typography(
     labelSmall = base.labelSmall.copy(fontFamily = Sora),
 )
 
-// For protocol names, hosts, keys, ports
 val MonoText = TextStyle(fontFamily = JetBrainsMono, fontSize = 13.sp)
