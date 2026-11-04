@@ -48,6 +48,7 @@ internal object DashboardContract {
         data class ServerForgotten(val serverId: String) : Intent
         data class FingerprintChanged(val serverId: String, val value: XrayFingerprint) : Intent
         data class MuxEnabledChanged(val serverId: String, val enabled: Boolean) : Intent
+        data class FragmentEnabledChanged(val serverId: String, val enabled: Boolean) : Intent
         data class MuxConcurrencyChanged(val serverId: String, val value: Int) : Intent
     }
 

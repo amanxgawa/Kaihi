@@ -27,10 +27,13 @@ private const val MAX_MUX_CONCURRENCY = 128
 @Composable
 internal fun ServerAdvancedSection(
     fingerprint: XrayFingerprint?,
+    isXhttp: Boolean,
     muxEnabled: Boolean,
     muxConcurrency: Int,
+    fragmentEnabled: Boolean,
     onFingerprintChanged: (XrayFingerprint) -> Unit,
     onMuxEnabledChanged: (Boolean) -> Unit,
+    onFragmentEnabledChanged: (Boolean) -> Unit,
     onMuxConcurrencyChanged: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -69,25 +72,15 @@ internal fun ServerAdvancedSection(
             }
         }
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(id = R.string.dashboard_server_mux_title),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Text(
-                    text = stringResource(id = R.string.dashboard_server_mux_description),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Switch(checked = muxEnabled, onCheckedChange = onMuxEnabledChanged)
-        }
+        SwitchRow(
+            title = stringResource(id = R.string.dashboard_server_mux_title),
+            description = stringResource(
+                id = if (isXhttp) R.string.dashboard_server_mux_description_xhttp
+                else R.string.dashboard_server_mux_description_raw,
+            ),
+            checked = muxEnabled,
+            onCheckedChange = onMuxEnabledChanged,
+        )
 
         if (muxEnabled) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(dimens.m)) {
@@ -106,6 +99,41 @@ internal fun ServerAdvancedSection(
                 )
             }
         }
+
+        SwitchRow(
+            title = stringResource(id = R.string.dashboard_server_fragment_title),
+            description = stringResource(id = R.string.dashboard_server_fragment_description),
+            checked = fragmentEnabled,
+            onCheckedChange = onFragmentEnabledChanged,
+        )
+    }
+}
+
+@Composable
+private fun SwitchRow(
+    title: String,
+    description: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
 

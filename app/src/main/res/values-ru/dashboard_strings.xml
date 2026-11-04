@@ -38,8 +38,11 @@
     <string name="dashboard_server_advanced_title">Расширенные</string>
     <string name="dashboard_server_utls_fingerprint_title">TLS-отпечаток</string>
     <string name="dashboard_server_mux_title">Мультиплексирование</string>
-    <string name="dashboard_server_mux_description">Использовать одно соединение для нескольких потоков.</string>
+    <string name="dashboard_server_mux_description_xhttp">Передавать несколько потоков через одно HTTP-соединение. Если выключено, каждый поток открывает своё соединение.</string>
+    <string name="dashboard_server_mux_description_raw">Использовать одно соединение для нескольких потоков. С Vision мультиплексируется только UDP.</string>
     <string name="dashboard_server_mux_concurrency">Конкурентность: %1$d</string>
+    <string name="dashboard_server_fragment_title">Фрагментировать TLS-рукопожатие</string>
+    <string name="dashboard_server_fragment_description">Разбивать первый TLS-пакет на мелкие части, чтобы обойти DPI, блокирующий по SNI. Немного увеличивает задержку при каждом новом соединении.</string>
 
     <string name="dashboard_stats_down">↓ Загрузка</string>
     <string name="dashboard_stats_up">↑ Отдача</string>

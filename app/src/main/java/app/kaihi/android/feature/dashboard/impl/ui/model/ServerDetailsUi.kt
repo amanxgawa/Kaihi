@@ -15,4 +15,6 @@ internal data class ServerDetailsUi(
     val fingerprint: XrayFingerprint?,
     val muxEnabled: Boolean,
     val muxConcurrency: Int,
+    val fragmentEnabled: Boolean,
+    val isXhttp: Boolean,
 )

@@ -58,6 +58,9 @@ internal class ServerLibraryCoordinator @Inject constructor(
 
     suspend fun setMuxEnabled(serverId: String, enabled: Boolean) = updateServer(serverId) { it.copy(muxEnabled = enabled) }
 
+    suspend fun setFragmentEnabled(serverId: String, enabled: Boolean) =
+        updateServer(serverId) { it.copy(fragmentEnabled = enabled) }
+
     suspend fun setMuxConcurrency(serverId: String, concurrency: Int) =
         updateServer(serverId) { it.copy(muxConcurrency = concurrency) }
 

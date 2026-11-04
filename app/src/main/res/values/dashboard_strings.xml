@@ -38,8 +38,11 @@
     <string name="dashboard_server_advanced_title">Advanced</string>
     <string name="dashboard_server_utls_fingerprint_title">TLS fingerprint</string>
     <string name="dashboard_server_mux_title">Multiplexing</string>
-    <string name="dashboard_server_mux_description">Share one connection across multiple streams.</string>
+    <string name="dashboard_server_mux_description_xhttp">Carry several streams over one HTTP connection. When off, each stream opens its own connection.</string>
+    <string name="dashboard_server_mux_description_raw">Share one connection across multiple streams. With Vision, only UDP is multiplexed.</string>
     <string name="dashboard_server_mux_concurrency">Concurrency: %1$d</string>
+    <string name="dashboard_server_fragment_title">Fragment TLS handshake</string>
+    <string name="dashboard_server_fragment_description">Split the first TLS packet into small pieces to get past DPI that blocks by SNI. Adds a little latency to each new connection.</string>
 
     <string name="dashboard_stats_down">↓ Down</string>
     <string name="dashboard_stats_up">↑ Up</string>
