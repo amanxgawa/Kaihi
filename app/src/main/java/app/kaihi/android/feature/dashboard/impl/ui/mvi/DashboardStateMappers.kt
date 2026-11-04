@@ -2,6 +2,7 @@ package app.kaihi.android.feature.dashboard.impl.ui.mvi
 
 import app.kaihi.android.core.vpn.XrayVpnProfile
 import app.kaihi.android.core.vpn.spec.XraySecurity
+import app.kaihi.android.core.vpn.spec.XrayTransport
 import app.kaihi.android.feature.dashboard.impl.domain.model.ServerLibrary
 import app.kaihi.android.feature.dashboard.impl.ui.model.ServerDetailsUi
 import app.kaihi.android.feature.dashboard.impl.ui.model.ServerUi
@@ -35,6 +36,8 @@ internal fun XrayVpnProfile.toDetailsUi(): ServerDetailsUi {
         fingerprint = reality?.fingerprint,
         muxEnabled = muxEnabled,
         muxConcurrency = muxConcurrency,
+        fragmentEnabled = fragmentEnabled,
+        isXhttp = transport is XrayTransport.Xhttp,
     )
 }
 

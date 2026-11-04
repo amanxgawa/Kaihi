@@ -37,7 +37,7 @@ All paths below are under `app/src/main/java/app/kaihi/android/` unless stated.
 ## Commands
 
 - `./gradlew compileDebugKotlin`: fast loop while iterating.
-- `./gradlew testDebugUnitTest`: all unit tests (182 across 37 classes).
+- `./gradlew testDebugUnitTest`: all unit tests (194 across 39 classes).
 - `./gradlew testDebugUnitTest --tests 'app.kaihi.android.core.ssh.HostnameValidationTest'`: one
   test class; `--tests '<class>.<method>'` selects a single test.
 - `./gradlew lintDebug`: Android Lint. No formatter or detekt is configured.
@@ -104,6 +104,7 @@ module, Screen). Reference test: `StoredAppModeRepositoryTest`.
 - Run `./gradlew regenerateGeoipDat` (maintainer-only, needs Go and network) or
   `./gradlew assembleRelease` (CI's job).
 - Add a mocking library, or call `Dispatchers.IO` / `Dispatchers.Main` in non-composable code.
+- Edit `AGENTS.md`, `CLAUDE.md` or anything under `.claude/`.
 
 ## Definition of done
 

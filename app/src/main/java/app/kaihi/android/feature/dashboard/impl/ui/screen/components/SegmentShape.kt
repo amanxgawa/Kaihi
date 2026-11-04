@@ -4,7 +4,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
 
-// Material 3's extra-large and small corner tokens, as plain Dp so the header can animate between them.
 internal val SegmentOuterCorner = 28.dp
 internal val SegmentInnerCorner = 8.dp
 

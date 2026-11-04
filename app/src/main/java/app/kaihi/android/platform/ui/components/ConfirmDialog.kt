@@ -12,8 +12,6 @@ import app.kaihi.android.R
 import app.kaihi.android.platform.ui.util.UiText
 import app.kaihi.android.platform.ui.util.asString
 
-/** [MessageDialog] plus a dismiss action, for anything the user has to accept or decline rather
- *  than merely acknowledge. */
 @Composable
 fun ConfirmDialog(
     title: UiText,

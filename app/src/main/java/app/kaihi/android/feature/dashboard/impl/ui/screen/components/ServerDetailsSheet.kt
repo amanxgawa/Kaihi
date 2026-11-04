@@ -47,6 +47,7 @@ internal fun ServerDetailsSheet(
     onForget: () -> Unit,
     onFingerprintChanged: (XrayFingerprint) -> Unit,
     onMuxEnabledChanged: (Boolean) -> Unit,
+    onFragmentEnabledChanged: (Boolean) -> Unit,
     onMuxConcurrencyChanged: (Int) -> Unit,
 ) {
     val dimens = MaterialTheme.dimens
@@ -122,10 +123,13 @@ internal fun ServerDetailsSheet(
                 HorizontalDivider()
                 ServerAdvancedSection(
                     fingerprint = details.fingerprint,
+                    isXhttp = details.isXhttp,
                     muxEnabled = details.muxEnabled,
                     muxConcurrency = details.muxConcurrency,
+                    fragmentEnabled = details.fragmentEnabled,
                     onFingerprintChanged = onFingerprintChanged,
                     onMuxEnabledChanged = onMuxEnabledChanged,
+                    onFragmentEnabledChanged = onFragmentEnabledChanged,
                     onMuxConcurrencyChanged = onMuxConcurrencyChanged,
                 )
             }

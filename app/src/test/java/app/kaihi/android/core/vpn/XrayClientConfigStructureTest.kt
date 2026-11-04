@@ -6,6 +6,7 @@ import app.kaihi.android.core.vpn.spec.XraySecurity
 import app.kaihi.android.core.vpn.spec.XrayTransport
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -39,6 +40,129 @@ class XrayClientConfigStructureTest {
     @Test
     fun `raw transport without a flow omits the field entirely`() {
         assertNull(firstUser(config(transport = XrayTransport.Raw()))["flow"])
+    }
+
+    @Test
+    fun `xhttp mux uses xmux and does not emit mux cool`() {
+        val outbound = config(
+            transport = XrayTransport.Xhttp(path = "/custom", mode = app.kaihi.android.core.vpn.spec.XhttpMode.AUTO),
+            muxEnabled = true,
+            muxConcurrency = 8,
+        ).outbound("proxy")
+        val xhttp = outbound.getValue("streamSettings").jsonObject.getValue("xhttpSettings").jsonObject
+        val expectedXmux = Json.parseToJsonElement(
+            """{"maxConcurrency":8,"hMaxRequestTimes":"600-900","hMaxReusableSecs":"1800-3000"}"""
+        ).jsonObject
+
+        assertNull(outbound["mux"])
+        assertEquals(expectedXmux, xhttp.getValue("extra").jsonObject.getValue("xmux").jsonObject)
+        assertEquals("/custom", xhttp.getValue("path").jsonPrimitive.content)
+        assertEquals("auto", xhttp.getValue("mode").jsonPrimitive.content)
+    }
+
+    @Test
+    fun `xhttp mux disabled keeps single-connection xmux without mux cool`() {
+        val outbound = config(transport = XrayTransport.Xhttp()).outbound("proxy")
+        val xhttp = outbound.getValue("streamSettings").jsonObject.getValue("xhttpSettings").jsonObject
+
+        assertNull(outbound["mux"])
+        assertEquals(
+            1,
+            xhttp.getValue("extra").jsonObject.getValue("xmux").jsonObject
+                .getValue("maxConcurrency").jsonPrimitive.content.toInt(),
+        )
+    }
+
+    @Test
+    fun `raw mux carries tcp and xudp at the configured concurrency`() {
+        val mux = config(
+            transport = XrayTransport.Raw(),
+            muxEnabled = true,
+            muxConcurrency = 8,
+        ).outbound("proxy").getValue("mux").jsonObject
+
+        assertEquals(
+            Json.parseToJsonElement(
+                """{"enabled":true,"concurrency":8,"xudpConcurrency":8,"xudpProxyUDP443":"reject"}"""
+            ).jsonObject,
+            mux,
+        )
+    }
+
+    @Test
+    fun `raw vision mux carries only xudp`() {
+        val mux = config(
+            transport = XrayTransport.Raw(flow = XrayFlow.VISION),
+            muxEnabled = true,
+            muxConcurrency = 8,
+        ).outbound("proxy").getValue("mux").jsonObject
+
+        assertEquals(-1, mux.getValue("concurrency").jsonPrimitive.content.toInt())
+        assertEquals(8, mux.getValue("xudpConcurrency").jsonPrimitive.content.toInt())
+        assertEquals("reject", mux.getValue("xudpProxyUDP443").jsonPrimitive.content)
+    }
+
+    @Test
+    fun `raw mux disabled omits mux`() {
+        val outbound = config(transport = XrayTransport.Raw()).outbound("proxy")
+
+        assertNull(outbound["mux"])
+    }
+
+    @Test
+    fun `mux concurrency is clamped for xhttp and raw`() {
+        val xhttp = config(
+            transport = XrayTransport.Xhttp(),
+            muxEnabled = true,
+            muxConcurrency = 500,
+        ).outbound("proxy").getValue("streamSettings").jsonObject
+            .getValue("xhttpSettings").jsonObject.getValue("extra").jsonObject
+            .getValue("xmux").jsonObject.getValue("maxConcurrency").jsonPrimitive.content.toInt()
+        val raw = config(
+            transport = XrayTransport.Raw(),
+            muxEnabled = true,
+            muxConcurrency = 500,
+        ).outbound("proxy").getValue("mux").jsonObject
+
+        assertEquals(128, xhttp)
+        assertEquals(128, raw.getValue("concurrency").jsonPrimitive.content.toInt())
+        assertEquals(128, raw.getValue("xudpConcurrency").jsonPrimitive.content.toInt())
+    }
+
+    @Test
+    fun `fragment finalmask is present on xhttp and raw without changing reality`() {
+        val transports = listOf(XrayTransport.Xhttp(), XrayTransport.Raw())
+        val expectedMask = Json.parseToJsonElement(
+            """{"type":"fragment","settings":{"packets":"tlshello","lengths":["100-200"],"delays":["10-20"]}}"""
+        ).jsonObject
+        val expectedReality = Json.parseToJsonElement(
+            """{"serverName":"www.example.com","fingerprint":"edge","password":"public-key","shortId":"abcd"}"""
+        ).jsonObject
+
+        transports.forEach { transport ->
+            val stream = config(transport = transport, fragmentEnabled = true)
+                .outbound("proxy").getValue("streamSettings").jsonObject
+
+            assertEquals(listOf(expectedMask), stream.getValue("finalmask").jsonObject.getValue("tcp").jsonArray.map { it.jsonObject })
+            assertEquals(expectedReality, stream.getValue("realitySettings").jsonObject)
+        }
+    }
+
+    @Test
+    fun `fragment disabled omits finalmask`() {
+        val stream = config().outbound("proxy").getValue("streamSettings").jsonObject
+
+        assertNull(stream["finalmask"])
+    }
+
+    @Test
+    fun `profile without fragment enabled decodes with fragmentation disabled`() {
+        val encoded = XrayJson.default.encodeToJsonElement(XrayVpnProfile.serializer(), profile(fragmentEnabled = true))
+        val legacy = JsonObject(encoded.jsonObject - "fragmentEnabled").toString()
+
+        val decoded = XrayJson.default.decodeFromString(XrayVpnProfile.serializer(), legacy)
+
+        assertFalse(decoded.fragmentEnabled)
     }
 
     @Test
@@ -211,7 +335,12 @@ class XrayClientConfigStructureTest {
         )
     }
 
-    private fun profile(transport: XrayTransport = XrayTransport.Xhttp()) = XrayVpnProfile(
+    private fun profile(
+        transport: XrayTransport = XrayTransport.Xhttp(),
+        muxEnabled: Boolean = false,
+        muxConcurrency: Int = XrayVpnProfile.DEFAULT_MUX_CONCURRENCY,
+        fragmentEnabled: Boolean = false,
+    ) = XrayVpnProfile(
         id = "server-1",
         name = "test",
         sshHost = "ssh.example",
@@ -227,12 +356,23 @@ class XrayClientConfigStructureTest {
         ),
         transport = transport,
         deployedAtMillis = 0L,
+        muxEnabled = muxEnabled,
+        muxConcurrency = muxConcurrency,
+        fragmentEnabled = fragmentEnabled,
     )
 
     private fun config(
         transport: XrayTransport = XrayTransport.Xhttp(),
+        muxEnabled: Boolean = false,
+        muxConcurrency: Int = XrayVpnProfile.DEFAULT_MUX_CONCURRENCY,
+        fragmentEnabled: Boolean = false,
         ipv6Enabled: Boolean = false,
-    ): JsonObject = Json.parseToJsonElement(XrayClientConfigFactory.build(profile(transport), ipv6Enabled).toJson()).jsonObject
+    ): JsonObject = Json.parseToJsonElement(
+        XrayClientConfigFactory.build(
+            profile(transport, muxEnabled, muxConcurrency, fragmentEnabled),
+            ipv6Enabled,
+        ).toJson()
+    ).jsonObject
 
     private fun JsonObject.routing(): JsonObject = getValue("routing").jsonObject
 
