@@ -23,6 +23,7 @@ data class XrayVpnProfile(
     val countryCode: String? = null,
     val muxEnabled: Boolean = false,
     val muxConcurrency: Int = DEFAULT_MUX_CONCURRENCY,
+    val fragmentEnabled: Boolean = false,
 ) {
     companion object {
         const val DEFAULT_MUX_CONCURRENCY = 8

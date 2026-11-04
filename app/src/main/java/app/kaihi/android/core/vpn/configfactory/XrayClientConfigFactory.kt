@@ -21,6 +21,7 @@ import app.kaihi.android.core.vpn.spec.VlessOutboundSettings
 import app.kaihi.android.core.vpn.spec.VlessVnext
 import app.kaihi.android.core.vpn.spec.VlessVnextUser
 import app.kaihi.android.core.vpn.spec.XrayConfig
+import app.kaihi.android.core.vpn.spec.XrayFlow
 import app.kaihi.android.core.vpn.spec.XrayTransport
 import app.kaihi.android.core.vpn.spec.toJsonObject
 import kotlinx.serialization.json.JsonArray
@@ -38,6 +39,14 @@ object XrayClientConfigFactory {
     private const val FAKE_DNS_POOL = "198.18.0.0/15"
     private const val FAKE_DNS_POOL_SIZE = 65_535
     private const val SOCKS_CREDENTIAL_BYTES = 18
+    // "reject" is Xray's documented default for MuxObject.xudpProxyUDP443; write it explicitly
+    // so QUIC stays blocked, consistent with the UDP/443 blackhole rule.
+    private const val MUX_XUDP_PROXY_UDP_443 = "reject"
+    // 128 is the maximum MuxObject.concurrency per Xray's outbound docs, also used as the xmux cap.
+    private const val MAX_MUX_CONCURRENCY = 128
+    private const val MIN_MUX_CONCURRENCY = 1
+    // Under Vision the server breaks Mux connections that carry TCP, so -1 keeps TCP off Mux and only XUDP is muxed.
+    private const val VISION_TCP_MUX_DISABLED = -1
 
     fun createRuntimeConfig(profile: XrayVpnProfile): XrayRuntimeConfig {
         // See SocksEndpoint for why this can't be "noauth".
@@ -76,12 +85,18 @@ object XrayClientConfigFactory {
                     ),
                 ),
             ).toJsonObject(),
-            streamSettings = XrayTransportFactory.streamSettings(profile.transport, profile.security),
-            mux = if (profile.muxEnabled) {
-                MuxObject(enabled = true, concurrency = profile.muxConcurrency)
-            } else {
-                null
-            },
+            streamSettings = XrayTransportFactory.streamSettings(
+                transport = profile.transport,
+                security = profile.security,
+                xmuxMaxConcurrency = if (profile.muxEnabled) {
+                    profile.muxConcurrency.coerceIn(MIN_MUX_CONCURRENCY, MAX_MUX_CONCURRENCY)
+                } else {
+                    MIN_MUX_CONCURRENCY
+                },
+                fragmentEnabled = profile.fragmentEnabled,
+            ),
+            // XHTTP has its own client multiplexer (xmux), so it must never use Mux.Cool.
+            mux = muxFor(profile),
         )
 
         return XrayConfig(
@@ -159,6 +174,23 @@ object XrayClientConfigFactory {
         SecureRandom().nextBytes(bytes)
         val secret = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
         return SocksCredential(user = "kaihi", pass = secret)
+    }
+
+    private fun muxFor(profile: XrayVpnProfile): MuxObject? {
+        val raw = profile.transport as? XrayTransport.Raw ?: return null
+        if (!profile.muxEnabled) return null
+
+        val concurrency = profile.muxConcurrency.coerceIn(MIN_MUX_CONCURRENCY, MAX_MUX_CONCURRENCY)
+        return MuxObject(
+            enabled = true,
+            concurrency = if (raw.flow == XrayFlow.VISION) {
+                VISION_TCP_MUX_DISABLED
+            } else {
+                concurrency
+            },
+            xudpConcurrency = concurrency,
+            xudpProxyUDP443 = MUX_XUDP_PROXY_UDP_443,
+        )
     }
 
     private data class SocksCredential(val user: String, val pass: String)
