@@ -11,6 +11,7 @@ import app.kaihi.android.feature.wizard.impl.domain.model.PackageManager
 import app.kaihi.android.feature.wizard.impl.domain.model.SniSelector
 import app.kaihi.android.feature.wizard.impl.domain.model.XrayServerCredentials
 import app.kaihi.android.feature.wizard.impl.domain.model.XrayServerSecrets
+import app.kaihi.android.feature.wizard.impl.domain.ssh.DetectIpv6SupportCommand
 import app.kaihi.android.feature.wizard.impl.domain.ssh.DetectPackageManagerCommand
 import app.kaihi.android.feature.wizard.impl.domain.ssh.DetectServerCountryCommand
 import app.kaihi.android.feature.wizard.impl.domain.ssh.GenerateXrayServerSecretsCommand
@@ -94,11 +95,27 @@ internal class DeployXrayServerUseCase @Inject constructor() {
         realityServerName: String,
         packageManager: PackageManager,
     ): XrayServerCredentials {
+        val supportsIpv6 = connection.execute(DetectIpv6SupportCommand()).getOrDefault(false)
+        emit(
+            DeploymentEvent.LogLine(
+                DeploymentStep.WRITE_CONFIGURATION,
+                if (supportsIpv6) {
+                    "IPv6 available: listening on IPv4 and IPv6"
+                } else {
+                    "No IPv6 on this server: listening on IPv4 only"
+                },
+            ),
+        )
         val serverConfigJson = XrayServerConfigFactory.build(
             uuid = secrets.uuid,
             privateKey = secrets.privateKey,
             shortId = secrets.shortId,
             realityServerName = realityServerName,
+            listenAddress = if (supportsIpv6) {
+                XrayServerConfigFactory.DUAL_STACK_ANY
+            } else {
+                XrayServerConfigFactory.IPV4_ANY
+            },
         ).toJson()
         emit(
             DeploymentEvent.LogLine(
