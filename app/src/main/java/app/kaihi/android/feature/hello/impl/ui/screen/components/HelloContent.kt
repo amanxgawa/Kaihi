@@ -30,8 +30,6 @@ internal fun HelloContent(
     val scrollState = rememberScrollState()
     val dimens = MaterialTheme.dimens
 
-    // The watermark sits outside the inset padding and the scroll container so it can reach the screen
-    // edges (and run under the status bar) instead of being clipped at the scroll viewport.
     Box(modifier = modifier.fillMaxSize()) {
         HelloWatermark(
             scrollOffset = { scrollState.value },
@@ -44,8 +42,6 @@ internal fun HelloContent(
                 .windowInsetsPadding(WindowInsets.systemBars)
                 .verticalScroll(scrollState)
                 .padding(horizontal = dimens.l, vertical = dimens.l),
-            // Centers the block when it's shorter than the viewport (the common case); once content
-            // overflows, verticalScroll naturally takes over and this has no effect.
             verticalArrangement = Arrangement.spacedBy(dimens.m, Alignment.CenterVertically)
         ) {
             HelloHeader(subtitle = UiText.Resource(R.string.hello_header_subtitle))

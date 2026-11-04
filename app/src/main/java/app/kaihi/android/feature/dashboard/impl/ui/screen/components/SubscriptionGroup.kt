@@ -44,8 +44,6 @@ internal fun SubscriptionGroup(
 
         AnimatedVisibility(
             visible = subscription.isExpanded,
-            // A reveal clips to its animated height, which would saw the emerging row's rounded corners
-            // off square. Rounding the reveal itself keeps the leading edge shaped like the rows behind it.
             modifier = Modifier.clip(revealShape),
             enter = expandVertically(animationSpec = dashboardSpatialSpec(), expandFrom = Alignment.Top) +
                 fadeIn(animationSpec = dashboardEffectsSpec()),

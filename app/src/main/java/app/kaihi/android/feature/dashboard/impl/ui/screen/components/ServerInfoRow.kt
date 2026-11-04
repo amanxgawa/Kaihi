@@ -9,7 +9,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import app.kaihi.android.platform.ui.theme.JetBrainsMono
 
-// Plain String, not UiText: nothing here crosses the MVI-state boundary.
 @Composable
 internal fun ServerInfoRow(label: String, value: String, modifier: Modifier = Modifier, monospace: Boolean = false) {
     Row(

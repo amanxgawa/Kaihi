@@ -43,7 +43,7 @@ internal class InstallXrayRuntimeCommand(
     data class ReleaseAsset(val name: String, val sha256: String)
 
     companion object {
-        private const val XRAY_VERSION = "v26.7.28"
+        private const val XRAY_VERSION = "v26.10.31"
 
         // Digests are the upstream release's own published .dgst values (SHA2-256), verified
         // against a locally computed hash of the downloaded asset. Update together with
@@ -51,12 +51,12 @@ internal class InstallXrayRuntimeCommand(
         fun releaseAssetFor(architecture: String): ReleaseAsset = when (architecture) {
             "64" -> ReleaseAsset(
                 name = "Xray-linux-64.zip",
-                sha256 = "8195d909f1109b8f3d99eefe401a3c451d7bf4af71f24d3815420f77e5dd2a40",
+                sha256 = "e4bd9119f50ae7c41658b1abd0679ae06f98bd864a2907ff33f2f2cf7081b214",
             )
 
             "arm64-v8a" -> ReleaseAsset(
                 name = "Xray-linux-arm64-v8a.zip",
-                sha256 = "f5698bb218ada3b4022db26fafc39601c5f53b46b19eb76c9616325985807501",
+                sha256 = "1811c8f1da0c3b6dc707ebaf1c8390e987ba39859a8f0a7aadd8526157f2ec8d",
             )
 
             else -> error("Unsupported server architecture: $architecture")

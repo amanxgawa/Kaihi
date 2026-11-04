@@ -5,6 +5,7 @@ import app.kaihi.android.core.ssh.command.SshCommand
 import app.kaihi.android.core.ssh.command.SshStreamingCommand
 import app.kaihi.android.core.ssh.model.CommandEvent
 import app.kaihi.android.core.ssh.model.CommandResult
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.mapNotNull
 import timber.log.Timber
@@ -36,12 +37,16 @@ suspend fun <T> SshConnection.execute(
         }
     }
 
-    return runCatching {
+    return try {
         val status = checkNotNull(exitCode) {
             "The connection ended without reporting an exit code: $stderr"
         }
         check(status == 0) { "Exit code $status: $stderr" }
-        command.parseOutput(CommandResult(stdout.toString(), stderr.toString(), status))
+        Result.success(command.parseOutput(CommandResult(stdout.toString(), stderr.toString(), status)))
+    } catch (cancellation: CancellationException) {
+        throw cancellation
+    } catch (error: Throwable) {
+        Result.failure(error)
     }
 }
 

@@ -8,7 +8,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import app.kaihi.android.R
 
-// The launcher icon's K on its own, without the tile behind it.
 @Composable
 fun KaihiMark(
     modifier: Modifier = Modifier,

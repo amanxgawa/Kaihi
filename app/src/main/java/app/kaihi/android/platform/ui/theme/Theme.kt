@@ -69,7 +69,6 @@ object KaihiTheme {
         get() = LocalKaihiStatus.current
 }
 
-// Dark-only, no dynamic color: the palette stays exact on every device.
 @Composable
 fun KaihiTheme(content: @Composable () -> Unit) {
     CompositionLocalProvider(
