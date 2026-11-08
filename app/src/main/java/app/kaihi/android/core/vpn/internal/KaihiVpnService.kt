@@ -23,12 +23,16 @@ import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import timber.log.Timber
+import kotlin.coroutines.coroutineContext
 
 @AndroidEntryPoint
 internal class KaihiVpnService : VpnService() {
@@ -46,6 +50,9 @@ internal class KaihiVpnService : VpnService() {
     internal lateinit var hevSocks5Tunnel: HevSocks5Tunnel
 
     @Inject
+    internal lateinit var tunnelProbe: TunnelProbe
+
+    @Inject
     @IoDispatcher
     internal lateinit var ioDispatcher: CoroutineDispatcher
 
@@ -54,6 +61,8 @@ internal class KaihiVpnService : VpnService() {
     private lateinit var scope: CoroutineScope
 
     private val isStarting = AtomicBoolean(false)
+    @Volatile
+    private var startJob: Job? = null
     @Volatile
     private var lastConfig: XrayRuntimeConfig? = null
 
@@ -116,31 +125,63 @@ internal class KaihiVpnService : VpnService() {
 
     private fun startVpn(config: XrayRuntimeConfig) {
         lastConfig = config
-        scope.launch {
+        startJob = scope.launch {
             try {
                 lifecycleMutex.withLock {
                     healthWatchdog.stop()
                     teardown()
                     telemetry.stopping()
                     telemetry.starting()
-                    val establishedTun = establishTun(config.ipv6Enabled)
+                    var coreStarted = false
+                    var establishedTun: ParcelFileDescriptor? = null
+                    var hevStartAttempted = false
                     try {
-                        hevSocks5Tunnel.start(establishedTun, config.socksEndpoint, config.ipv6Enabled)
+                        val sessionFingerprint = if (config.fingerprintCandidates.isNotEmpty()) {
+                            FingerprintSelector(
+                                startCore = { json -> runtime.start(config.copy(rawJson = json), telemetry) },
+                                stopCore = { runtime.stop() },
+                                probe = { tunnelProbe.probe(config.socksEndpoint) },
+                            ).select(config.fingerprintCandidates).fingerprint.wireValue.also {
+                                coreStarted = true
+                            }
+                        } else {
+                            runtime.start(config, telemetry)
+                            coreStarted = true
+                            config.fingerprint?.wireValue
+                        }
+                        val openedTun = establishTun(config.ipv6Enabled)
+                        establishedTun = openedTun
+                        hevStartAttempted = true
+                        hevSocks5Tunnel.start(openedTun, config.socksEndpoint, config.ipv6Enabled)
+                        tunInterface = openedTun
+                        telemetry.running(
+                            config.statusIntervalMillis,
+                            config.serverId,
+                            config.settingsKey,
+                            sessionFingerprint,
+                        )
+                        healthWatchdog.start(scope, config.socksEndpoint, ::onHealthDegraded)
+                        Timber.i("VPN started")
                     } catch (error: Throwable) {
-                        establishedTun.close()
+                        try {
+                            withContext(NonCancellable) {
+                                try {
+                                    if (hevStartAttempted) hevSocks5Tunnel.stop()
+                                } finally {
+                                    try {
+                                        establishedTun?.close()
+                                    } finally {
+                                        if (tunInterface === establishedTun) tunInterface = null
+                                        if (coreStarted) runtime.stop()
+                                    }
+                                }
+                            }
+                        } catch (cleanupError: Throwable) {
+                            if (cleanupError is CancellationException) throw cleanupError
+                            Timber.e(cleanupError, "VPN startup cleanup failed")
+                        }
                         throw error
                     }
-                    try {
-                        runtime.start(config, telemetry)
-                    } catch (error: Throwable) {
-                        hevSocks5Tunnel.stop()
-                        establishedTun.close()
-                        throw error
-                    }
-                    tunInterface = establishedTun
-                    telemetry.running(config.statusIntervalMillis, config.serverId, config.settingsKey)
-                    healthWatchdog.start(scope, config.socksEndpoint, ::onHealthDegraded)
-                    Timber.i("VPN started")
                 }
             } catch (error: CancellationException) {
                 throw error
@@ -150,6 +191,8 @@ internal class KaihiVpnService : VpnService() {
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
             } finally {
+                val self = coroutineContext[Job]
+                if (startJob === self) startJob = null
                 isStarting.set(false)
             }
         }
@@ -183,6 +226,7 @@ internal class KaihiVpnService : VpnService() {
     // Android as a crash, earning an escalating restart backoff. Waiting out that backoff before
     // the UI could rebind is what made disconnects look like they took minutes.
     private fun stopVpn() {
+        startJob?.cancel()
         scope.launch {
             lifecycleMutex.withLock {
                 healthWatchdog.stop()
@@ -198,6 +242,7 @@ internal class KaihiVpnService : VpnService() {
     // Only for onHealthDegraded: xray-core may be wedged past what a fresh CoreController can fix
     // in-process, so this path pays the process kill, and its restart backoff, for a clean slate.
     private fun stopVpnAndRestartProcess() {
+        startJob?.cancel()
         scope.launch {
             lifecycleMutex.withLock {
                 healthWatchdog.stop()

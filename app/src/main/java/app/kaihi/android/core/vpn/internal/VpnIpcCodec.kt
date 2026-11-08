@@ -1,6 +1,7 @@
 package app.kaihi.android.core.vpn.internal
 
 import android.os.Bundle
+import app.kaihi.android.core.vpn.XrayFailure
 import app.kaihi.android.core.vpn.XrayLogMessage
 import app.kaihi.android.core.vpn.XrayTrafficStats
 
@@ -29,14 +30,17 @@ internal fun XrayLogMessage.toBundle(): Bundle = Bundle().apply {
     putLong(VpnIpcProtocol.KEY_LOG_SEQUENCE, sequence)
 }
 
-internal fun sessionServerBundle(serverId: String?, settingsKey: String?): Bundle = Bundle().apply {
+internal fun sessionServerBundle(serverId: String?, settingsKey: String?, fingerprint: String?): Bundle = Bundle().apply {
     putString(VpnIpcProtocol.KEY_SESSION_SERVER_ID, serverId)
     putString(VpnIpcProtocol.KEY_SESSION_SETTINGS_KEY, settingsKey)
+    putString(VpnIpcProtocol.KEY_SESSION_FINGERPRINT, fingerprint)
 }
 
 internal fun Bundle.toSessionServerId(): String? = getString(VpnIpcProtocol.KEY_SESSION_SERVER_ID)
 
 internal fun Bundle.toSessionSettingsKey(): String? = getString(VpnIpcProtocol.KEY_SESSION_SETTINGS_KEY)
+
+internal fun Bundle.toSessionFingerprint(): String? = getString(VpnIpcProtocol.KEY_SESSION_FINGERPRINT)
 
 // A Long has no spare "no session" value, so absence is the signal: the key is omitted rather
 // than written as 0.
@@ -47,6 +51,14 @@ internal fun runningSinceBundle(runningSinceRealtime: Long?): Bundle = Bundle().
 internal fun Bundle.toRunningSinceRealtime(): Long? =
     takeIf { it.containsKey(VpnIpcProtocol.KEY_RUNNING_SINCE_REALTIME) }
         ?.getLong(VpnIpcProtocol.KEY_RUNNING_SINCE_REALTIME)
+
+internal fun failureBundle(failure: XrayFailure?): Bundle = Bundle().apply {
+    failure?.let { putString(VpnIpcProtocol.KEY_FAILURE, it.name) }
+}
+
+internal fun Bundle.toFailure(): XrayFailure? = getString(VpnIpcProtocol.KEY_FAILURE)?.let { name ->
+    XrayFailure.entries.firstOrNull { it.name == name } ?: XrayFailure.OTHER
+}
 
 internal fun Bundle.toLogMessage(): XrayLogMessage = XrayLogMessage(
     level = getInt(VpnIpcProtocol.KEY_LOG_LEVEL),

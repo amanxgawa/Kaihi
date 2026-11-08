@@ -2,6 +2,7 @@ package app.kaihi.android.core.vpn.configfactory
 
 import app.kaihi.android.BuildConfig
 import app.kaihi.android.core.vpn.SocksEndpoint
+import app.kaihi.android.core.vpn.FingerprintCandidate
 import app.kaihi.android.core.vpn.XrayRuntimeConfig
 import app.kaihi.android.core.vpn.XrayVpnProfile
 import app.kaihi.android.core.vpn.configfactory.XrayClientConfigFactory.createRuntimeConfig
@@ -22,7 +23,12 @@ import app.kaihi.android.core.vpn.spec.VlessVnext
 import app.kaihi.android.core.vpn.spec.VlessVnextUser
 import app.kaihi.android.core.vpn.spec.XrayConfig
 import app.kaihi.android.core.vpn.spec.XrayFlow
+import app.kaihi.android.core.vpn.spec.XrayFingerprint
+import app.kaihi.android.core.vpn.spec.XrayFingerprintSetting
+import app.kaihi.android.core.vpn.spec.XraySecurity
 import app.kaihi.android.core.vpn.spec.XrayTransport
+import app.kaihi.android.core.vpn.spec.candidates
+import app.kaihi.android.core.vpn.spec.preferred
 import app.kaihi.android.core.vpn.spec.toJsonObject
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -55,23 +61,52 @@ object XrayClientConfigFactory {
     fun createRuntimeConfig(profile: XrayVpnProfile, ipv6Enabled: Boolean): XrayRuntimeConfig {
         // See SocksEndpoint for why this can't be "noauth".
         val socksCredential = generateSocksCredential()
+        val fingerprintSetting = (profile.security as? XraySecurity.Reality)?.fingerprint
+        val fingerprint = fingerprintSetting?.preferred()
+        val probeUrl = ProbeTargets.urlForWholeSession()
+        val candidates = (fingerprintSetting as? XrayFingerprintSetting.Auto)
+            ?.candidates()
+            ?.map { candidate ->
+                FingerprintCandidate(
+                    fingerprint = candidate,
+                    rawJson = build(profile, socksCredential, ipv6Enabled, probeUrl, candidate).toJson(),
+                )
+            }
+            .orEmpty()
         return XrayRuntimeConfig(
-            rawJson = build(profile, socksCredential, ipv6Enabled).toJson(),
+            rawJson = candidates.firstOrNull()?.rawJson
+                ?: build(
+                    profile = profile,
+                    socksCredential = socksCredential,
+                    ipv6Enabled = ipv6Enabled,
+                    probeUrl = probeUrl,
+                    fingerprint = fingerprint ?: XrayFingerprint.FIREFOX,
+                ).toJson(),
             socksEndpoint = SocksEndpoint(LOOPBACK, SOCKS_PORT, socksCredential.user, socksCredential.pass),
             serverId = profile.id,
             ipv6Enabled = ipv6Enabled,
             settingsKey = settingsKey(profile, ipv6Enabled),
+            fingerprintCandidates = candidates,
+            fingerprint = fingerprint,
         )
     }
 
     fun settingsKey(profile: XrayVpnProfile, ipv6Enabled: Boolean): String {
+        val setting = profile.security.fingerprintSettingOrNull()
+        val fingerprint = if (setting == null || setting is XrayFingerprintSetting.Auto) {
+            XrayFingerprintSetting.Auto().preferred()
+        } else {
+            setting.preferred()
+        }
+        val config = build(
+            profile = profile,
+            socksCredential = PLACEHOLDER_CREDENTIAL,
+            ipv6Enabled = ipv6Enabled,
+            probeUrl = ProbeTargets.urlForSettingsKey(),
+            fingerprint = fingerprint,
+        ).toJson() + if (setting is XrayFingerprintSetting.Auto) "\nfingerprint=auto" else ""
         val digest = MessageDigest.getInstance("SHA-256").digest(
-            build(
-                profile = profile,
-                socksCredential = PLACEHOLDER_CREDENTIAL,
-                ipv6Enabled = ipv6Enabled,
-                probeUrl = ProbeTargets.urlForSettingsKey(),
-            ).toJson().toByteArray(Charsets.UTF_8)
+            config.toByteArray(Charsets.UTF_8)
         )
         return buildString(digest.size * 2) {
             digest.forEach { byte ->
@@ -87,17 +122,19 @@ object XrayClientConfigFactory {
      * without threading a throwaway SOCKS credential through.
      */
     fun build(profile: XrayVpnProfile, ipv6Enabled: Boolean = false): XrayConfig =
-        build(profile, generateSocksCredential(), ipv6Enabled)
+        build(profile, generateSocksCredential(), ipv6Enabled, profile.security.fingerprintForConfig())
 
     private fun build(
         profile: XrayVpnProfile,
         socksCredential: SocksCredential,
         ipv6Enabled: Boolean,
+        fingerprint: XrayFingerprint,
     ): XrayConfig = build(
         profile = profile,
         socksCredential = socksCredential,
         ipv6Enabled = ipv6Enabled,
         probeUrl = ProbeTargets.urlForWholeSession(),
+        fingerprint = fingerprint,
     )
 
     private fun build(
@@ -105,6 +142,7 @@ object XrayClientConfigFactory {
         socksCredential: SocksCredential,
         ipv6Enabled: Boolean,
         probeUrl: String,
+        fingerprint: XrayFingerprint,
     ): XrayConfig {
         val proxyOutbound = OutboundObject(
             protocol = "vless",
@@ -129,6 +167,7 @@ object XrayClientConfigFactory {
             streamSettings = XrayTransportFactory.streamSettings(
                 transport = profile.transport,
                 security = profile.security,
+                fingerprint = fingerprint,
                 xmuxMaxConcurrency = if (profile.muxEnabled) {
                     profile.muxConcurrency.coerceIn(MIN_MUX_CONCURRENCY, MAX_MUX_CONCURRENCY)
                 } else {
@@ -236,4 +275,10 @@ object XrayClientConfigFactory {
     }
 
     private data class SocksCredential(val user: String, val pass: String)
+
+    private fun XraySecurity.fingerprintSettingOrNull() =
+        (this as? XraySecurity.Reality)?.fingerprint
+
+    private fun XraySecurity.fingerprintForConfig() =
+        fingerprintSettingOrNull()?.preferred() ?: XrayFingerprintSetting.Auto().preferred()
 }

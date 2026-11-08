@@ -1,5 +1,10 @@
 package app.kaihi.android.feature.dashboard.impl.ui.screen.components
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -18,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import app.kaihi.android.R
 import app.kaihi.android.core.vpn.spec.XrayFingerprint
+import app.kaihi.android.core.vpn.spec.XrayFingerprintSetting
 import app.kaihi.android.platform.ui.theme.size.dimens
 
 private const val MIN_MUX_CONCURRENCY = 1
@@ -26,12 +32,12 @@ private const val MAX_MUX_CONCURRENCY = 128
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun ServerAdvancedSection(
-    fingerprint: XrayFingerprint?,
+    fingerprint: XrayFingerprintSetting?,
     isXhttp: Boolean,
     muxEnabled: Boolean,
     muxConcurrency: Int,
     fragmentEnabled: Boolean,
-    onFingerprintChanged: (XrayFingerprint) -> Unit,
+    onFingerprintChanged: (XrayFingerprintSetting) -> Unit,
     onMuxEnabledChanged: (Boolean) -> Unit,
     onFragmentEnabledChanged: (Boolean) -> Unit,
     onMuxConcurrencyChanged: (Int) -> Unit,
@@ -57,10 +63,42 @@ internal fun ServerAdvancedSection(
                     horizontalArrangement = Arrangement.spacedBy(dimens.s),
                     verticalArrangement = Arrangement.spacedBy(dimens.s),
                 ) {
+                    FilterChip(
+                        selected = fingerprint is XrayFingerprintSetting.Auto,
+                        onClick = {
+                            if (fingerprint is XrayFingerprintSetting.Fixed) {
+                                onFingerprintChanged(XrayFingerprintSetting.Auto(fingerprint.fingerprint))
+                            }
+                        },
+                        label = {
+                            val auto = fingerprint as? XrayFingerprintSetting.Auto
+                            val autoLabel = if (auto?.lastWorking == null) {
+                                stringResource(R.string.dashboard_server_fingerprint_auto)
+                            } else {
+                                stringResource(
+                                    R.string.dashboard_server_fingerprint_auto_with_current,
+                                    auto.lastWorking.wireValue,
+                                )
+                            }
+                            AnimatedContent(
+                                targetState = autoLabel,
+                                transitionSpec = {
+                                    fadeIn() togetherWith fadeOut() using SizeTransform()
+                                },
+                                label = "auto_fingerprint_label",
+                            ) { label ->
+                                Text(text = label)
+                            }
+                        },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        ),
+                    )
                     XrayFingerprint.entries.forEach { entry ->
                         FilterChip(
-                            selected = fingerprint == entry,
-                            onClick = { onFingerprintChanged(entry) },
+                            selected = fingerprint == XrayFingerprintSetting.Fixed(entry),
+                            onClick = { onFingerprintChanged(XrayFingerprintSetting.Fixed(entry)) },
                             label = { Text(entry.wireValue) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,

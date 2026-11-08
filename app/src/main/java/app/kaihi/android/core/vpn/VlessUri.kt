@@ -2,6 +2,7 @@ package app.kaihi.android.core.vpn
 
 import app.kaihi.android.core.vpn.spec.XraySecurity
 import app.kaihi.android.core.vpn.spec.XrayTransport
+import app.kaihi.android.core.vpn.spec.preferred
 import java.net.URLEncoder
 
 fun XrayVpnProfile.toVlessUri(): String = buildString {
@@ -17,7 +18,7 @@ fun XrayVpnProfile.toVlessUri(): String = buildString {
         is XraySecurity.Reality -> {
             append("&security=reality")
             append("&sni=").append(security.serverName.urlEncode())
-            append("&fp=").append(security.fingerprint.wireValue.urlEncode())
+            append("&fp=").append(security.fingerprint.preferred().wireValue.urlEncode())
             append("&pbk=").append(security.publicKey.urlEncode())
             append("&sid=").append(security.shortId.urlEncode())
         }

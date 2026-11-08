@@ -39,6 +39,8 @@
 
     <string name="dashboard_server_advanced_title">Расширенные</string>
     <string name="dashboard_server_utls_fingerprint_title">TLS-отпечаток</string>
+    <string name="dashboard_server_fingerprint_auto">Авто</string>
+    <string name="dashboard_server_fingerprint_auto_with_current">Авто · %1$s</string>
     <string name="dashboard_server_mux_title">Мультиплексирование</string>
     <string name="dashboard_server_mux_description_xhttp">Передавать несколько потоков через одно HTTP-соединение. Если выключено, каждый поток открывает своё соединение.</string>
     <string name="dashboard_server_mux_description_raw">Использовать одно соединение для нескольких потоков. С Vision мультиплексируется только UDP.</string>
@@ -56,6 +58,7 @@
     <string name="dashboard_error_reconnect_timed_out">Не удалось переподключиться. Попробуйте подключиться снова.</string>
     <string name="dashboard_error_no_server_configured">Сервер ещё не настроен. Сначала пройдите настройку.</string>
     <string name="dashboard_error_failed_to_start_vpn">Не удалось запустить VPN.</string>
+    <string name="dashboard_error_no_working_fingerprint">Не удалось подключиться к серверу ни с одним TLS-отпечатком.</string>
 
     <string name="xray_logs_title">Логи Xray</string>
     <string name="xray_logs_copy">Копировать</string>

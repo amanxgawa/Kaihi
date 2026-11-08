@@ -2,11 +2,13 @@ package app.kaihi.android.feature.dashboard
 
 import app.kaihi.android.core.vpn.XrayControl
 import app.kaihi.android.core.vpn.XrayEngineState
+import app.kaihi.android.core.vpn.XrayFailure
 import app.kaihi.android.core.vpn.XrayLogMessage
 import app.kaihi.android.core.vpn.XrayMonitoring
 import app.kaihi.android.core.vpn.XrayRuntimeConfig
 import app.kaihi.android.core.vpn.XrayServiceProvider
 import app.kaihi.android.core.vpn.XrayTrafficStats
+import app.kaihi.android.core.vpn.spec.XrayFingerprint
 import app.kaihi.android.feature.dashboard.impl.ui.mvi.XrayLogsViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -95,5 +97,7 @@ private class FakeMonitoring(override val logs: Flow<XrayLogMessage>) : XrayMoni
     override val healthDegraded: Flow<Unit> = MutableSharedFlow()
     override val sessionServerId: StateFlow<String?> = MutableStateFlow(null)
     override val sessionSettingsKey: StateFlow<String?> = MutableStateFlow(null)
+    override val sessionFingerprint: StateFlow<XrayFingerprint?> = MutableStateFlow(null)
     override val runningSinceRealtime: StateFlow<Long?> = MutableStateFlow(null)
+    override val failure: StateFlow<XrayFailure?> = MutableStateFlow(null)
 }

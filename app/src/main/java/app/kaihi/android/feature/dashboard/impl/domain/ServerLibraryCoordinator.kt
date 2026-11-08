@@ -4,6 +4,7 @@ import app.kaihi.android.core.vpn.XraySubscriptionStore
 import app.kaihi.android.core.vpn.XrayVpnProfile
 import app.kaihi.android.core.vpn.findServer
 import app.kaihi.android.core.vpn.spec.XrayFingerprint
+import app.kaihi.android.core.vpn.spec.XrayFingerprintSetting
 import app.kaihi.android.core.vpn.spec.XraySecurity
 import app.kaihi.android.core.vpn.withServerUpdated
 import app.kaihi.android.core.vpn.withSubscriptionUpdated
@@ -51,9 +52,22 @@ internal class ServerLibraryCoordinator @Inject constructor(
         subscriptionStore.update { it.withoutServer(serverId) }
     }
 
-    suspend fun setFingerprint(serverId: String, fingerprint: XrayFingerprint) = updateServer(serverId) { server ->
+    suspend fun setFingerprint(serverId: String, fingerprint: XrayFingerprintSetting) = updateServer(serverId) { server ->
         val reality = server.security as? XraySecurity.Reality ?: return@updateServer server
         server.copy(security = reality.copy(fingerprint = fingerprint))
+    }
+
+    suspend fun recordWorkingFingerprint(serverId: String, fingerprint: XrayFingerprint) {
+        val current = subscriptionStore.subscriptions.first().findServer(serverId) ?: return
+        val reality = current.security as? XraySecurity.Reality ?: return
+        val auto = reality.fingerprint as? XrayFingerprintSetting.Auto ?: return
+        if (auto.lastWorking == fingerprint) return
+        updateServer(serverId) { server ->
+            val reality = server.security as? XraySecurity.Reality ?: return@updateServer server
+            val auto = reality.fingerprint as? XrayFingerprintSetting.Auto ?: return@updateServer server
+            if (auto.lastWorking == fingerprint) return@updateServer server
+            server.copy(security = reality.copy(fingerprint = auto.copy(lastWorking = fingerprint)))
+        }
     }
 
     suspend fun setMuxEnabled(serverId: String, enabled: Boolean) = updateServer(serverId) { it.copy(muxEnabled = enabled) }

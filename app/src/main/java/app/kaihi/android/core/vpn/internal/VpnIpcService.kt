@@ -55,6 +55,7 @@ internal class VpnIpcService : Service() {
                         data = sessionServerBundle(
                             sessionIdentity?.serverId,
                             sessionIdentity?.settingsKey,
+                            sessionIdentity?.fingerprint,
                         )
                     }
             )
@@ -68,6 +69,12 @@ internal class VpnIpcService : Service() {
             broadcast(
                 Message.obtain(null, VpnIpcProtocol.MSG_RUNNING_SINCE_CHANGED)
                     .apply { data = runningSinceBundle(runningSinceRealtime) }
+            )
+        }.launchIn(scope)
+        telemetry.failure.onEach { failure ->
+            broadcast(
+                Message.obtain(null, VpnIpcProtocol.MSG_FAILURE_CHANGED)
+                    .apply { data = failureBundle(failure) }
             )
         }.launchIn(scope)
         telemetry.stats.onEach { stats ->
@@ -109,7 +116,11 @@ internal class VpnIpcService : Service() {
             Message.obtain(null, VpnIpcProtocol.MSG_SESSION_SERVER_CHANGED)
                 .apply {
                     data = telemetry.sessionIdentity.value.let { sessionIdentity ->
-                        sessionServerBundle(sessionIdentity?.serverId, sessionIdentity?.settingsKey)
+                        sessionServerBundle(
+                            sessionIdentity?.serverId,
+                            sessionIdentity?.settingsKey,
+                            sessionIdentity?.fingerprint,
+                        )
                     }
                 }
         )
@@ -124,6 +135,10 @@ internal class VpnIpcService : Service() {
         client.trySend(
             Message.obtain(null, VpnIpcProtocol.MSG_RUNNING_SINCE_CHANGED)
                 .apply { data = runningSinceBundle(telemetry.runningSinceRealtime.value) }
+        )
+        client.trySend(
+            Message.obtain(null, VpnIpcProtocol.MSG_FAILURE_CHANGED)
+                .apply { data = failureBundle(telemetry.failure.value) }
         )
         lastStats?.let { stats ->
             client.trySend(
