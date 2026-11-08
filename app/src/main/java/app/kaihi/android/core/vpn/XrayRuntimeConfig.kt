@@ -10,4 +10,6 @@ data class XrayRuntimeConfig(
     // Nullable only so a restart intent scheduled by an older build still decodes.
     val serverId: String? = null,
     val ipv6Enabled: Boolean = false,
+    // Nullable only so a restart intent scheduled by an older build still decodes.
+    val settingsKey: String? = null,
 )

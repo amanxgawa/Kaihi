@@ -27,6 +27,7 @@ import app.kaihi.android.core.vpn.spec.toJsonObject
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.Base64
 
@@ -47,6 +48,9 @@ object XrayClientConfigFactory {
     private const val MIN_MUX_CONCURRENCY = 1
     // Under Vision the server breaks Mux connections that carry TCP, so -1 keeps TCP off Mux and only XUDP is muxed.
     private const val VISION_TCP_MUX_DISABLED = -1
+    private const val HEX_DIGITS = "0123456789abcdef"
+    // Used only as hashed input; this credential is never used to run Xray.
+    private val PLACEHOLDER_CREDENTIAL = SocksCredential(user = "kaihi", pass = "settings-key")
 
     fun createRuntimeConfig(profile: XrayVpnProfile, ipv6Enabled: Boolean): XrayRuntimeConfig {
         // See SocksEndpoint for why this can't be "noauth".
@@ -56,7 +60,26 @@ object XrayClientConfigFactory {
             socksEndpoint = SocksEndpoint(LOOPBACK, SOCKS_PORT, socksCredential.user, socksCredential.pass),
             serverId = profile.id,
             ipv6Enabled = ipv6Enabled,
+            settingsKey = settingsKey(profile, ipv6Enabled),
         )
+    }
+
+    fun settingsKey(profile: XrayVpnProfile, ipv6Enabled: Boolean): String {
+        val digest = MessageDigest.getInstance("SHA-256").digest(
+            build(
+                profile = profile,
+                socksCredential = PLACEHOLDER_CREDENTIAL,
+                ipv6Enabled = ipv6Enabled,
+                probeUrl = ProbeTargets.urlForSettingsKey(),
+            ).toJson().toByteArray(Charsets.UTF_8)
+        )
+        return buildString(digest.size * 2) {
+            digest.forEach { byte ->
+                val unsigned = byte.toInt() and 0xff
+                append(HEX_DIGITS[unsigned ushr 4])
+                append(HEX_DIGITS[unsigned and 0x0f])
+            }
+        }
     }
 
     /**
@@ -70,6 +93,18 @@ object XrayClientConfigFactory {
         profile: XrayVpnProfile,
         socksCredential: SocksCredential,
         ipv6Enabled: Boolean,
+    ): XrayConfig = build(
+        profile = profile,
+        socksCredential = socksCredential,
+        ipv6Enabled = ipv6Enabled,
+        probeUrl = ProbeTargets.urlForWholeSession(),
+    )
+
+    private fun build(
+        profile: XrayVpnProfile,
+        socksCredential: SocksCredential,
+        ipv6Enabled: Boolean,
+        probeUrl: String,
     ): XrayConfig {
         val proxyOutbound = OutboundObject(
             protocol = "vless",
@@ -139,7 +174,7 @@ object XrayClientConfigFactory {
                 pingConfig = PingConfigObject(
                     // Fixed for the session because xray reads it once, but drawn from a pool so
                     // that it is not the same name on every install. See ProbeTargets.
-                    destination = ProbeTargets.urlForWholeSession(),
+                    destination = probeUrl,
                     interval = "1m",
                     sampling = 4,
                     timeout = "3s",

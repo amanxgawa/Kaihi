@@ -44,9 +44,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.kaihi.android.R
 import app.kaihi.android.feature.dashboard.impl.ui.mvi.DashboardContract
 import app.kaihi.android.feature.dashboard.impl.ui.mvi.DashboardViewModel
+import app.kaihi.android.feature.dashboard.impl.ui.mvi.isBusy
 import app.kaihi.android.feature.dashboard.impl.ui.screen.components.ConnectFab
 import app.kaihi.android.feature.dashboard.impl.ui.screen.components.ConnectionHeader
 import app.kaihi.android.feature.dashboard.impl.ui.screen.components.DeployServerButton
+import app.kaihi.android.feature.dashboard.impl.ui.screen.components.ReconnectToApplyBanner
 import app.kaihi.android.feature.dashboard.impl.ui.screen.components.ServerDetailsSheet
 import app.kaihi.android.feature.dashboard.impl.ui.screen.components.SubscriptionEditorSheet
 import app.kaihi.android.feature.dashboard.impl.ui.screen.components.connectFabClearance
@@ -59,6 +61,7 @@ import app.kaihi.android.platform.ui.util.CollectAsEffect
 import app.kaihi.android.platform.ui.util.asString
 
 private const val CONNECTION_ITEM_KEY = "connection"
+private const val RECONNECT_TO_APPLY_ITEM_KEY = "reconnect-to-apply"
 private const val DEPLOY_ITEM_KEY = "deploy"
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -162,6 +165,9 @@ internal fun DashboardScreen(
             details = details,
             isAdvancedMode = state.isAdvancedMode,
             onDismiss = { viewModel.processIntent(DashboardContract.Intent.ServerDetailsDismissed) },
+            showReconnectToApply = details.id == state.reconnectToApplyServerId,
+            onReconnectToApply = { viewModel.processIntent(DashboardContract.Intent.ReconnectToApplyRequested) },
+            isBusy = state.isBusy,
             onShare = { viewModel.processIntent(DashboardContract.Intent.ShareServerRequested(details.id)) },
             onForget = { viewModel.processIntent(DashboardContract.Intent.ServerForgotten(details.id)) },
             onFingerprintChanged = { value ->
@@ -217,6 +223,18 @@ private fun DashboardContent(
                     .fillMaxWidth()
                     .padding(bottom = dimens.xl),
             )
+        }
+
+        if (state.reconnectToApplyServerId != null) {
+            item(key = RECONNECT_TO_APPLY_ITEM_KEY) {
+                ReconnectToApplyBanner(
+                    onReconnect = { onIntent(DashboardContract.Intent.ReconnectToApplyRequested) },
+                    enabled = !state.isBusy,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = dimens.l),
+                )
+            }
         }
 
         subscriptionItems(

@@ -8,7 +8,7 @@ internal object VpnIpcProtocol {
     const val MSG_LOG_LINE = 12
     /** No payload. See [app.kaihi.android.core.vpn.internal.XrayHealthWatchdog]. */
     const val MSG_HEALTH_DEGRADED = 13
-    /** [KEY_SESSION_SERVER_ID] payload, absent while no session runs. */
+    /** [KEY_SESSION_SERVER_ID] and [KEY_SESSION_SETTINGS_KEY] payload, absent while no session runs. */
     const val MSG_SESSION_SERVER_CHANGED = 14
     /** [KEY_RUNNING_SINCE_REALTIME] payload, absent while no session runs. */
     const val MSG_RUNNING_SINCE_CHANGED = 15
@@ -26,5 +26,6 @@ internal object VpnIpcProtocol {
     const val KEY_LOG_SEQUENCE = "log_sequence"
 
     const val KEY_SESSION_SERVER_ID = "session_server_id"
+    const val KEY_SESSION_SETTINGS_KEY = "session_settings_key"
     const val KEY_RUNNING_SINCE_REALTIME = "running_since_realtime"
 }
