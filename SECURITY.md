@@ -21,6 +21,9 @@ Kaihi is pre-1.0. Only the latest release is supported, and fixes are not backpo
 Kaihi is a client for a VPN server **you own**. That shapes the threat model more than anything
 else in it.
 
+For imported servers, their operator is in the hosting provider's position and can see traffic
+leaving that server.
+
 It is built to resist:
 
 - a network observer between your device and your server, including active DPI probing;
@@ -49,6 +52,8 @@ Whether REALITY itself is distinguishable on the wire is an open research questi
 - defeating host key verification, or weakening the trust-on-first-use flow;
 - leaking SSH credentials or profile material, through logs, Android backups, inter-process
   communication, or a generated `toString`;
+- unsafe parsing of untrusted `vless://` links or subscription responses, or leaking a subscription
+  URL;
 - weakening the generated Xray configuration: losing a blackhole rule, degrading REALITY masking,
   or making a connection more distinguishable than intended;
 - reaching the loopback SOCKS inbound from another application on the device;
@@ -91,10 +96,14 @@ Stated because knowing them may change how you use this, not because they are op
   dual-stack fingerprint is itself something DPI can key on. Advanced mode has a Settings option,
   off by default, to route IPv6 through the tunnel on the next connect. When enabled, the TUN gets
   an IPv6 route so IPv6 still cannot bypass the tunnel, and the client's `::/0` blackhole is lifted.
+- **Subscription fetches go outside the VPN.** Importing, opening the dashboard with a stale
+  subscription, or manually refreshing sends an HTTPS GET directly from the phone to the provider.
+  The local network and ISP can see the provider's hostname. Kaihi sends no device identifier, so
+  panels that require one (for example, HWID-limited subscriptions) may reject the request.
 - **Apps outside VPN bypass the tunnel by design.** Apps selected in Settings send traffic directly
   through the device's normal network connection, where the local network and ISP can see it. The
-  choice takes effect on the next connect. Android supplies the on-device list of launchable apps;
-  Kaihi does not request `QUERY_ALL_PACKAGES`.
+  choice takes effect on the next connect. Android supplies the on-device list of launchable apps
+  through a `<queries>` launcher-intent declaration; Kaihi does not request `QUERY_ALL_PACKAGES`.
 
 ## A note for users at risk
 
