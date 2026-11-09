@@ -31,4 +31,7 @@ internal object ProbeTargets {
 
     /** One endpoint, for config fields xray reads once and keeps for the session. */
     fun urlForWholeSession(): String = TARGETS.random().url
+
+    /** Stable config input for settings keys; the real session still chooses a random endpoint. */
+    fun urlForSettingsKey(): String = TARGETS.first().url
 }

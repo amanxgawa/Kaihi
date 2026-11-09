@@ -23,10 +23,13 @@ internal object DashboardContract {
         val serverDetails: ServerDetailsUi? = null,
         val subscriptionEditor: SubscriptionEditorUi? = null,
         val isAdvancedMode: Boolean = false,
+        // The running session does not include the current saved settings.
+        val reconnectToApplyServerId: String? = null,
     )
 
     sealed interface Intent {
         data object ToggleConnection : Intent
+        data object ReconnectToApplyRequested : Intent
         data object VpnPermissionGranted : Intent
         data object VpnPermissionDenied : Intent
         data object ErrorDismissed : Intent

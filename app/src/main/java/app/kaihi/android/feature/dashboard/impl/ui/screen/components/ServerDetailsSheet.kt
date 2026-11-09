@@ -42,6 +42,9 @@ import app.kaihi.android.platform.ui.util.UiText
 internal fun ServerDetailsSheet(
     details: ServerDetailsUi,
     isAdvancedMode: Boolean,
+    showReconnectToApply: Boolean,
+    onReconnectToApply: () -> Unit,
+    isBusy: Boolean,
     onDismiss: () -> Unit,
     onShare: () -> Unit,
     onForget: () -> Unit,
@@ -121,6 +124,12 @@ internal fun ServerDetailsSheet(
 
             if (isAdvancedMode) {
                 HorizontalDivider()
+                if (showReconnectToApply) {
+                    ReconnectToApplyBanner(
+                        onReconnect = onReconnectToApply,
+                        enabled = !isBusy,
+                    )
+                }
                 ServerAdvancedSection(
                     fingerprint = details.fingerprint,
                     isXhttp = details.isXhttp,

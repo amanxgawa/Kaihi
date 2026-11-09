@@ -7,6 +7,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -83,7 +84,10 @@ class XrayRuntimeConfigFactoryTest {
 
         assertFalse(config.ipv6Enabled)
         assertEquals("server-1", config.serverId)
+        assertNull(config.settingsKey)
         assertEquals(SocksEndpoint("127.0.0.1", 10_808, "kaihi", "secret"), config.socksEndpoint)
-        assertFalse(XrayJson.default.encodeToString(config).contains("ipv6Enabled"))
+        val reencoded = XrayJson.default.encodeToString(config)
+        assertFalse(reencoded.contains("ipv6Enabled"))
+        assertFalse(reencoded.contains("settingsKey"))
     }
 }

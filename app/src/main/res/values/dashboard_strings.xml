@@ -11,6 +11,8 @@
     <string name="dashboard_state_taking_a_while">Still working on it. A first connection takes a little longer.</string>
     <string name="dashboard_connect">Connect</string>
     <string name="dashboard_disconnect">Disconnect</string>
+    <string name="dashboard_reconnect_to_apply_message">Changes apply after you reconnect.</string>
+    <string name="dashboard_reconnect_to_apply_action">Reconnect</string>
 
     <string name="dashboard_deploy_server">Deploy server</string>
     <string name="dashboard_empty_hint">No servers yet. Deploy Xray to your own VPS and it shows up here.</string>

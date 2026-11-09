@@ -29,11 +29,14 @@ internal fun XrayLogMessage.toBundle(): Bundle = Bundle().apply {
     putLong(VpnIpcProtocol.KEY_LOG_SEQUENCE, sequence)
 }
 
-internal fun sessionServerBundle(serverId: String?): Bundle = Bundle().apply {
+internal fun sessionServerBundle(serverId: String?, settingsKey: String?): Bundle = Bundle().apply {
     putString(VpnIpcProtocol.KEY_SESSION_SERVER_ID, serverId)
+    putString(VpnIpcProtocol.KEY_SESSION_SETTINGS_KEY, settingsKey)
 }
 
 internal fun Bundle.toSessionServerId(): String? = getString(VpnIpcProtocol.KEY_SESSION_SERVER_ID)
+
+internal fun Bundle.toSessionSettingsKey(): String? = getString(VpnIpcProtocol.KEY_SESSION_SETTINGS_KEY)
 
 // A Long has no spare "no session" value, so absence is the signal: the key is omitted rather
 // than written as 0.

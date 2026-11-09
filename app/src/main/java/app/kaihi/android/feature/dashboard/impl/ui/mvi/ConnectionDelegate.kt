@@ -8,11 +8,14 @@ import app.kaihi.android.core.vpn.XrayEngineState
 import app.kaihi.android.core.vpn.XrayServiceProvider
 import app.kaihi.android.core.vpn.XrayVpnProfile
 import app.kaihi.android.core.vpn.configfactory.XrayClientConfigFactory
+import app.kaihi.android.core.vpn.findServer
 import app.kaihi.android.feature.dashboard.impl.domain.ServerLibraryCoordinator
 import app.kaihi.android.platform.ui.mvi.ViewModelDelegate
 import app.kaihi.android.platform.ui.util.UiText
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -46,6 +49,24 @@ internal class ConnectionDelegate @Inject constructor(
             .launchIn(scope)
         serviceProvider.monitoring.state
             .onEach { engineState -> reduce { copy(engineState = engineState) } }
+            .launchIn(scope)
+        combine(
+            serviceProvider.monitoring.state,
+            serviceProvider.monitoring.sessionServerId,
+            serviceProvider.monitoring.sessionSettingsKey,
+            coordinator.library,
+            vpnPreferences.ipv6Enabled,
+        ) { engineState, serverId, settingsKey, library, ipv6Enabled ->
+            reconnectToApplyServerId(
+                engineState = engineState,
+                sessionServerId = serverId,
+                sessionSettingsKey = settingsKey,
+                sessionServer = serverId?.let { library.subscriptions.findServer(it) },
+                ipv6Enabled = ipv6Enabled,
+            )
+        }
+            .distinctUntilChanged()
+            .onEach { serverId -> reduce { copy(reconnectToApplyServerId = serverId) } }
             .launchIn(scope)
         // From :vpn rather than derived from `state` here: a UI process recreated underneath a
         // live tunnel would otherwise see RUNNING for the first time on reconnect and mistake that
@@ -91,6 +112,14 @@ internal class ConnectionDelegate @Inject constructor(
         val dispatched = start(server, stateOnDispatchFailure = XrayEngineState.RUNNING)
         // Nothing reached the service, so the old session keeps running: put the selection back on it.
         if (!dispatched) sessionServerId?.let(coordinator::select)
+    }
+
+    suspend fun applyPendingSettings() {
+        if (currentState.isBusy || currentState.engineState != XrayEngineState.RUNNING) return
+        val serverId = currentState.reconnectToApplyServerId ?: return
+        val server = coordinator.library.first().subscriptions.findServer(serverId) ?: return
+        reduce { copy(engineState = XrayEngineState.STARTING, errorMessage = null) }
+        start(server, stateOnDispatchFailure = XrayEngineState.RUNNING)
     }
 
     suspend fun stopIfRunningOn(removedServerIds: Set<String>) {
