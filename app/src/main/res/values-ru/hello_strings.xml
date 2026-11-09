@@ -16,13 +16,12 @@
 
     <string name="advanced_mode_intro_title">Расширенный режим</string>
     <string name="advanced_mode_intro_capabilities_title">Что даёт</string>
-    <string name="advanced_mode_intro_capability_transport">Выбор транспорта и управления потоком вручную вместо автоматического</string>
-    <string name="advanced_mode_intro_capability_camouflage">Перенастройка маскировки REALITY: маскировочный домен, TLS-отпечаток и short ID</string>
-    <string name="advanced_mode_intro_capability_mtu">Настройка MTU VPN-туннеля</string>
-    <string name="advanced_mode_intro_capability_config">Редактирование всего конфига Xray, включая редактор сырого JSON, который проверяется перед применением</string>
-    <string name="advanced_mode_intro_capability_tunnel">Замена локального туннеля, через который Xray отправляет трафик</string>
+    <string name="advanced_mode_intro_capability_connection">Настройка подключения к каждому серверу: TLS-отпечаток, мультиплексирование и фрагментация ClientHello</string>
+    <string name="advanced_mode_intro_capability_ipv6">Пускать IPv6-трафик через туннель, а не блокировать его</string>
+    <string name="advanced_mode_intro_capability_setup">Выбор стратегии и технологий при добавлении сервера</string>
+    <string name="advanced_mode_intro_reversible_note">При возврате в обычный режим всё это снова работает с безопасными настройками по умолчанию. Ваши настройки сохранятся на будущее.</string>
     <string name="advanced_mode_intro_warning_title">Обычно это не нужно</string>
-    <string name="advanced_mode_intro_warning_body">Это для тех, кто уже разбирается в REALITY, XHTTP и конфиге Xray и имеет причину настраивать всё это вручную. Ошибка в любом из этого может упростить вашу идентификацию или вовсе разорвать соединение. Приложение никак от этого не защищает.</string>
+    <string name="advanced_mode_intro_warning_body">Он для тех, кто разбирается в REALITY, XHTTP и Xray и знает, зачем менять эти настройки. Неверный выбор может сделать подключение заметнее для блокировок или сломать его.</string>
     <string name="advanced_mode_intro_acknowledge">Я понимаю риски и хочу полный контроль</string>
     <string name="advanced_mode_intro_enable">Включить расширенный режим</string>
 </resources>

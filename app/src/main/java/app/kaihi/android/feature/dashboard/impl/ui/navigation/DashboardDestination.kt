@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import app.kaihi.android.feature.dashboard.DashboardKey
+import app.kaihi.android.feature.dashboard.ServerKey
 import app.kaihi.android.feature.dashboard.impl.ui.screen.DashboardScreen
 import app.kaihi.android.feature.settings.SettingsKey
 import app.kaihi.android.feature.wizard.WizardKey
@@ -29,6 +30,7 @@ class DashboardDestination @Inject constructor() : Destination<DashboardKey> {
             selectServerId = key.selectServerId.takeUnless { isSelectionHandedOver },
             onSettingsClick = { navigator.navigate(SettingsKey) },
             onNavigateToWizard = { subscriptionId -> navigator.navigate(WizardKey(subscriptionId)) },
+            onNavigateToServer = { serverId -> navigator.navigate(ServerKey(serverId)) },
         )
     }
 }

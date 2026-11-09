@@ -58,16 +58,16 @@ internal class DashboardViewModel @AssistedInject constructor(
             }
 
             is Intent.ServerDetailsRequested -> libraryDelegate.openServerDetails(intent.serverId)
+            is Intent.ServerManageRequested -> {
+                libraryDelegate.dismissServerDetails()
+                sendEffect(Effect.NavigateToServer(intent.serverId))
+            }
             Intent.ServerDetailsDismissed -> libraryDelegate.dismissServerDetails()
             is Intent.ShareServerRequested -> libraryDelegate.shareServer(intent.serverId)
             is Intent.ServerForgotten -> {
                 connectionDelegate.stopIfRunningOn(setOf(intent.serverId))
                 libraryDelegate.forgetServer(intent.serverId)
             }
-            is Intent.FingerprintChanged -> coordinator.setFingerprint(intent.serverId, intent.value)
-            is Intent.MuxEnabledChanged -> coordinator.setMuxEnabled(intent.serverId, intent.enabled)
-            is Intent.FragmentEnabledChanged -> coordinator.setFragmentEnabled(intent.serverId, intent.enabled)
-            is Intent.MuxConcurrencyChanged -> coordinator.setMuxConcurrency(intent.serverId, intent.value)
         }
     }
 

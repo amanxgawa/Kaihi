@@ -1,8 +1,10 @@
 package app.kaihi.android.feature.dashboard.impl.ui.navigation.di
 
 import app.kaihi.android.feature.dashboard.DashboardKey
+import app.kaihi.android.feature.dashboard.ServerKey
 import app.kaihi.android.feature.dashboard.XrayLogsKey
 import app.kaihi.android.feature.dashboard.impl.ui.navigation.DashboardDestination
+import app.kaihi.android.feature.dashboard.impl.ui.navigation.ServerDestination
 import app.kaihi.android.feature.dashboard.impl.ui.navigation.XrayLogsDestination
 import app.kaihi.android.platform.navigation.Destination
 import app.kaihi.android.platform.navigation.NavDestination
@@ -28,5 +30,12 @@ abstract class DashboardNavigationModule {
     @NavDestination(XrayLogsKey::class)
     abstract fun bindXrayLogsDestination(
         destination: XrayLogsDestination
+    ): Destination<*>
+
+    @Binds
+    @IntoMap
+    @NavDestination(ServerKey::class)
+    abstract fun bindServerDestination(
+        destination: ServerDestination,
     ): Destination<*>
 }

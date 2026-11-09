@@ -1,5 +1,6 @@
-package app.kaihi.android.feature.dashboard.impl.ui.mvi
+package app.kaihi.android.feature.dashboard.impl.domain
 
+import app.kaihi.android.core.vpn.TunnelSettings
 import app.kaihi.android.core.vpn.XrayEngineState
 import app.kaihi.android.core.vpn.XrayVpnProfile
 import app.kaihi.android.core.vpn.configfactory.XrayClientConfigFactory
@@ -9,7 +10,7 @@ internal fun reconnectToApplyServerId(
     sessionServerId: String?,
     sessionSettingsKey: String?,
     sessionServer: XrayVpnProfile?,
-    ipv6Enabled: Boolean,
+    settings: TunnelSettings,
 ): String? {
     if (engineState != XrayEngineState.RUNNING) return null
     val serverId = sessionServerId ?: return null
@@ -17,6 +18,6 @@ internal fun reconnectToApplyServerId(
     val savedServer = sessionServer ?: return null
 
     return serverId.takeIf {
-        XrayClientConfigFactory.settingsKey(savedServer, ipv6Enabled) != runningSettingsKey
+        XrayClientConfigFactory.settingsKey(savedServer, settings) != runningSettingsKey
     }
 }

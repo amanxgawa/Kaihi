@@ -12,4 +12,5 @@
     <string name="settings_danger_zone_title">Danger zone</string>
     <string name="settings_advanced_mode_toggle_title">Advanced mode</string>
     <string name="settings_advanced_mode_toggle_description">Manual transport, camouflage, and config tuning. Most people don\'t need this.</string>
+    <string name="settings_excluded_apps_back">Back</string>
 </resources>

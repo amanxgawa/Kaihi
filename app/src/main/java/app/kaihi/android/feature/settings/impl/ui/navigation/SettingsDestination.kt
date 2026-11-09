@@ -18,6 +18,7 @@ class SettingsDestination @Inject constructor() : Destination<SettingsKey> {
         SettingsScreen(
             onNavigateToLogs = { navigator.navigate(XrayLogsKey) },
             onNavigateToAdvancedModeIntro = { navigator.navigate(AdvancedModeIntroKey) },
+            onNavigateBack = navigator::back,
         )
     }
 }

@@ -2,17 +2,22 @@ package app.kaihi.android.feature.settings.impl.ui.screen
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -24,6 +29,7 @@ import app.kaihi.android.feature.settings.impl.ui.screen.components.SettingsDang
 import app.kaihi.android.feature.settings.impl.ui.screen.components.SettingsGeneralSection
 import app.kaihi.android.feature.settings.impl.ui.screen.components.SettingsNetworkSection
 import app.kaihi.android.platform.mode.AppMode
+import app.kaihi.android.platform.ui.icons.KaihiIcons
 import app.kaihi.android.platform.ui.theme.size.dimens
 import app.kaihi.android.platform.ui.util.CollectAsEffect
 
@@ -31,6 +37,7 @@ import app.kaihi.android.platform.ui.util.CollectAsEffect
 internal fun SettingsScreen(
     onNavigateToLogs: () -> Unit,
     onNavigateToAdvancedModeIntro: () -> Unit,
+    onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
@@ -40,11 +47,13 @@ internal fun SettingsScreen(
         when (effect) {
             SettingsContract.Effect.NavigateToAdvancedModeIntro -> onNavigateToAdvancedModeIntro()
             SettingsContract.Effect.NavigateToLogs -> onNavigateToLogs()
+            SettingsContract.Effect.NavigateBack -> onNavigateBack()
         }
     }
 
     SettingsContent(
         state = state,
+        onBack = { viewModel.processIntent(SettingsContract.Intent.BackRequested) },
         onViewLogsClick = { viewModel.processIntent(SettingsContract.Intent.ViewLogsRequested) },
         onAdvancedModeToggled = { enabled ->
             viewModel.processIntent(SettingsContract.Intent.AdvancedModeToggled(enabled))
@@ -59,6 +68,7 @@ internal fun SettingsScreen(
 @Composable
 private fun SettingsContent(
     state: SettingsContract.State,
+    onBack: () -> Unit,
     onViewLogsClick: () -> Unit,
     onAdvancedModeToggled: (Boolean) -> Unit,
     onIpv6Toggled: (Boolean) -> Unit,
@@ -70,29 +80,49 @@ private fun SettingsContent(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .windowInsetsPadding(WindowInsets.systemBars)
-            .verticalScroll(rememberScrollState())
-            .padding(dimens.l),
-        verticalArrangement = Arrangement.spacedBy(dimens.l),
+            .windowInsetsPadding(WindowInsets.systemBars),
     ) {
-        Text(
-            text = stringResource(id = R.string.settings_title),
-            style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-
-        SettingsGeneralSection(onViewLogsClick = onViewLogsClick)
-
-        if (advancedModeEnabled) {
-            SettingsNetworkSection(
-                ipv6Enabled = state.ipv6Enabled,
-                onIpv6Toggled = onIpv6Toggled,
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = dimens.m, end = dimens.l),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = KaihiIcons.Outlined.ArrowBack,
+                    contentDescription = stringResource(R.string.settings_excluded_apps_back),
+                    tint = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+            Text(
+                text = stringResource(id = R.string.settings_title),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
             )
         }
 
-        SettingsDangerZoneSection(
-            advancedModeEnabled = advancedModeEnabled,
-            onAdvancedModeToggled = onAdvancedModeToggled,
-        )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(dimens.l),
+            verticalArrangement = Arrangement.spacedBy(dimens.l),
+        ) {
+            SettingsGeneralSection(onViewLogsClick = onViewLogsClick)
+
+            if (advancedModeEnabled) {
+                SettingsNetworkSection(
+                    ipv6Enabled = state.ipv6Enabled,
+                    onIpv6Toggled = onIpv6Toggled,
+                )
+            }
+
+            SettingsDangerZoneSection(
+                advancedModeEnabled = advancedModeEnabled,
+                onAdvancedModeToggled = onAdvancedModeToggled,
+            )
+        }
     }
+
 }

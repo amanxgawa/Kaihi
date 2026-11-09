@@ -3,6 +3,7 @@ package app.kaihi.android.core.vpn.configfactory
 import app.kaihi.android.BuildConfig
 import app.kaihi.android.core.vpn.SocksEndpoint
 import app.kaihi.android.core.vpn.FingerprintCandidate
+import app.kaihi.android.core.vpn.TunnelSettings
 import app.kaihi.android.core.vpn.XrayRuntimeConfig
 import app.kaihi.android.core.vpn.XrayVpnProfile
 import app.kaihi.android.core.vpn.configfactory.XrayClientConfigFactory.createRuntimeConfig
@@ -58,10 +59,11 @@ object XrayClientConfigFactory {
     // Used only as hashed input; this credential is never used to run Xray.
     private val PLACEHOLDER_CREDENTIAL = SocksCredential(user = "kaihi", pass = "settings-key")
 
-    fun createRuntimeConfig(profile: XrayVpnProfile, ipv6Enabled: Boolean): XrayRuntimeConfig {
+    fun createRuntimeConfig(profile: XrayVpnProfile, settings: TunnelSettings): XrayRuntimeConfig {
+        val effective = resolve(profile, settings)
         // See SocksEndpoint for why this can't be "noauth".
         val socksCredential = generateSocksCredential()
-        val fingerprintSetting = (profile.security as? XraySecurity.Reality)?.fingerprint
+        val fingerprintSetting = (effective.profile.security as? XraySecurity.Reality)?.fingerprint
         val fingerprint = fingerprintSetting?.preferred()
         val probeUrl = ProbeTargets.urlForWholeSession()
         val candidates = (fingerprintSetting as? XrayFingerprintSetting.Auto)
@@ -69,29 +71,33 @@ object XrayClientConfigFactory {
             ?.map { candidate ->
                 FingerprintCandidate(
                     fingerprint = candidate,
-                    rawJson = build(profile, socksCredential, ipv6Enabled, probeUrl, candidate).toJson(),
+                    rawJson = build(effective.profile, socksCredential, effective.ipv6Enabled, probeUrl, candidate).toJson(),
                 )
             }
             .orEmpty()
         return XrayRuntimeConfig(
             rawJson = candidates.firstOrNull()?.rawJson
                 ?: build(
-                    profile = profile,
+                    profile = effective.profile,
                     socksCredential = socksCredential,
-                    ipv6Enabled = ipv6Enabled,
+                    ipv6Enabled = effective.ipv6Enabled,
                     probeUrl = probeUrl,
                     fingerprint = fingerprint ?: XrayFingerprint.FIREFOX,
                 ).toJson(),
             socksEndpoint = SocksEndpoint(LOOPBACK, SOCKS_PORT, socksCredential.user, socksCredential.pass),
-            serverId = profile.id,
-            ipv6Enabled = ipv6Enabled,
-            settingsKey = settingsKey(profile, ipv6Enabled),
+            serverId = effective.profile.id,
+            ipv6Enabled = effective.ipv6Enabled,
+            settingsKey = settingsKey(effective),
             fingerprintCandidates = candidates,
             fingerprint = fingerprint,
         )
     }
 
-    fun settingsKey(profile: XrayVpnProfile, ipv6Enabled: Boolean): String {
+    fun settingsKey(profile: XrayVpnProfile, settings: TunnelSettings): String =
+        settingsKey(resolve(profile, settings))
+
+    private fun settingsKey(effective: EffectiveTunnelConfig): String {
+        val profile = effective.profile
         val setting = profile.security.fingerprintSettingOrNull()
         val fingerprint = if (setting == null || setting is XrayFingerprintSetting.Auto) {
             XrayFingerprintSetting.Auto().preferred()
@@ -101,7 +107,7 @@ object XrayClientConfigFactory {
         val config = build(
             profile = profile,
             socksCredential = PLACEHOLDER_CREDENTIAL,
-            ipv6Enabled = ipv6Enabled,
+            ipv6Enabled = effective.ipv6Enabled,
             probeUrl = ProbeTargets.urlForSettingsKey(),
             fingerprint = fingerprint,
         ).toJson() + if (setting is XrayFingerprintSetting.Auto) "\nfingerprint=auto" else ""
@@ -281,4 +287,31 @@ object XrayClientConfigFactory {
 
     private fun XraySecurity.fingerprintForConfig() =
         fingerprintSettingOrNull()?.preferred() ?: XrayFingerprintSetting.Auto().preferred()
+
+    private fun resolve(profile: XrayVpnProfile, settings: TunnelSettings): EffectiveTunnelConfig {
+        if (settings.advancedMode) {
+            return EffectiveTunnelConfig(profile, settings.ipv6Enabled)
+        }
+
+        val security = (profile.security as? XraySecurity.Reality)?.let { reality ->
+            val fingerprint = when (val saved = reality.fingerprint) {
+                is XrayFingerprintSetting.Auto -> saved
+                is XrayFingerprintSetting.Fixed -> XrayFingerprintSetting.Auto()
+            }
+            reality.copy(fingerprint = fingerprint)
+        } ?: profile.security
+        return EffectiveTunnelConfig(
+            profile = profile.copy(
+                security = security,
+                muxEnabled = false,
+                fragmentEnabled = false,
+            ),
+            ipv6Enabled = false,
+        )
+    }
+
+    private data class EffectiveTunnelConfig(
+        val profile: XrayVpnProfile,
+        val ipv6Enabled: Boolean,
+    )
 }
