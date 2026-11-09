@@ -39,6 +39,7 @@ internal class DashboardViewModel @AssistedInject constructor(
     override suspend fun onIntent(intent: Intent) {
         when (intent) {
             Intent.ToggleConnection -> connectionDelegate.toggle()
+            Intent.ReconnectToApplyRequested -> connectionDelegate.applyPendingSettings()
             Intent.VpnPermissionGranted -> connectionDelegate.onPermissionGranted()
             Intent.VpnPermissionDenied -> connectionDelegate.onPermissionDenied()
             Intent.ErrorDismissed -> reduce { copy(errorMessage = null) }

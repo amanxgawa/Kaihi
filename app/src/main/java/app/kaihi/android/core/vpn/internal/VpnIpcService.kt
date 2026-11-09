@@ -48,10 +48,15 @@ internal class VpnIpcService : Service() {
         scope = CoroutineScope(SupervisorJob() + mainDispatcher)
 
         // Collected ahead of state, so the server a new session runs on reaches clients before RUNNING does.
-        telemetry.sessionServerId.onEach { serverId ->
+        telemetry.sessionIdentity.onEach { sessionIdentity ->
             broadcast(
                 Message.obtain(null, VpnIpcProtocol.MSG_SESSION_SERVER_CHANGED)
-                    .apply { data = sessionServerBundle(serverId) }
+                    .apply {
+                        data = sessionServerBundle(
+                            sessionIdentity?.serverId,
+                            sessionIdentity?.settingsKey,
+                        )
+                    }
             )
         }.launchIn(scope)
         telemetry.state.onEach { state ->
@@ -102,7 +107,11 @@ internal class VpnIpcService : Service() {
     private fun replayCurrentState(client: Messenger) {
         client.trySend(
             Message.obtain(null, VpnIpcProtocol.MSG_SESSION_SERVER_CHANGED)
-                .apply { data = sessionServerBundle(telemetry.sessionServerId.value) }
+                .apply {
+                    data = telemetry.sessionIdentity.value.let { sessionIdentity ->
+                        sessionServerBundle(sessionIdentity?.serverId, sessionIdentity?.settingsKey)
+                    }
+                }
         )
         client.trySend(
             Message.obtain(

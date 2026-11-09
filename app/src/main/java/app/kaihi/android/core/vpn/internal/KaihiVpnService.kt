@@ -138,7 +138,7 @@ internal class KaihiVpnService : VpnService() {
                         throw error
                     }
                     tunInterface = establishedTun
-                    telemetry.running(config.statusIntervalMillis, config.serverId)
+                    telemetry.running(config.statusIntervalMillis, config.serverId, config.settingsKey)
                     healthWatchdog.start(scope, config.socksEndpoint, ::onHealthDegraded)
                     Timber.i("VPN started")
                 }

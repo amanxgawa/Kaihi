@@ -11,6 +11,8 @@
     <string name="dashboard_state_taking_a_while">Ещё работаем. Первое подключение занимает больше времени.</string>
     <string name="dashboard_connect">Подключить</string>
     <string name="dashboard_disconnect">Отключить</string>
+    <string name="dashboard_reconnect_to_apply_message">Изменения вступят в силу после переподключения.</string>
+    <string name="dashboard_reconnect_to_apply_action">Переподключить</string>
 
     <string name="dashboard_deploy_server">Развернуть сервер</string>
     <string name="dashboard_empty_hint">Серверов пока нет. Разверните Xray на своём VPS, и он появится здесь.</string>

@@ -2,6 +2,7 @@ package app.kaihi.android.core.vpn
 
 import app.kaihi.android.core.vpn.XrayStatsSource
 import app.kaihi.android.core.vpn.internal.ElapsedRealtimeSource
+import app.kaihi.android.core.vpn.internal.SessionIdentity
 import app.kaihi.android.core.vpn.internal.XrayTelemetryMonitor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -88,15 +89,21 @@ class XrayTelemetryMonitorTest {
         assertNull(monitor.sessionServerId.value)
 
         monitor.starting()
-        monitor.running(STATS_INTERVAL_MS, serverId = "server-a")
+        monitor.running(STATS_INTERVAL_MS, serverId = "server-a", settingsKey = "k")
         assertEquals("server-a", monitor.sessionServerId.value)
+        assertEquals("k", monitor.sessionSettingsKey.value)
+        assertEquals(SessionIdentity("server-a", "k"), monitor.sessionIdentity.value)
 
         monitor.stopping()
         assertNull("a stopped engine must not claim a session server", monitor.sessionServerId.value)
+        assertNull("a stopped engine must not claim session settings", monitor.sessionSettingsKey.value)
+        assertNull("a stopped engine must not claim a session identity", monitor.sessionIdentity.value)
 
         monitor.starting()
-        monitor.running(STATS_INTERVAL_MS, serverId = "server-b")
+        monitor.running(STATS_INTERVAL_MS, serverId = "server-b", settingsKey = "k-2")
         assertEquals("a restart reports the server it switched to", "server-b", monitor.sessionServerId.value)
+        assertEquals("a restart reports the settings it switched to", "k-2", monitor.sessionSettingsKey.value)
+        assertEquals(SessionIdentity("server-b", "k-2"), monitor.sessionIdentity.value)
 
         monitor.stopping()
     }
@@ -134,10 +141,12 @@ class XrayTelemetryMonitorTest {
         val monitor = monitor()
 
         monitor.starting()
-        monitor.running(STATS_INTERVAL_MS, serverId = "server-a")
+        monitor.running(STATS_INTERVAL_MS, serverId = "server-a", settingsKey = "k")
         monitor.failed(IllegalStateException("tunnel lost"))
 
         assertNull(monitor.sessionServerId.value)
+        assertNull(monitor.sessionSettingsKey.value)
+        assertNull(monitor.sessionIdentity.value)
         monitor.stopping()
     }
 
