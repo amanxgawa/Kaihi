@@ -1,10 +1,11 @@
 package app.kaihi.android.feature.dashboard
 
 import app.kaihi.android.core.vpn.XrayEngineState
+import app.kaihi.android.core.vpn.TunnelSettings
 import app.kaihi.android.core.vpn.XrayVpnProfile
 import app.kaihi.android.core.vpn.configfactory.XrayClientConfigFactory
 import app.kaihi.android.core.vpn.spec.XraySecurity
-import app.kaihi.android.feature.dashboard.impl.ui.mvi.reconnectToApplyServerId
+import app.kaihi.android.feature.dashboard.impl.domain.reconnectToApplyServerId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -54,9 +55,9 @@ class ReconnectToApplyTest {
                 reconnectToApplyServerId(
                     engineState = state,
                     sessionServerId = sessionProfile.id,
-                    sessionSettingsKey = XrayClientConfigFactory.settingsKey(sessionProfile, false),
+                    sessionSettingsKey = XrayClientConfigFactory.settingsKey(sessionProfile, settings(false)),
                     sessionServer = changedProfile,
-                    ipv6Enabled = false,
+                    settings = settings(false),
                 ),
             )
         }
@@ -72,7 +73,7 @@ class ReconnectToApplyTest {
                 sessionServerId = sessionProfile.id,
                 sessionSettingsKey = null,
                 sessionServer = sessionProfile.copy(fragmentEnabled = true),
-                ipv6Enabled = false,
+                settings = settings(false),
             ),
         )
     }
@@ -85,9 +86,9 @@ class ReconnectToApplyTest {
             reconnectToApplyServerId(
                 engineState = XrayEngineState.RUNNING,
                 sessionServerId = sessionProfile.id,
-                sessionSettingsKey = XrayClientConfigFactory.settingsKey(sessionProfile, false),
+                sessionSettingsKey = XrayClientConfigFactory.settingsKey(sessionProfile, settings(false)),
                 sessionServer = null,
-                ipv6Enabled = false,
+                settings = settings(false),
             ),
         )
     }
@@ -99,9 +100,9 @@ class ReconnectToApplyTest {
     ): String? = reconnectToApplyServerId(
         engineState = XrayEngineState.RUNNING,
         sessionServerId = sessionProfile.id,
-        sessionSettingsKey = XrayClientConfigFactory.settingsKey(sessionProfile, false),
+        sessionSettingsKey = XrayClientConfigFactory.settingsKey(sessionProfile, settings(false)),
         sessionServer = savedProfile,
-        ipv6Enabled = ipv6Enabled,
+        settings = settings(ipv6Enabled),
     )
 
     private fun profile() = XrayVpnProfile(
@@ -119,5 +120,10 @@ class ReconnectToApplyTest {
             shortId = "abcd",
         ),
         deployedAtMillis = 0L,
+    )
+
+    private fun settings(ipv6Enabled: Boolean) = TunnelSettings(
+        advancedMode = true,
+        ipv6Enabled = ipv6Enabled,
     )
 }

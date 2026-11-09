@@ -340,8 +340,9 @@ class XrayClientConfigStructureTest {
     /** Every app on the device can reach 127.0.0.1, and a constant credential would be no better than none. */
     @Test
     fun `the socks inbound requires a freshly generated credential`() {
-        val first = XrayClientConfigFactory.createRuntimeConfig(profile(), ipv6Enabled = false)
-        val second = XrayClientConfigFactory.createRuntimeConfig(profile(), ipv6Enabled = false)
+        val settings = TunnelSettings(advancedMode = true, ipv6Enabled = false)
+        val first = XrayClientConfigFactory.createRuntimeConfig(profile(), settings)
+        val second = XrayClientConfigFactory.createRuntimeConfig(profile(), settings)
 
         assertNotEquals(first.socksEndpoint.password, second.socksEndpoint.password)
 

@@ -12,4 +12,5 @@
     <string name="settings_danger_zone_title">Опасная зона</string>
     <string name="settings_advanced_mode_toggle_title">Расширенный режим</string>
     <string name="settings_advanced_mode_toggle_description">Ручная настройка транспорта, маскировки и конфига. Обычно это не нужно.</string>
+    <string name="settings_excluded_apps_back">Назад</string>
 </resources>

@@ -70,6 +70,7 @@ internal fun DashboardScreen(
     selectServerId: String?,
     onSettingsClick: () -> Unit,
     onNavigateToWizard: (subscriptionId: String?) -> Unit,
+    onNavigateToServer: (serverId: String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: DashboardViewModel = hiltViewModel<DashboardViewModel, DashboardViewModel.Factory>(
         creationCallback = { factory -> factory.create(selectServerId) },
@@ -113,6 +114,7 @@ internal fun DashboardScreen(
             }
 
             is DashboardContract.Effect.NavigateToWizard -> onNavigateToWizard(effect.subscriptionId)
+            is DashboardContract.Effect.NavigateToServer -> onNavigateToServer(effect.serverId)
         }
     }
 
@@ -165,23 +167,9 @@ internal fun DashboardScreen(
             details = details,
             isAdvancedMode = state.isAdvancedMode,
             onDismiss = { viewModel.processIntent(DashboardContract.Intent.ServerDetailsDismissed) },
-            showReconnectToApply = details.id == state.reconnectToApplyServerId,
-            onReconnectToApply = { viewModel.processIntent(DashboardContract.Intent.ReconnectToApplyRequested) },
-            isBusy = state.isBusy,
             onShare = { viewModel.processIntent(DashboardContract.Intent.ShareServerRequested(details.id)) },
+            onManageServer = { viewModel.processIntent(DashboardContract.Intent.ServerManageRequested(details.id)) },
             onForget = { viewModel.processIntent(DashboardContract.Intent.ServerForgotten(details.id)) },
-            onFingerprintChanged = { value ->
-                viewModel.processIntent(DashboardContract.Intent.FingerprintChanged(details.id, value))
-            },
-            onMuxEnabledChanged = { enabled ->
-                viewModel.processIntent(DashboardContract.Intent.MuxEnabledChanged(details.id, enabled))
-            },
-            onFragmentEnabledChanged = { enabled ->
-                viewModel.processIntent(DashboardContract.Intent.FragmentEnabledChanged(details.id, enabled))
-            },
-            onMuxConcurrencyChanged = { value ->
-                viewModel.processIntent(DashboardContract.Intent.MuxConcurrencyChanged(details.id, value))
-            },
         )
     }
 
