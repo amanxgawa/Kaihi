@@ -89,6 +89,9 @@ the NDK installed (SDK Manager), then run the `app` module. Requires `minSdk` 26
   hardcoded or reused across servers.
 - Local storage of anything sensitive (SSH trust, saved connection profiles) is encrypted via the
   Android Keystore.
+- Settings has an "Apps outside VPN" list in both modes. Apps you select bypass the tunnel on the
+  next connect; their traffic goes directly to the local network and ISP. The list stays on your
+  device and contains launchable apps returned by Android.
 
 Kaihi is pre-1.0 and has not been independently audited. Read the code before trusting it with
 anything where getting it wrong has real consequences.
