@@ -5,6 +5,7 @@ import app.kaihi.android.core.vpn.spec.XraySecurity
 import app.kaihi.android.core.vpn.spec.XrayTransport
 import app.kaihi.android.feature.dashboard.impl.domain.model.ServerLibrary
 import app.kaihi.android.feature.dashboard.impl.ui.model.ServerDetailsUi
+import app.kaihi.android.feature.dashboard.impl.ui.model.ServerSettingsUi
 import app.kaihi.android.feature.dashboard.impl.ui.model.ServerUi
 import app.kaihi.android.feature.dashboard.impl.ui.model.SubscriptionUi
 import kotlinx.collections.immutable.ImmutableList
@@ -33,6 +34,14 @@ internal fun XrayVpnProfile.toDetailsUi(): ServerDetailsUi {
         address = "$serverAddress:$serverPort",
         maskingAs = reality?.serverName ?: (security as? XraySecurity.Tls)?.serverName,
         deployedAtMillis = deployedAtMillis,
+    )
+}
+
+internal fun XrayVpnProfile.toSettingsUi(): ServerSettingsUi {
+    val reality = security as? XraySecurity.Reality
+    return ServerSettingsUi(
+        id = id,
+        name = name,
         fingerprint = reality?.fingerprint,
         muxEnabled = muxEnabled,
         muxConcurrency = muxConcurrency,

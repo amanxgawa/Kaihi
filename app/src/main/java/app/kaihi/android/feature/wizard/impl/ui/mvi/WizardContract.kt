@@ -10,8 +10,15 @@ object WizardContract {
     enum class SetupStrategy { FAST_START, NAIVEPROXY }
     enum class ServerAuthMethod { PASSWORD, SSH_KEY }
 
+    enum class WizardPage { STRATEGY, SERVER_DATA, CONFIRMATION, DEPLOYMENT }
+
     @Immutable
     internal data class State(
+        val pages: List<WizardPage> = listOf(
+            WizardPage.SERVER_DATA,
+            WizardPage.CONFIRMATION,
+            WizardPage.DEPLOYMENT,
+        ),
         val setupStrategy: SetupStrategy = SetupStrategy.FAST_START,
         val serverAuthMethod: ServerAuthMethod = ServerAuthMethod.PASSWORD,
         val serverAddress: String = "",
@@ -35,7 +42,7 @@ object WizardContract {
 
     internal sealed interface Intent {
         data object OnCloseWizardClicked : Intent
-        data class OnNextClicked(val currentPageIdx: Int) : Intent
+        data class OnNextClicked(val page: WizardPage) : Intent
         data class SetupStrategyChanged(val strategy: SetupStrategy) : Intent
         data class ServerAuthMethodChanged(val method: ServerAuthMethod) : Intent
         data class ServerAddressChanged(val address: String) : Intent

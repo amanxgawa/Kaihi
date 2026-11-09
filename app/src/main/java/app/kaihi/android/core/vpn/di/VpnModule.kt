@@ -2,6 +2,7 @@ package app.kaihi.android.core.vpn.di
 
 import android.os.SystemClock
 import app.kaihi.android.core.vpn.VpnPreferences
+import app.kaihi.android.core.vpn.TunnelSettingsSource
 import app.kaihi.android.core.vpn.XrayControl
 import app.kaihi.android.core.vpn.XrayMonitoring
 import app.kaihi.android.core.vpn.XrayServiceProvider
@@ -9,6 +10,7 @@ import app.kaihi.android.core.vpn.XrayStatsSource
 import app.kaihi.android.core.vpn.XraySubscriptionStore
 import app.kaihi.android.core.vpn.internal.ElapsedRealtimeSource
 import app.kaihi.android.core.vpn.internal.RemoteXrayMonitoring
+import app.kaihi.android.core.vpn.internal.RepositoryTunnelSettingsSource
 import app.kaihi.android.core.vpn.internal.SocksTunnelProbe
 import app.kaihi.android.core.vpn.internal.StoredVpnPreferences
 import app.kaihi.android.core.vpn.internal.StoredXraySubscriptionStore
@@ -27,6 +29,9 @@ import dagger.hilt.components.SingletonComponent
 internal abstract class VpnModule {
     @Binds
     abstract fun bindVpnPreferences(impl: StoredVpnPreferences): VpnPreferences
+
+    @Binds
+    abstract fun bindTunnelSettingsSource(impl: RepositoryTunnelSettingsSource): TunnelSettingsSource
 
     @Binds
     abstract fun bindXrayControl(impl: XrayProcessControl): XrayControl

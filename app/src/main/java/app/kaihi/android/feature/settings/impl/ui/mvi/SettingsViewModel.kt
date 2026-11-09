@@ -42,6 +42,7 @@ internal class SettingsViewModel @Inject constructor(
 
             is SettingsContract.Intent.Ipv6Toggled -> vpnPreferences.setIpv6Enabled(intent.enabled)
             SettingsContract.Intent.ViewLogsRequested -> sendEffect(SettingsContract.Effect.NavigateToLogs)
+            SettingsContract.Intent.BackRequested -> sendEffect(SettingsContract.Effect.NavigateBack)
         }
     }
 }

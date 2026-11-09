@@ -22,6 +22,7 @@ import app.kaihi.android.feature.wizard.impl.ui.mvi.DeploymentPhase
 import app.kaihi.android.feature.wizard.impl.ui.mvi.WizardContract
 import app.kaihi.android.feature.wizard.impl.ui.mvi.WizardContract.Intent
 import app.kaihi.android.feature.wizard.impl.ui.mvi.WizardContract.Intent.SetupStrategyChanged
+import app.kaihi.android.feature.wizard.impl.ui.mvi.WizardContract.WizardPage
 import app.kaihi.android.feature.wizard.impl.ui.mvi.WizardViewModel
 import app.kaihi.android.feature.wizard.impl.ui.mvi.isInProgress
 import app.kaihi.android.feature.wizard.impl.ui.mvi.isSshValid
@@ -41,12 +42,7 @@ import app.kaihi.android.platform.ui.util.CollectAsEffect
 import app.kaihi.android.platform.ui.util.UiSecret
 import app.kaihi.android.platform.ui.util.UiText
 import app.kaihi.android.platform.ui.util.asString
-import kotlinx.collections.immutable.persistentListOf
-
-private const val PAGE_STRATEGY = 0
-private const val PAGE_SERVER_DATA = 1
-private const val PAGE_DEPLOYMENT = 3
-private const val PAGE_COUNT = 4
+import kotlinx.collections.immutable.toPersistentList
 
 @Composable
 internal fun WizardScreen(
@@ -68,7 +64,7 @@ internal fun WizardScreen(
         )
     }
 
-    val wizardState = rememberWizardState(pageCount = PAGE_COUNT)
+    val wizardState = rememberWizardState(pageCount = uiState.pages.size)
     val navigator = LocalAppNavigator.current
     var isAdvancedSheetOpen by remember { mutableStateOf(false) }
 
@@ -84,73 +80,79 @@ internal fun WizardScreen(
         }
     }
 
-    val wizardSteps = persistentListOf(
-        WizardStep(title = UiText.Resource(R.string.wizard_strategy_choice)) {
-            StrategyChoicePage(
-                onStrategySelected = { strategy ->
-                    viewModel.processIntent(SetupStrategyChanged(strategy))
-                },
-                selectedStrategy = uiState.setupStrategy,
-                isAdvancedMode = uiState.appMode == AppMode.ADVANCED,
-            )
-        },
-        WizardStep(title = UiText.Resource(R.string.wizard_server_data_entry)) {
-            ServerDataEntryPage(
-                serverAddress = uiState.serverAddress,
-                onServerAddressChange = {
-                    viewModel.processIntent(Intent.ServerAddressChanged(it))
-                },
-                authMethod = uiState.serverAuthMethod,
-                onAuthMethodChange = {
-                    viewModel.processIntent(Intent.ServerAuthMethodChanged(it))
-                },
-                password = uiState.password.value,
-                onPasswordChange = {
-                    viewModel.processIntent(Intent.PasswordChanged(UiSecret(it)))
-                },
-                sshKey = uiState.sshKey.value,
-                onSshKeyChange = {
-                    viewModel.processIntent(Intent.SshKeyChanged(UiSecret(it)))
-                },
-                port = uiState.sshPort,
-                onPortChange = {
-                    viewModel.processIntent(Intent.SshPortChanged(it))
-                },
-                username = uiState.username,
-                onUsernameChange = {
-                    viewModel.processIntent(Intent.UsernameChanged(it))
-                },
-                sshFingerprint = uiState.sshFingerprint,
-                onSshFingerprintChange = { viewModel.processIntent(Intent.SshFingerprintChanged(it)) },
-                isAdvancedSheetOpen = isAdvancedSheetOpen,
-                onAdvancedSheetDismiss = { isAdvancedSheetOpen = false },
-                onAdvancedSettingsClick = { isAdvancedSheetOpen = true },
-            )
-        },
-        WizardStep(title = UiText.Resource(R.string.wizard_step_confirmation)) {
-            ConfirmationPage(
-                serverAddress = uiState.serverAddress,
-                sshPort = uiState.sshPort,
-                username = uiState.username,
-                authMethod = uiState.serverAuthMethod,
-                setupStrategy = uiState.setupStrategy,
-            )
-        },
-        WizardStep(title = UiText.Resource(R.string.wizard_step_deployment)) {
-            DeploymentProgressPage(
-                deployment = uiState.deployment,
-                onToggleTerminal = { viewModel.processIntent(Intent.ToggleTerminalVisibility) },
-                onRetry = { viewModel.processIntent(Intent.RetryDeployment) },
-                onBack = {
-                    viewModel.processIntent(Intent.CancelDeployment)
-                    previous()
-                },
-                onFinish = { viewModel.processIntent(Intent.FinishAndStartVpn) },
-            )
-        }
-    )
+    val wizardSteps = uiState.pages.map { page ->
+        when (page) {
+            WizardPage.STRATEGY -> WizardStep(title = UiText.Resource(R.string.wizard_strategy_choice)) {
+                StrategyChoicePage(
+                    onStrategySelected = { strategy ->
+                        viewModel.processIntent(SetupStrategyChanged(strategy))
+                    },
+                    selectedStrategy = uiState.setupStrategy,
+                    isAdvancedMode = uiState.appMode == AppMode.ADVANCED,
+                )
+            }
 
-    val isDeploymentPage = wizardState.currentPage == PAGE_DEPLOYMENT
+            WizardPage.SERVER_DATA -> WizardStep(title = UiText.Resource(R.string.wizard_server_data_entry)) {
+                ServerDataEntryPage(
+                    serverAddress = uiState.serverAddress,
+                    onServerAddressChange = {
+                        viewModel.processIntent(Intent.ServerAddressChanged(it))
+                    },
+                    authMethod = uiState.serverAuthMethod,
+                    onAuthMethodChange = {
+                        viewModel.processIntent(Intent.ServerAuthMethodChanged(it))
+                    },
+                    password = uiState.password.value,
+                    onPasswordChange = {
+                        viewModel.processIntent(Intent.PasswordChanged(UiSecret(it)))
+                    },
+                    sshKey = uiState.sshKey.value,
+                    onSshKeyChange = {
+                        viewModel.processIntent(Intent.SshKeyChanged(UiSecret(it)))
+                    },
+                    port = uiState.sshPort,
+                    onPortChange = {
+                        viewModel.processIntent(Intent.SshPortChanged(it))
+                    },
+                    username = uiState.username,
+                    onUsernameChange = {
+                        viewModel.processIntent(Intent.UsernameChanged(it))
+                    },
+                    sshFingerprint = uiState.sshFingerprint,
+                    onSshFingerprintChange = { viewModel.processIntent(Intent.SshFingerprintChanged(it)) },
+                    isAdvancedSheetOpen = isAdvancedSheetOpen,
+                    onAdvancedSheetDismiss = { isAdvancedSheetOpen = false },
+                    onAdvancedSettingsClick = { isAdvancedSheetOpen = true },
+                )
+            }
+
+            WizardPage.CONFIRMATION -> WizardStep(title = UiText.Resource(R.string.wizard_step_confirmation)) {
+                ConfirmationPage(
+                    serverAddress = uiState.serverAddress,
+                    sshPort = uiState.sshPort,
+                    username = uiState.username,
+                    authMethod = uiState.serverAuthMethod,
+                    setupStrategy = uiState.setupStrategy,
+                )
+            }
+
+            WizardPage.DEPLOYMENT -> WizardStep(title = UiText.Resource(R.string.wizard_step_deployment)) {
+                DeploymentProgressPage(
+                    deployment = uiState.deployment,
+                    onToggleTerminal = { viewModel.processIntent(Intent.ToggleTerminalVisibility) },
+                    onRetry = { viewModel.processIntent(Intent.RetryDeployment) },
+                    onBack = {
+                        viewModel.processIntent(Intent.CancelDeployment)
+                        previous()
+                    },
+                    onFinish = { viewModel.processIntent(Intent.FinishAndStartVpn) },
+                )
+            }
+        }
+    }.toPersistentList()
+
+    val currentPage = uiState.pages[wizardState.currentPage]
+    val isDeploymentPage = currentPage == WizardPage.DEPLOYMENT
 
     BackHandler(enabled = isDeploymentPage) {
         (context as? Activity)?.finish()
@@ -159,15 +161,15 @@ internal fun WizardScreen(
     WizardContainer(
         state = wizardState,
         steps = wizardSteps,
-        isNextEnabled = when (wizardState.currentPage) {
-            PAGE_SERVER_DATA -> uiState.isSshValid
+        isNextEnabled = when (currentPage) {
+            WizardPage.SERVER_DATA -> uiState.isSshValid
             else -> true
         },
         isLoading = uiState.isLoading || uiState.deployment.phase == DeploymentPhase.InProgress,
         isTopBarVisible = !isDeploymentPage,
         isBottomBarVisible = !isDeploymentPage,
         onNavIconClick = { viewModel.processIntent(Intent.OnCloseWizardClicked) },
-        onNextClick = { viewModel.processIntent(Intent.OnNextClicked(wizardState.currentPage)) },
+        onNextClick = { viewModel.processIntent(Intent.OnNextClicked(currentPage)) },
         topBar = {
             WizardTopBar(
                 steps = wizardSteps,

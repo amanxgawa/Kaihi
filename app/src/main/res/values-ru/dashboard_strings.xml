@@ -62,4 +62,5 @@
 
     <string name="xray_logs_title">Логи Xray</string>
     <string name="xray_logs_copy">Копировать</string>
+    <string name="dashboard_manage_server">Управление сервером</string>
 </resources>

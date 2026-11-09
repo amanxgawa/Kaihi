@@ -15,6 +15,7 @@ import app.kaihi.android.platform.ui.icons.sources._cable_filled
 import app.kaihi.android.platform.ui.icons.sources._cable_outlined
 import app.kaihi.android.platform.ui.icons.sources._check_filled
 import app.kaihi.android.platform.ui.icons.sources._check_outlined
+import app.kaihi.android.platform.ui.icons.sources._chevron_right_outlined
 import app.kaihi.android.platform.ui.icons.sources._close_filled
 import app.kaihi.android.platform.ui.icons.sources._close_outlined
 import app.kaihi.android.platform.ui.icons.sources._dns_filled
@@ -91,5 +92,6 @@ object KaihiIcons {
         val Edit: ImageVector get() = _edit_outlined
         val Info: ImageVector get() = _info_outlined
         val ExpandMore: ImageVector get() = _expand_more_outlined
+        val ChevronRight: ImageVector get() = _chevron_right_outlined
     }
 }

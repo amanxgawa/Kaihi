@@ -38,6 +38,7 @@
     <string name="dashboard_server_forget_confirm_body">This removes the saved connection from this device. Your server keeps running, so you can set it up again anytime.</string>
 
     <string name="dashboard_server_advanced_title">Advanced</string>
+    <string name="dashboard_manage_server">Manage server</string>
     <string name="dashboard_server_utls_fingerprint_title">TLS fingerprint</string>
     <string name="dashboard_server_fingerprint_auto">Auto</string>
     <string name="dashboard_server_fingerprint_auto_with_current">Auto · %1$s</string>

@@ -113,11 +113,15 @@ private fun AdvancedModeIntroContent(
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                     Spacer(modifier = Modifier.height(dimens.m))
-                    BulletPoint(stringResource(id = R.string.advanced_mode_intro_capability_transport))
-                    BulletPoint(stringResource(id = R.string.advanced_mode_intro_capability_camouflage))
-                    BulletPoint(stringResource(id = R.string.advanced_mode_intro_capability_mtu))
-                    BulletPoint(stringResource(id = R.string.advanced_mode_intro_capability_config))
-                    BulletPoint(stringResource(id = R.string.advanced_mode_intro_capability_tunnel))
+                    BulletPoint(stringResource(id = R.string.advanced_mode_intro_capability_connection))
+                    BulletPoint(stringResource(id = R.string.advanced_mode_intro_capability_ipv6))
+                    BulletPoint(stringResource(id = R.string.advanced_mode_intro_capability_setup))
+                    Spacer(modifier = Modifier.height(dimens.m))
+                    Text(
+                        text = stringResource(id = R.string.advanced_mode_intro_reversible_note),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
 

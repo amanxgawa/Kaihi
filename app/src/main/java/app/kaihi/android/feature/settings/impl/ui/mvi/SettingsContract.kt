@@ -13,10 +13,12 @@ internal object SettingsContract {
         data class AdvancedModeToggled(val enabled: Boolean) : Intent
         data class Ipv6Toggled(val enabled: Boolean) : Intent
         data object ViewLogsRequested : Intent
+        data object BackRequested : Intent
     }
 
     sealed interface Effect {
         data object NavigateToAdvancedModeIntro : Effect
         data object NavigateToLogs : Effect
+        data object NavigateBack : Effect
     }
 }

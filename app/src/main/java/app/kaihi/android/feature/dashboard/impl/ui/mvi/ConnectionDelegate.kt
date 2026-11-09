@@ -3,19 +3,18 @@ package app.kaihi.android.feature.dashboard.impl.ui.mvi
 import android.content.Context
 import android.net.VpnService
 import app.kaihi.android.R
-import app.kaihi.android.core.vpn.VpnPreferences
+import app.kaihi.android.core.vpn.TunnelSettingsSource
 import app.kaihi.android.core.vpn.XrayEngineState
 import app.kaihi.android.core.vpn.XrayServiceProvider
 import app.kaihi.android.core.vpn.XrayVpnProfile
 import app.kaihi.android.core.vpn.configfactory.XrayClientConfigFactory
-import app.kaihi.android.core.vpn.findServer
+import app.kaihi.android.feature.dashboard.impl.domain.PendingSettingsMonitor
 import app.kaihi.android.feature.dashboard.impl.domain.ServerLibraryCoordinator
 import app.kaihi.android.platform.ui.mvi.ViewModelDelegate
 import app.kaihi.android.platform.ui.util.UiText
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -25,8 +24,9 @@ import timber.log.Timber
 internal class ConnectionDelegate @Inject constructor(
     @ApplicationContext private val appContext: Context,
     private val serviceProvider: XrayServiceProvider,
-    private val vpnPreferences: VpnPreferences,
+    private val tunnelSettingsSource: TunnelSettingsSource,
     private val coordinator: ServerLibraryCoordinator,
+    private val pendingSettingsMonitor: PendingSettingsMonitor,
 ) : ViewModelDelegate<DashboardContract.State, DashboardContract.Effect>() {
 
     // Guards against re-entering handleHealthDegraded(): its own reconnect passes through the same
@@ -63,22 +63,7 @@ internal class ConnectionDelegate @Inject constructor(
         serviceProvider.monitoring.failure
             .onEach { failure -> failureMessage(failure)?.let { message -> reduce { copy(errorMessage = message) } } }
             .launchIn(scope)
-        combine(
-            serviceProvider.monitoring.state,
-            serviceProvider.monitoring.sessionServerId,
-            serviceProvider.monitoring.sessionSettingsKey,
-            coordinator.library,
-            vpnPreferences.ipv6Enabled,
-        ) { engineState, serverId, settingsKey, library, ipv6Enabled ->
-            reconnectToApplyServerId(
-                engineState = engineState,
-                sessionServerId = serverId,
-                sessionSettingsKey = settingsKey,
-                sessionServer = serverId?.let { library.subscriptions.findServer(it) },
-                ipv6Enabled = ipv6Enabled,
-            )
-        }
-            .distinctUntilChanged()
+        pendingSettingsMonitor.pendingServerId
             .onEach { serverId -> reduce { copy(reconnectToApplyServerId = serverId) } }
             .launchIn(scope)
         // From :vpn rather than derived from `state` here: a UI process recreated underneath a
@@ -130,9 +115,16 @@ internal class ConnectionDelegate @Inject constructor(
     suspend fun applyPendingSettings() {
         if (currentState.isBusy || currentState.engineState != XrayEngineState.RUNNING) return
         val serverId = currentState.reconnectToApplyServerId ?: return
-        val server = coordinator.library.first().subscriptions.findServer(serverId) ?: return
         reduce { copy(engineState = XrayEngineState.STARTING, errorMessage = null) }
-        start(server, stateOnDispatchFailure = XrayEngineState.RUNNING)
+        pendingSettingsMonitor.restart(serverId).onFailure { error ->
+            Timber.e(error, "start() dispatch failed")
+            reduce {
+                copy(
+                    engineState = XrayEngineState.RUNNING,
+                    errorMessage = UiText.Resource(R.string.dashboard_error_failed_to_start_vpn),
+                )
+            }
+        }
     }
 
     suspend fun stopIfRunningOn(removedServerIds: Set<String>) {
@@ -174,7 +166,7 @@ internal class ConnectionDelegate @Inject constructor(
     /** Only whether the start reached the service; the session itself is confirmed later over IPC. */
     private suspend fun start(server: XrayVpnProfile, stateOnDispatchFailure: XrayEngineState): Boolean =
         serviceProvider.control.start(
-            XrayClientConfigFactory.createRuntimeConfig(server, vpnPreferences.ipv6Enabled.value),
+            XrayClientConfigFactory.createRuntimeConfig(server, tunnelSettingsSource.current()),
         )
             .onFailure { error ->
                 Timber.e(error, "start() dispatch failed")

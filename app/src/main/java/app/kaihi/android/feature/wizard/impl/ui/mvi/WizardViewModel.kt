@@ -5,7 +5,7 @@ import app.kaihi.android.R
 import app.kaihi.android.core.storage.AppStorage
 import app.kaihi.android.core.storage.ExperienceKeys
 import app.kaihi.android.core.storage.StorageDomain
-import app.kaihi.android.core.vpn.VpnPreferences
+import app.kaihi.android.core.vpn.TunnelSettingsSource
 import app.kaihi.android.core.vpn.XrayControl
 import app.kaihi.android.core.vpn.XrayVpnProfile
 import app.kaihi.android.core.vpn.configfactory.XrayClientConfigFactory
@@ -13,6 +13,8 @@ import app.kaihi.android.feature.wizard.impl.domain.WizardSetupCoordinator
 import app.kaihi.android.feature.wizard.impl.ui.mvi.WizardContract.Effect
 import app.kaihi.android.feature.wizard.impl.ui.mvi.WizardContract.Intent
 import app.kaihi.android.feature.wizard.impl.ui.mvi.WizardContract.State
+import app.kaihi.android.feature.wizard.impl.ui.mvi.WizardContract.WizardPage
+import app.kaihi.android.platform.mode.AppMode
 import app.kaihi.android.platform.mode.AppModeRepository
 import app.kaihi.android.platform.ui.mvi.MviViewModel
 import app.kaihi.android.platform.ui.util.UiText
@@ -30,13 +32,13 @@ internal class WizardViewModel @AssistedInject constructor(
     @Assisted private val targetSubscriptionId: String?,
     private val coordinator: WizardSetupCoordinator,
     private val xrayControl: XrayControl,
-    private val vpnPreferences: VpnPreferences,
+    private val tunnelSettingsSource: TunnelSettingsSource,
     private val appStorage: AppStorage,
     private val appModeRepository: AppModeRepository,
     private val connectionCheckDelegate: ConnectionCheckDelegate,
     private val deploymentDelegate: DeploymentDelegate,
 ) : MviViewModel<State, Intent, Effect>(
-    initialState = State()
+    initialState = initialWizardState(appModeRepository.mode.value)
 ) {
     init {
         attachDelegates(connectionCheckDelegate, deploymentDelegate)
@@ -56,7 +58,7 @@ internal class WizardViewModel @AssistedInject constructor(
             is Intent.UsernameChanged -> reduce { copy(username = intent.username) }
             is Intent.SshFingerprintChanged -> reduce { copy(sshFingerprint = intent.fingerprint) }
             is Intent.OnCloseWizardClicked -> sendEffect(Effect.NavigateBack)
-            is Intent.OnNextClicked -> handleNextClick(intent.currentPageIdx)
+            is Intent.OnNextClicked -> handleNextClick(intent.page)
             Intent.CancelConnectionCheck -> connectionCheckDelegate.cancel()
             Intent.DismissConnectionErrorDialog -> reduce { copy(connectionCheck = ConnectionCheckState.Idle) }
             is Intent.TrustHostAndRetry -> {
@@ -75,14 +77,16 @@ internal class WizardViewModel @AssistedInject constructor(
         }
     }
 
-    private fun handleNextClick(currentPageIdx: Int) {
-        when (currentPageIdx) {
-            0 -> sendEffect(Effect.GoToNextPage)
-            1 -> connectionCheckDelegate.validate()
-            2 -> {
+    private fun handleNextClick(page: WizardPage) {
+        when (page) {
+            WizardPage.STRATEGY -> sendEffect(Effect.GoToNextPage)
+            WizardPage.SERVER_DATA -> connectionCheckDelegate.validate()
+            WizardPage.CONFIRMATION -> {
                 sendEffect(Effect.GoToNextPage)
                 deploymentDelegate.start()
             }
+
+            WizardPage.DEPLOYMENT -> Unit
         }
     }
 
@@ -109,7 +113,7 @@ internal class WizardViewModel @AssistedInject constructor(
         reduce { copy(isLoading = true, errorMessage = null) }
         processStartResult(
             profile,
-            xrayControl.start(XrayClientConfigFactory.createRuntimeConfig(profile, vpnPreferences.ipv6Enabled.value)),
+            xrayControl.start(XrayClientConfigFactory.createRuntimeConfig(profile, tunnelSettingsSource.current())),
         )
     }
 
@@ -128,3 +132,16 @@ internal class WizardViewModel @AssistedInject constructor(
         fun create(targetSubscriptionId: String?): WizardViewModel
     }
 }
+
+private fun initialWizardState(mode: AppMode): State = State(
+    pages = when (mode) {
+        AppMode.NORMAL -> listOf(
+            WizardPage.SERVER_DATA,
+            WizardPage.CONFIRMATION,
+            WizardPage.DEPLOYMENT,
+        )
+
+        AppMode.ADVANCED -> WizardPage.entries.toList()
+    },
+    appMode = mode,
+)
