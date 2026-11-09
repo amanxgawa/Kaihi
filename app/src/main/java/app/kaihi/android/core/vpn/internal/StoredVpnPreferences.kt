@@ -5,6 +5,7 @@ import app.kaihi.android.core.storage.AppStorage
 import app.kaihi.android.core.storage.ExperienceKeys
 import app.kaihi.android.core.storage.StorageDomain
 import app.kaihi.android.core.vpn.VpnPreferences
+import app.kaihi.android.core.vpn.isValidSubscriptionUserAgent
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,6 +25,9 @@ internal class StoredVpnPreferences @Inject constructor(
     private val _excludedPackages = MutableStateFlow(readExcludedPackages())
     override val excludedPackages: StateFlow<Set<String>> = _excludedPackages.asStateFlow()
 
+    private val _subscriptionUserAgent = MutableStateFlow(readSubscriptionUserAgent())
+    override val subscriptionUserAgent: StateFlow<String?> = _subscriptionUserAgent.asStateFlow()
+
     override fun setIpv6Enabled(enabled: Boolean) {
         appStorage.putBoolean(StorageDomain.EXPERIENCE, ExperienceKeys.IPV6_ENABLED, enabled)
         _ipv6Enabled.value = enabled
@@ -39,6 +43,22 @@ internal class StoredVpnPreferences @Inject constructor(
         _excludedPackages.value = filteredPackages
     }
 
+    override fun setSubscriptionUserAgent(value: String?): Boolean {
+        if (value != null && !isValidSubscriptionUserAgent(value)) return false
+
+        if (value == null) {
+            appStorage.remove(StorageDomain.EXPERIENCE, ExperienceKeys.SUBSCRIPTION_USER_AGENT)
+        } else {
+            appStorage.putString(
+                StorageDomain.EXPERIENCE,
+                ExperienceKeys.SUBSCRIPTION_USER_AGENT,
+                value,
+            )
+        }
+        _subscriptionUserAgent.value = value
+        return true
+    }
+
     private fun readExcludedPackages(): Set<String> = appStorage.getString(
         StorageDomain.EXPERIENCE,
         ExperienceKeys.EXCLUDED_PACKAGES,
@@ -46,6 +66,11 @@ internal class StoredVpnPreferences @Inject constructor(
         ?.split(PACKAGE_SEPARATOR)
         ?.filterTo(mutableSetOf()) { it.isNotBlank() && it != BuildConfig.APPLICATION_ID }
         .orEmpty()
+
+    private fun readSubscriptionUserAgent(): String? = appStorage.getString(
+        StorageDomain.EXPERIENCE,
+        ExperienceKeys.SUBSCRIPTION_USER_AGENT,
+    )?.takeIf(::isValidSubscriptionUserAgent)
 
     private companion object {
         const val PACKAGE_SEPARATOR = ","

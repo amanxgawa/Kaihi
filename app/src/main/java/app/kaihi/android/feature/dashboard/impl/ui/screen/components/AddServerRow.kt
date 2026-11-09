@@ -25,6 +25,7 @@ internal fun AddServerRow(
     shape: Shape,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    labelRes: Int = R.string.dashboard_subscription_add_server,
 ) {
     val dimens = MaterialTheme.dimens
 
@@ -46,7 +47,7 @@ internal fun AddServerRow(
                 Icon(imageVector = KaihiIcons.Outlined.Add, contentDescription = null)
             }
             Text(
-                text = stringResource(R.string.dashboard_subscription_add_server),
+                text = stringResource(labelRes),
                 style = MaterialTheme.typography.titleMedium,
             )
         }

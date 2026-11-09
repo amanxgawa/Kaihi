@@ -1,0 +1,41 @@
+<resources>
+    <string name="import_title">Import servers</string>
+    <string name="import_back">Back</string>
+    <string name="import_helper">Paste VLESS links (vless://), or an HTTPS subscription URL.</string>
+    <string name="import_input_label">Links or subscription URL</string>
+    <string name="import_paste_from_clipboard">Paste from clipboard</string>
+    <string name="import_action">Import</string>
+    <string name="import_progress">Importing…</string>
+    <string name="import_cancel">Cancel</string>
+    <string name="import_error_use_https">Use an HTTPS subscription URL.</string>
+    <string name="import_error_unrecognized">This does not look like a VLESS link or subscription URL.</string>
+    <string name="import_error_nothing_importable">No new servers could be imported. Unsupported: %1$d · invalid: %2$d.</string>
+    <string name="import_error_already_added">This subscription is already in your library.</string>
+    <string name="import_error_unexpected">Import failed. Check the input and try again.</string>
+    <string name="import_fetch_error_insecure_url">The subscription redirected to an insecure URL. Use HTTPS.</string>
+    <string name="import_fetch_error_network">Could not reach the subscription server.</string>
+    <string name="import_fetch_error_timeout">The subscription server took too long to respond.</string>
+    <string name="import_fetch_error_http_status">The subscription server returned an error.</string>
+    <string name="import_fetch_error_too_large">The subscription is too large to import.</string>
+    <string name="import_fetch_error_redirects">The subscription redirected too many times.</string>
+    <string name="import_fetch_error_unsupported_format">This subscription format is not supported.</string>
+    <string name="import_fetch_error_empty">The subscription contains no links.</string>
+    <string name="import_summary_separator"> · </string>
+    <string name="import_summary_truncated">some links were omitted</string>
+    <plurals name="import_summary_added">
+        <item quantity="one">Added %1$d server</item>
+        <item quantity="other">Added %1$d servers</item>
+    </plurals>
+    <plurals name="import_summary_duplicates">
+        <item quantity="one">%1$d duplicate</item>
+        <item quantity="other">%1$d duplicates</item>
+    </plurals>
+    <plurals name="import_summary_unsupported">
+        <item quantity="one">%1$d unsupported</item>
+        <item quantity="other">%1$d unsupported</item>
+    </plurals>
+    <plurals name="import_summary_invalid">
+        <item quantity="one">%1$d invalid</item>
+        <item quantity="other">%1$d invalid</item>
+    </plurals>
+</resources>

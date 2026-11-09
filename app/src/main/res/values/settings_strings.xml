@@ -21,6 +21,14 @@
     <string name="settings_ipv6_title">Route IPv6 through the VPN</string>
     <string name="settings_ipv6_description">Off by default. When on, IPv6 traffic goes through your server instead of being blocked. A dual-stack connection is easier for DPI to fingerprint. Applies on next connect.</string>
 
+    <string name="settings_subscriptions_section_title">Subscriptions</string>
+    <string name="settings_subscription_user_agent_title">User-Agent</string>
+    <string name="settings_subscription_user_agent_dialog_title">Subscription User-Agent</string>
+    <string name="settings_subscription_user_agent_invalid">Use 1-256 printable ASCII characters.</string>
+    <string name="settings_subscription_user_agent_reset">Reset to default</string>
+    <string name="settings_subscription_user_agent_cancel">Cancel</string>
+    <string name="settings_subscription_user_agent_save">Save</string>
+
     <string name="settings_danger_zone_title">Danger zone</string>
     <string name="settings_advanced_mode_toggle_title">Advanced mode</string>
     <string name="settings_advanced_mode_toggle_description">Manual transport, camouflage, and config tuning. Most people don\'t need this.</string>

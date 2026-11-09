@@ -58,8 +58,6 @@ internal fun HelloContent(
                 description = UiText.Resource(R.string.hello_connect_description),
                 icon = KaihiIcons.Outlined.Cable,
                 onClick = onConnectOrImportClick,
-                enabled = false,
-                badgeText = UiText.Resource(R.string.badge_soon),
             )
 
             HelloActionCard(

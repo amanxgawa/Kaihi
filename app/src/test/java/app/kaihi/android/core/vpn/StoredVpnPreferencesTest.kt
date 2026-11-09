@@ -1,6 +1,7 @@
 package app.kaihi.android.core.vpn
 
 import app.kaihi.android.BuildConfig
+import app.kaihi.android.core.storage.ExperienceKeys
 import app.kaihi.android.core.storage.InMemoryAppStorage
 import app.kaihi.android.core.storage.StorageDomain
 import app.kaihi.android.core.vpn.internal.StoredVpnPreferences
@@ -11,6 +12,7 @@ import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -80,4 +82,33 @@ class StoredVpnPreferencesTest {
         assertEquals(emptySet<String>(), StoredVpnPreferences(storage).excludedPackages.value)
     }
 
+    @Test
+    fun `subscription User-Agent round trips and reset removes the stored value`() {
+        val storage = InMemoryAppStorage()
+        val preferences = StoredVpnPreferences(storage)
+
+        assertTrue(preferences.setSubscriptionUserAgent("PanelClient/1.2"))
+        assertEquals("PanelClient/1.2", preferences.subscriptionUserAgent.value)
+        assertEquals("PanelClient/1.2", StoredVpnPreferences(storage).subscriptionUserAgent.value)
+
+        assertTrue(preferences.setSubscriptionUserAgent(null))
+        assertNull(preferences.subscriptionUserAgent.value)
+        assertNull(storage.getString(StorageDomain.EXPERIENCE, ExperienceKeys.SUBSCRIPTION_USER_AGENT))
+    }
+
+    @Test
+    fun `invalid subscription User-Agent is rejected without changing storage or state`() {
+        val storage = InMemoryAppStorage()
+        val preferences = StoredVpnPreferences(storage)
+        preferences.setSubscriptionUserAgent("PanelClient/1.2")
+
+        listOf("", " ", "x".repeat(257), "bad\r\nInjected: yes", "не ASCII").forEach { value ->
+            assertFalse("$value should be rejected", preferences.setSubscriptionUserAgent(value))
+            assertEquals("PanelClient/1.2", preferences.subscriptionUserAgent.value)
+            assertEquals(
+                "PanelClient/1.2",
+                storage.getString(StorageDomain.EXPERIENCE, ExperienceKeys.SUBSCRIPTION_USER_AGENT),
+            )
+        }
+    }
 }

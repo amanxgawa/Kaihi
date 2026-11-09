@@ -1,0 +1,49 @@
+<resources>
+    <string name="import_title">Импорт серверов</string>
+    <string name="import_back">Назад</string>
+    <string name="import_helper">Вставьте VLESS-ссылки (vless://) или HTTPS-адрес подписки.</string>
+    <string name="import_input_label">Ссылки или адрес подписки</string>
+    <string name="import_paste_from_clipboard">Вставить из буфера обмена</string>
+    <string name="import_action">Импортировать</string>
+    <string name="import_progress">Импорт…</string>
+    <string name="import_cancel">Отмена</string>
+    <string name="import_error_use_https">Используйте HTTPS-адрес подписки.</string>
+    <string name="import_error_unrecognized">Это не похоже на VLESS-ссылку или адрес подписки.</string>
+    <string name="import_error_nothing_importable">Не удалось добавить серверы. Не поддерживаются: %1$d · с ошибками: %2$d.</string>
+    <string name="import_error_already_added">Эта подписка уже есть в библиотеке.</string>
+    <string name="import_error_unexpected">Не удалось выполнить импорт. Проверьте данные и попробуйте ещё раз.</string>
+    <string name="import_fetch_error_insecure_url">Подписка перенаправила на небезопасный адрес. Используйте HTTPS.</string>
+    <string name="import_fetch_error_network">Не удалось связаться с сервером подписки.</string>
+    <string name="import_fetch_error_timeout">Сервер подписки слишком долго не отвечает.</string>
+    <string name="import_fetch_error_http_status">Сервер подписки вернул ошибку.</string>
+    <string name="import_fetch_error_too_large">Подписка слишком большая для импорта.</string>
+    <string name="import_fetch_error_redirects">Слишком много перенаправлений при загрузке подписки.</string>
+    <string name="import_fetch_error_unsupported_format">Формат подписки не поддерживается.</string>
+    <string name="import_fetch_error_empty">В подписке нет ссылок.</string>
+    <string name="import_summary_separator"> · </string>
+    <string name="import_summary_truncated">часть ссылок пропущена</string>
+    <plurals name="import_summary_added">
+        <item quantity="one">Добавлен %1$d сервер</item>
+        <item quantity="few">Добавлено %1$d сервера</item>
+        <item quantity="many">Добавлено %1$d серверов</item>
+        <item quantity="other">Добавлено %1$d сервера</item>
+    </plurals>
+    <plurals name="import_summary_duplicates">
+        <item quantity="one">%1$d дубликат</item>
+        <item quantity="few">%1$d дубликата</item>
+        <item quantity="many">%1$d дубликатов</item>
+        <item quantity="other">%1$d дубликата</item>
+    </plurals>
+    <plurals name="import_summary_unsupported">
+        <item quantity="one">%1$d неподдерживаемая ссылка</item>
+        <item quantity="few">%1$d неподдерживаемые ссылки</item>
+        <item quantity="many">%1$d неподдерживаемых ссылок</item>
+        <item quantity="other">%1$d неподдерживаемой ссылки</item>
+    </plurals>
+    <plurals name="import_summary_invalid">
+        <item quantity="one">%1$d некорректная ссылка</item>
+        <item quantity="few">%1$d некорректные ссылки</item>
+        <item quantity="many">%1$d некорректных ссылок</item>
+        <item quantity="other">%1$d некорректной ссылки</item>
+    </plurals>
+</resources>

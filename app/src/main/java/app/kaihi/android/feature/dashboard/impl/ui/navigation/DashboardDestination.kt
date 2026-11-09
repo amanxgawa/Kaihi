@@ -9,6 +9,7 @@ import androidx.compose.runtime.setValue
 import app.kaihi.android.feature.dashboard.DashboardKey
 import app.kaihi.android.feature.dashboard.ServerKey
 import app.kaihi.android.feature.dashboard.impl.ui.screen.DashboardScreen
+import app.kaihi.android.feature.importing.ImportKey
 import app.kaihi.android.feature.settings.SettingsKey
 import app.kaihi.android.feature.wizard.WizardKey
 import app.kaihi.android.platform.navigation.Destination
@@ -30,6 +31,7 @@ class DashboardDestination @Inject constructor() : Destination<DashboardKey> {
             selectServerId = key.selectServerId.takeUnless { isSelectionHandedOver },
             onSettingsClick = { navigator.navigate(SettingsKey) },
             onNavigateToWizard = { subscriptionId -> navigator.navigate(WizardKey(subscriptionId)) },
+            onNavigateToImport = { navigator.navigate(ImportKey) },
             onNavigateToServer = { serverId -> navigator.navigate(ServerKey(serverId)) },
         )
     }

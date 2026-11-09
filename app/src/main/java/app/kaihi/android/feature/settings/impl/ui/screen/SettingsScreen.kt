@@ -23,11 +23,15 @@ import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.kaihi.android.R
+import app.kaihi.android.core.vpn.effectiveSubscriptionUserAgent
+import app.kaihi.android.core.vpn.isValidSubscriptionUserAgent
 import app.kaihi.android.feature.settings.impl.ui.mvi.SettingsContract
 import app.kaihi.android.feature.settings.impl.ui.mvi.SettingsViewModel
 import app.kaihi.android.feature.settings.impl.ui.screen.components.SettingsDangerZoneSection
 import app.kaihi.android.feature.settings.impl.ui.screen.components.SettingsGeneralSection
 import app.kaihi.android.feature.settings.impl.ui.screen.components.SettingsNetworkSection
+import app.kaihi.android.feature.settings.impl.ui.screen.components.SettingsSubscriptionsSection
+import app.kaihi.android.feature.settings.impl.ui.screen.components.SubscriptionUserAgentDialog
 import app.kaihi.android.platform.mode.AppMode
 import app.kaihi.android.platform.ui.icons.KaihiIcons
 import app.kaihi.android.platform.ui.theme.size.dimens
@@ -66,6 +70,21 @@ internal fun SettingsScreen(
         onExcludedAppsClick = {
             viewModel.processIntent(SettingsContract.Intent.ExcludedAppsRequested)
         },
+        onSubscriptionUserAgentClick = {
+            viewModel.processIntent(SettingsContract.Intent.SubscriptionUserAgentRequested)
+        },
+        onSubscriptionUserAgentChanged = { value ->
+            viewModel.processIntent(SettingsContract.Intent.SubscriptionUserAgentChanged(value))
+        },
+        onSubscriptionUserAgentSave = {
+            viewModel.processIntent(SettingsContract.Intent.SubscriptionUserAgentSaved)
+        },
+        onSubscriptionUserAgentReset = {
+            viewModel.processIntent(SettingsContract.Intent.SubscriptionUserAgentReset)
+        },
+        onSubscriptionUserAgentDismiss = {
+            viewModel.processIntent(SettingsContract.Intent.SubscriptionUserAgentDialogDismissed)
+        },
         modifier = modifier,
     )
 }
@@ -78,6 +97,11 @@ private fun SettingsContent(
     onAdvancedModeToggled: (Boolean) -> Unit,
     onIpv6Toggled: (Boolean) -> Unit,
     onExcludedAppsClick: () -> Unit,
+    onSubscriptionUserAgentClick: () -> Unit,
+    onSubscriptionUserAgentChanged: (String) -> Unit,
+    onSubscriptionUserAgentSave: () -> Unit,
+    onSubscriptionUserAgentReset: () -> Unit,
+    onSubscriptionUserAgentDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val dimens = MaterialTheme.dimens
@@ -125,6 +149,13 @@ private fun SettingsContent(
                 showIpv6 = advancedModeEnabled,
             )
 
+            if (advancedModeEnabled) {
+                SettingsSubscriptionsSection(
+                    effectiveUserAgent = state.effectiveSubscriptionUserAgent,
+                    onUserAgentClick = onSubscriptionUserAgentClick,
+                )
+            }
+
             SettingsDangerZoneSection(
                 advancedModeEnabled = advancedModeEnabled,
                 onAdvancedModeToggled = onAdvancedModeToggled,
@@ -132,4 +163,16 @@ private fun SettingsContent(
         }
     }
 
+    if (state.isSubscriptionUserAgentDialogVisible) {
+        SubscriptionUserAgentDialog(
+            draft = state.subscriptionUserAgentDraft,
+            defaultUserAgent = effectiveSubscriptionUserAgent(null, AppMode.NORMAL),
+            error = state.subscriptionUserAgentError,
+            saveEnabled = isValidSubscriptionUserAgent(state.subscriptionUserAgentDraft),
+            onDraftChanged = onSubscriptionUserAgentChanged,
+            onSave = onSubscriptionUserAgentSave,
+            onReset = onSubscriptionUserAgentReset,
+            onDismiss = onSubscriptionUserAgentDismiss,
+        )
+    }
 }
