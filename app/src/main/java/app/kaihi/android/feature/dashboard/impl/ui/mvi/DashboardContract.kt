@@ -21,6 +21,7 @@ internal object DashboardContract {
         val subscriptions: ImmutableList<SubscriptionUi> = persistentListOf(),
         val serverDetails: ServerDetailsUi? = null,
         val subscriptionEditor: SubscriptionEditorUi? = null,
+        val remoteShareConfirmationSubscriptionId: String? = null,
         val isAdvancedMode: Boolean = false,
         // The running session does not include the current saved settings.
         val reconnectToApplyServerId: String? = null,
@@ -39,6 +40,9 @@ internal object DashboardContract {
         data class DeployServerRequested(val subscriptionId: String?) : Intent
         data object ImportRequested : Intent
         data class ShareSubscriptionRequested(val subscriptionId: String) : Intent
+        data class RefreshSubscriptionRequested(val subscriptionId: String) : Intent
+        data object RemoteSubscriptionShareConfirmed : Intent
+        data object RemoteSubscriptionShareDismissed : Intent
 
         data class SubscriptionEditorRequested(val subscriptionId: String) : Intent
         data object SubscriptionEditorDismissed : Intent

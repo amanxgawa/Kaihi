@@ -23,12 +23,33 @@
     <string name="dashboard_subscription_add_server">Add server</string>
     <string name="dashboard_subscription_share_cd">Share %1$s</string>
     <string name="dashboard_subscription_edit_cd">Edit %1$s</string>
+    <string name="dashboard_subscription_refresh_cd">Refresh %1$s</string>
+    <string name="dashboard_subscription_usage_separator"> · </string>
+    <string name="dashboard_subscription_usage_with_total">%1$s / %2$s</string>
+    <string name="dashboard_subscription_usage_used">%1$s used</string>
+    <string name="dashboard_subscription_usage_total">Total %1$s</string>
+    <string name="dashboard_subscription_usage_until">until %1$s</string>
+    <string name="dashboard_subscription_expired">Expired</string>
+    <string name="dashboard_subscription_refresh_failed">Refresh failed</string>
+    <string name="dashboard_subscription_refresh_empty">No supported VLESS servers were found in this subscription.</string>
     <string name="dashboard_subscription_edit_title">Edit subscription</string>
+    <string name="dashboard_subscription_details_title">Details</string>
     <string name="dashboard_subscription_name_label">Name</string>
     <string name="dashboard_subscription_save">Save</string>
     <string name="dashboard_subscription_delete">Delete subscription</string>
     <string name="dashboard_subscription_delete_confirm_title">Delete this subscription?</string>
     <string name="dashboard_subscription_delete_confirm_body">Its servers are removed from this device. The servers themselves keep running, so you can set them up again anytime.</string>
+    <string name="dashboard_subscription_detail_traffic">Traffic</string>
+    <string name="dashboard_subscription_detail_expiry">Expires</string>
+    <string name="dashboard_subscription_detail_refresh_interval">Refresh interval</string>
+    <string name="dashboard_subscription_detail_interval_value">Every %1$d h</string>
+    <string name="dashboard_subscription_detail_last_updated">Last updated</string>
+    <string name="dashboard_subscription_detail_announcement">Announcement</string>
+    <string name="dashboard_subscription_detail_support">Support</string>
+    <string name="dashboard_subscription_detail_web_page">Web page</string>
+    <string name="dashboard_subscription_share_link_confirm_title">Share this subscription?</string>
+    <string name="dashboard_subscription_share_link_confirm_body">Anyone with this link can use the subscription and access its servers.</string>
+    <string name="dashboard_subscription_share_link_confirm_action">Share link</string>
 
     <string name="dashboard_server_details_cd">Details for %1$s</string>
     <string name="dashboard_server_info_server">Server</string>
@@ -39,9 +60,9 @@
     <string name="dashboard_server_forget">Forget this server</string>
     <string name="dashboard_server_forget_confirm_title">Forget this server?</string>
     <string name="dashboard_server_forget_confirm_body">This removes the saved connection from this device. Your server keeps running, so you can set it up again anytime.</string>
+    <string name="dashboard_manage_server">Manage server</string>
 
     <string name="dashboard_server_advanced_title">Advanced</string>
-    <string name="dashboard_manage_server">Manage server</string>
     <string name="dashboard_server_utls_fingerprint_title">TLS fingerprint</string>
     <string name="dashboard_server_fingerprint_auto">Auto</string>
     <string name="dashboard_server_fingerprint_auto_with_current">Auto · %1$s</string>

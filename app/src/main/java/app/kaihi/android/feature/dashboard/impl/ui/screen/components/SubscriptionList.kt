@@ -18,6 +18,7 @@ internal fun LazyListScope.subscriptionItems(
     onAddServer: (SubscriptionUi) -> Unit,
     onShare: (subscriptionId: String) -> Unit,
     onEdit: (subscriptionId: String) -> Unit,
+    onRefresh: (subscriptionId: String) -> Unit,
     onSelectServer: (serverId: String) -> Unit,
     onServerDetails: (serverId: String) -> Unit,
 ) {
@@ -32,6 +33,7 @@ internal fun LazyListScope.subscriptionItems(
             onAddServer = { onAddServer(subscription) },
             onShare = { onShare(subscription.id) },
             onEdit = { onEdit(subscription.id) },
+            onRefresh = { onRefresh(subscription.id) },
             onSelectServer = onSelectServer,
             onServerDetails = onServerDetails,
             modifier = Modifier.padding(top = if (index == 0) 0.dp else MaterialTheme.dimens.l),

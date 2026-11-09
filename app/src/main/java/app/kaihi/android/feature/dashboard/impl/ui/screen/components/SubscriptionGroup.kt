@@ -30,6 +30,7 @@ internal fun SubscriptionGroup(
     onAddServer: (SubscriptionUi) -> Unit,
     onShare: () -> Unit,
     onEdit: () -> Unit,
+    onRefresh: () -> Unit,
     onSelectServer: (serverId: String) -> Unit,
     onServerDetails: (serverId: String) -> Unit,
     modifier: Modifier = Modifier,
@@ -42,6 +43,7 @@ internal fun SubscriptionGroup(
             onToggleExpanded = onToggleExpanded,
             onShare = onShare,
             onEdit = onEdit,
+            onRefresh = onRefresh,
         )
 
         AnimatedVisibility(
@@ -52,8 +54,8 @@ internal fun SubscriptionGroup(
             exit = shrinkVertically(animationSpec = dashboardSpatialSpec(), shrinkTowards = Alignment.Top) +
                 fadeOut(animationSpec = dashboardEffectsSpec()),
         ) {
-            // +2: the header and the add-server row that closes the run.
-            val segmentCount = subscription.servers.size + 2
+            val hasAddRow = subscription.kind != SubscriptionKind.REMOTE
+            val segmentCount = subscription.servers.size + 1 + if (hasAddRow) 1 else 0
             Column(
                 modifier = Modifier
                     .clip(revealShape)
@@ -72,15 +74,17 @@ internal fun SubscriptionGroup(
                     }
                 }
 
-                AddServerRow(
-                    shape = segmentShape(index = segmentCount - 1, count = segmentCount),
-                    onClick = { onAddServer(subscription) },
-                    labelRes = if (subscription.kind == SubscriptionKind.IMPORTED) {
-                        R.string.dashboard_import
-                    } else {
-                        R.string.dashboard_subscription_add_server
-                    },
-                )
+                if (hasAddRow) {
+                    AddServerRow(
+                        shape = segmentShape(index = segmentCount - 1, count = segmentCount),
+                        onClick = { onAddServer(subscription) },
+                        labelRes = if (subscription.kind == SubscriptionKind.IMPORTED) {
+                            R.string.dashboard_import
+                        } else {
+                            R.string.dashboard_subscription_add_server
+                        },
+                    )
+                }
             }
         }
     }

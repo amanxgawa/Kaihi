@@ -9,7 +9,7 @@ set -euo pipefail
 
 TYPES=(feat fix refactor perf test docs build ci chore style revert)
 SCOPES=(
-  wizard dashboard hello settings learn          # features
+  wizard dashboard hello settings learn importing # features
   vpn ssh storage ui mode security navigation di # core modules
   ci build deps release                          # infrastructure
 )

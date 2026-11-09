@@ -2,6 +2,7 @@ package app.kaihi.android.feature.dashboard.impl.ui.mvi
 
 import app.kaihi.android.core.vpn.XraySubscription
 import app.kaihi.android.core.vpn.XraySubscriptionSource
+import app.kaihi.android.core.vpn.XraySubscriptionUserInfo
 import app.kaihi.android.core.vpn.XrayVpnProfile
 import app.kaihi.android.core.vpn.spec.XraySecurity
 import app.kaihi.android.feature.dashboard.impl.domain.model.ServerLibrary
@@ -31,6 +32,42 @@ class DashboardStateMappersTest {
 
         assertEquals(listOf(XraySubscription.IMPORTED_ID, "deployed", "remote"), mapped.map { it.id })
         assertEquals(SubscriptionKind.IMPORTED, mapped.first().kind)
+    }
+
+    @Test
+    fun `remote subscription metadata maps to UI without exposing its credential URL`() {
+        val remote = subscription(
+            "remote",
+            XraySubscriptionSource.Remote(
+                url = "https://provider.example/private-token",
+                userInfo = XraySubscriptionUserInfo(
+                    uploadBytes = 3L,
+                    downloadBytes = 7L,
+                    totalBytes = 100L,
+                    expireEpochSeconds = 500L,
+                ),
+                updateIntervalHours = 6,
+                supportUrl = "https://provider.example/support",
+                webPageUrl = "https://provider.example/account",
+                announce = "Maintenance tonight",
+                lastUpdatedMillis = 1234L,
+            ),
+        )
+        val editor = remote.toEditorUi()
+        val mappedGroup = ServerLibrary(
+            subscriptions = listOf(remote),
+            selectedServer = null,
+            collapsedSubscriptionIds = emptySet(),
+        ).toSubscriptionsUi().single()
+
+        assertEquals(10L, editor.usedBytes)
+        assertEquals(100L, editor.totalBytes)
+        assertEquals(500L, editor.expireEpochSeconds)
+        assertEquals(6, editor.updateIntervalHours)
+        assertEquals(1234L, editor.lastUpdatedMillis)
+        assertEquals(10L, mappedGroup.remote?.usedBytes)
+        assertFalse(editor.toString().contains("private-token"))
+        assertFalse(mappedGroup.toString().contains("private-token"))
     }
 
     @Test

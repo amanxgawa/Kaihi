@@ -61,10 +61,12 @@ import app.kaihi.android.feature.dashboard.impl.ui.screen.components.rememberIsC
 import app.kaihi.android.feature.dashboard.impl.ui.screen.components.subscriptionItems
 import app.kaihi.android.feature.dashboard.impl.ui.model.SubscriptionKind
 import app.kaihi.android.platform.ui.components.KaihiMark
+import app.kaihi.android.platform.ui.components.ConfirmDialog
 import app.kaihi.android.platform.ui.icons.KaihiIcons
 import app.kaihi.android.platform.ui.theme.size.dimens
 import app.kaihi.android.platform.ui.util.CollectAsEffect
 import app.kaihi.android.platform.ui.util.asString
+import app.kaihi.android.platform.ui.util.UiText
 
 private const val CONNECTION_ITEM_KEY = "connection"
 private const val RECONNECT_TO_APPLY_ITEM_KEY = "reconnect-to-apply"
@@ -190,6 +192,15 @@ internal fun DashboardScreen(
         )
     }
 
+    if (state.remoteShareConfirmationSubscriptionId != null) {
+        ConfirmDialog(
+            title = UiText.Resource(R.string.dashboard_subscription_share_link_confirm_title),
+            body = UiText.Resource(R.string.dashboard_subscription_share_link_confirm_body),
+            confirmText = UiText.Resource(R.string.dashboard_subscription_share_link_confirm_action),
+            onConfirm = { viewModel.processIntent(DashboardContract.Intent.RemoteSubscriptionShareConfirmed) },
+            onDismiss = { viewModel.processIntent(DashboardContract.Intent.RemoteSubscriptionShareDismissed) },
+        )
+    }
 }
 
 @Composable
@@ -247,6 +258,7 @@ private fun DashboardContent(
             },
             onShare = { id -> onIntent(DashboardContract.Intent.ShareSubscriptionRequested(id)) },
             onEdit = { id -> onIntent(DashboardContract.Intent.SubscriptionEditorRequested(id)) },
+            onRefresh = { id -> onIntent(DashboardContract.Intent.RefreshSubscriptionRequested(id)) },
             onSelectServer = { id -> onIntent(DashboardContract.Intent.ServerSelected(id)) },
             onServerDetails = { id -> onIntent(DashboardContract.Intent.ServerDetailsRequested(id)) },
         )
