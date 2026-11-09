@@ -1,6 +1,8 @@
 package app.kaihi.android.core.vpn
 
 import app.kaihi.android.core.vpn.configfactory.XrayClientConfigFactory
+import app.kaihi.android.core.vpn.spec.XrayFingerprint
+import app.kaihi.android.core.vpn.spec.XrayFingerprintSetting
 import app.kaihi.android.core.vpn.spec.XrayFlow
 import app.kaihi.android.core.vpn.spec.XraySecurity
 import app.kaihi.android.core.vpn.spec.XrayTransport
@@ -136,7 +138,7 @@ class XrayClientConfigStructureTest {
             """{"type":"fragment","settings":{"packets":"tlshello","lengths":["100-200"],"delays":["10-20"]}}"""
         ).jsonObject
         val expectedReality = Json.parseToJsonElement(
-            """{"serverName":"www.example.com","fingerprint":"edge","password":"public-key","shortId":"abcd"}"""
+            """{"serverName":"www.example.com","fingerprint":"firefox","password":"public-key","shortId":"abcd"}"""
         ).jsonObject
 
         transports.forEach { transport ->
@@ -145,6 +147,36 @@ class XrayClientConfigStructureTest {
 
             assertEquals(listOf(expectedMask), stream.getValue("finalmask").jsonObject.getValue("tcp").jsonArray.map { it.jsonObject })
             assertEquals(expectedReality, stream.getValue("realitySettings").jsonObject)
+        }
+    }
+
+    @Test
+    fun `generated reality fingerprint is concrete for auto and fixed settings`() {
+        fun fingerprint(setting: XrayFingerprintSetting): String {
+            val json = Json.parseToJsonElement(
+                XrayClientConfigFactory.build(profile(fingerprint = setting)).toJson(),
+            ).jsonObject
+            return json.outbound("proxy").getValue("streamSettings").jsonObject
+                .getValue("realitySettings").jsonObject.getValue("fingerprint").jsonPrimitive.content
+        }
+
+        assertEquals("firefox", fingerprint(XrayFingerprintSetting.Auto()))
+        assertEquals("chrome", fingerprint(XrayFingerprintSetting.Auto(XrayFingerprint.CHROME)))
+        assertEquals("safari", fingerprint(XrayFingerprintSetting.Fixed(XrayFingerprint.SAFARI)))
+        assertTrue(listOf("firefox", "chrome", "safari").all { it != "auto" })
+    }
+
+    @Test
+    fun `fingerprint setting round trips in profile serialization`() {
+        listOf(
+            XrayFingerprintSetting.Auto(XrayFingerprint.CHROME),
+            XrayFingerprintSetting.Fixed(XrayFingerprint.SAFARI),
+        ).forEach { setting ->
+            val original = profile(fingerprint = setting)
+            val encoded = XrayJson.default.encodeToString(XrayVpnProfile.serializer(), original)
+            val decoded = XrayJson.default.decodeFromString(XrayVpnProfile.serializer(), encoded)
+
+            assertEquals(original, decoded)
         }
     }
 
@@ -340,6 +372,7 @@ class XrayClientConfigStructureTest {
         muxEnabled: Boolean = false,
         muxConcurrency: Int = XrayVpnProfile.DEFAULT_MUX_CONCURRENCY,
         fragmentEnabled: Boolean = false,
+        fingerprint: XrayFingerprintSetting = XrayFingerprintSetting.Auto(),
     ) = XrayVpnProfile(
         id = "server-1",
         name = "test",
@@ -353,6 +386,7 @@ class XrayClientConfigStructureTest {
             serverName = "www.example.com",
             publicKey = "public-key",
             shortId = "abcd",
+            fingerprint = fingerprint,
         ),
         transport = transport,
         deployedAtMillis = 0L,

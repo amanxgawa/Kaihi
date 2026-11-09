@@ -10,10 +10,12 @@ import android.os.Looper
 import android.os.Message
 import android.os.Messenger
 import app.kaihi.android.core.vpn.XrayEngineState
+import app.kaihi.android.core.vpn.XrayFailure
 import app.kaihi.android.core.vpn.XrayLogLevel
 import app.kaihi.android.core.vpn.XrayLogMessage
 import app.kaihi.android.core.vpn.XrayMonitoring
 import app.kaihi.android.core.vpn.XrayTrafficStats
+import app.kaihi.android.core.vpn.spec.XrayFingerprint
 import app.kaihi.android.platform.di.MainDispatcher
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -103,9 +105,19 @@ internal class RemoteXrayMonitoring @Inject constructor(
         .map { it.settingsKey }
         .stateIn(scope, SharingStarted.WhileSubscribed(UNBIND_GRACE_MS), null)
 
+    override val sessionFingerprint: StateFlow<XrayFingerprint?> = events
+        .filterIsInstance<TelemetryEvent.SessionServer>()
+        .map { event -> event.fingerprint.toFingerprint() }
+        .stateIn(scope, SharingStarted.WhileSubscribed(UNBIND_GRACE_MS), null)
+
     override val runningSinceRealtime: StateFlow<Long?> = events
         .filterIsInstance<TelemetryEvent.RunningSince>()
         .map { it.runningSinceRealtime }
+        .stateIn(scope, SharingStarted.WhileSubscribed(UNBIND_GRACE_MS), null)
+
+    override val failure: StateFlow<XrayFailure?> = events
+        .filterIsInstance<TelemetryEvent.Failure>()
+        .map { it.failure }
         .stateIn(scope, SharingStarted.WhileSubscribed(UNBIND_GRACE_MS), null)
 
     private fun Message.toTelemetryEvent(): TelemetryEvent? = when (what) {
@@ -118,10 +130,15 @@ internal class RemoteXrayMonitoring @Inject constructor(
         VpnIpcProtocol.MSG_SESSION_SERVER_CHANGED -> TelemetryEvent.SessionServer(
             serverId = data.toSessionServerId(),
             settingsKey = data.toSessionSettingsKey(),
+            fingerprint = data.toSessionFingerprint(),
         )
         VpnIpcProtocol.MSG_RUNNING_SINCE_CHANGED -> TelemetryEvent.RunningSince(data.toRunningSinceRealtime())
+        VpnIpcProtocol.MSG_FAILURE_CHANGED -> TelemetryEvent.Failure(data.toFailure())
         else -> null
     }
+
+    private fun String?.toFingerprint(): XrayFingerprint? =
+        this?.let { wireValue -> XrayFingerprint.entries.firstOrNull { it.wireValue == wireValue } }
 
     private fun Flow<XrayLogMessage>.withDropMarkers(): Flow<XrayLogMessage> = flow {
         var expected = -1L

@@ -3,7 +3,7 @@ package app.kaihi.android.feature.dashboard.impl.ui.mvi
 import android.content.Intent as SystemIntent
 import app.kaihi.android.core.vpn.XrayEngineState
 import app.kaihi.android.core.vpn.XrayTrafficStats
-import app.kaihi.android.core.vpn.spec.XrayFingerprint
+import app.kaihi.android.core.vpn.spec.XrayFingerprintSetting
 import app.kaihi.android.feature.dashboard.impl.ui.model.ServerDetailsUi
 import app.kaihi.android.feature.dashboard.impl.ui.model.SubscriptionEditorUi
 import app.kaihi.android.feature.dashboard.impl.ui.model.SubscriptionUi
@@ -49,7 +49,7 @@ internal object DashboardContract {
         data object ServerDetailsDismissed : Intent
         data class ShareServerRequested(val serverId: String) : Intent
         data class ServerForgotten(val serverId: String) : Intent
-        data class FingerprintChanged(val serverId: String, val value: XrayFingerprint) : Intent
+        data class FingerprintChanged(val serverId: String, val value: XrayFingerprintSetting) : Intent
         data class MuxEnabledChanged(val serverId: String, val enabled: Boolean) : Intent
         data class FragmentEnabledChanged(val serverId: String, val enabled: Boolean) : Intent
         data class MuxConcurrencyChanged(val serverId: String, val value: Int) : Intent

@@ -6,6 +6,7 @@ import app.kaihi.android.core.vpn.spec.RawObject
 import app.kaihi.android.core.vpn.spec.RealityObject
 import app.kaihi.android.core.vpn.spec.StreamSettingsObject
 import app.kaihi.android.core.vpn.spec.TlsObject
+import app.kaihi.android.core.vpn.spec.XrayFingerprint
 import app.kaihi.android.core.vpn.spec.XraySecurity
 import app.kaihi.android.core.vpn.spec.XrayTransport
 import kotlinx.serialization.json.JsonArray
@@ -17,6 +18,7 @@ object XrayTransportFactory {
     fun streamSettings(
         transport: XrayTransport,
         security: XraySecurity,
+        fingerprint: XrayFingerprint,
         xmuxMaxConcurrency: Int,
         fragmentEnabled: Boolean,
     ): StreamSettingsObject {
@@ -43,7 +45,7 @@ object XrayTransportFactory {
                 "reality",
                 RealityObject(
                     serverName = security.serverName,
-                    fingerprint = security.fingerprint.wireValue,
+                    fingerprint = fingerprint.wireValue,
                     password = security.publicKey,
                     shortId = security.shortId,
                 ),

@@ -1,7 +1,11 @@
 package app.kaihi.android.core.vpn
 
 import app.kaihi.android.core.vpn.configfactory.XrayClientConfigFactory
+import app.kaihi.android.core.vpn.spec.XrayFingerprint
+import app.kaihi.android.core.vpn.spec.XrayFingerprintSetting
 import app.kaihi.android.core.vpn.spec.XraySecurity
+import app.kaihi.android.core.vpn.spec.candidates
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -49,6 +53,58 @@ class XrayRuntimeConfigFactoryTest {
     }
 
     @Test
+    fun `auto runtime config carries ordered candidate configs with shared session inputs`() {
+        val config = XrayClientConfigFactory.createRuntimeConfig(profile(), ipv6Enabled = false)
+        val expectedFingerprints = XrayFingerprintSetting.Auto().candidates()
+
+        assertEquals(expectedFingerprints, config.fingerprintCandidates.map { it.fingerprint })
+        assertEquals(config.fingerprintCandidates.first().rawJson, config.rawJson)
+        assertEquals(expectedFingerprints.first(), config.fingerprint)
+
+        val roots = config.fingerprintCandidates.map { XrayJson.default.parseToJsonElement(it.rawJson).jsonObject }
+        val firstAccounts = roots.first().getValue("inbounds").jsonArray.single().jsonObject
+            .getValue("settings").jsonObject.getValue("accounts").jsonArray.single().jsonObject
+        val firstProbeUrl = roots.first().getValue("burstObservatory").jsonObject
+            .getValue("pingConfig").jsonObject.getValue("destination").jsonPrimitive.content
+
+        roots.zip(config.fingerprintCandidates).forEach { (root, candidate) ->
+            val reality = root.outbound("proxy").getValue("streamSettings").jsonObject
+                .getValue("realitySettings").jsonObject
+            val accounts = root.getValue("inbounds").jsonArray.single().jsonObject
+                .getValue("settings").jsonObject.getValue("accounts").jsonArray.single().jsonObject
+            val probeUrl = root.getValue("burstObservatory").jsonObject
+                .getValue("pingConfig").jsonObject.getValue("destination").jsonPrimitive.content
+
+            assertEquals(candidate.fingerprint.wireValue, reality.getValue("fingerprint").jsonPrimitive.content)
+            assertEquals(firstAccounts, accounts)
+            assertEquals(firstProbeUrl, probeUrl)
+            assertEquals(
+                config.fingerprintCandidates.first().rawJson
+                    .replace("\"fingerprint\":\"${config.fingerprintCandidates.first().fingerprint.wireValue}\"", "\"fingerprint\":\"normalized\""),
+                candidate.rawJson.replace(
+                    "\"fingerprint\":\"${candidate.fingerprint.wireValue}\"",
+                    "\"fingerprint\":\"normalized\"",
+                ),
+            )
+        }
+    }
+
+    @Test
+    fun `fixed runtime config does not carry fingerprint candidates`() {
+        val fixed = XrayFingerprintSetting.Fixed(XrayFingerprint.SAFARI)
+        val config = XrayClientConfigFactory.createRuntimeConfig(
+            profile().copy(security = (profile().security as XraySecurity.Reality).copy(fingerprint = fixed)),
+            ipv6Enabled = false,
+        )
+
+        assertTrue(config.fingerprintCandidates.isEmpty())
+        assertEquals(XrayFingerprint.SAFARI, config.fingerprint)
+        val reality = XrayJson.default.parseToJsonElement(config.rawJson).jsonObject
+            .outbound("proxy").getValue("streamSettings").jsonObject.getValue("realitySettings").jsonObject
+        assertEquals("safari", reality.getValue("fingerprint").jsonPrimitive.content)
+    }
+
+    @Test
     fun `IPv6 enabled runtime config carries its choice and lifts the IPv6 blackhole`() {
         val config = XrayClientConfigFactory.createRuntimeConfig(profile(), ipv6Enabled = true)
         val rules = XrayJson.default.parseToJsonElement(config.rawJson).jsonObject
@@ -61,6 +117,7 @@ class XrayRuntimeConfigFactoryTest {
         // Restart intents serialize the whole config, preserving the session's original choice.
         val restarted = XrayJson.default.decodeFromString<XrayRuntimeConfig>(XrayJson.default.encodeToString(config))
         assertEquals(config, restarted)
+        assertEquals(config.fingerprintCandidates, restarted.fingerprintCandidates)
         assertTrue(restarted.ipv6Enabled)
     }
 
@@ -90,4 +147,8 @@ class XrayRuntimeConfigFactoryTest {
         assertFalse(reencoded.contains("ipv6Enabled"))
         assertFalse(reencoded.contains("settingsKey"))
     }
+
+    private fun JsonObject.outbound(tag: String) = getValue("outbounds").jsonArray
+        .map { it.jsonObject }
+        .single { it.getValue("tag").jsonPrimitive.content == tag }
 }

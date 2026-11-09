@@ -10,7 +10,4 @@ enum class XrayFingerprint(val wireValue: String) {
     SAFARI("safari"),
     IOS("ios"),
     ANDROID("android"),
-    RANDOM("random"),
-    RANDOMIZED("randomized"),
-    UNSAFE("unsafe"),
 }

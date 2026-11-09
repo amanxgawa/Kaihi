@@ -1,5 +1,7 @@
 package app.kaihi.android.core.vpn
 
+import app.kaihi.android.core.vpn.spec.XrayFingerprint
+import app.kaihi.android.core.vpn.spec.XrayFingerprintSetting
 import app.kaihi.android.core.vpn.spec.XraySecurity
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -41,6 +43,26 @@ class VlessUriTest {
         assertTrue(uri.contains("pbk=publicKeyValue"))
         assertTrue(uri.contains("sid=shortIdValue"))
         assertTrue(uri.contains("type=xhttp"))
+    }
+
+    @Test
+    fun `exports the preferred concrete fingerprint for auto and fixed settings`() {
+        val base = profile()
+        val reality = base.security as XraySecurity.Reality
+        val auto = base.copy(
+            security = reality.copy(
+                fingerprint = XrayFingerprintSetting.Auto(),
+            ),
+        )
+        val fixed = base.copy(
+            security = reality.copy(
+                fingerprint = XrayFingerprintSetting.Fixed(XrayFingerprint.SAFARI),
+            ),
+        )
+
+        assertTrue(auto.toVlessUri().contains("&fp=firefox"))
+        assertTrue(fixed.toVlessUri().contains("&fp=safari"))
+        assertTrue(!auto.toVlessUri().contains("&fp=auto"))
     }
 
     @Test

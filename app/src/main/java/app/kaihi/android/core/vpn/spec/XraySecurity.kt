@@ -9,7 +9,7 @@ sealed interface XraySecurity {
         val serverName: String,
         val publicKey: String,
         val shortId: String,
-        val fingerprint: XrayFingerprint = XrayFingerprint.EDGE,
+        val fingerprint: XrayFingerprintSetting = XrayFingerprintSetting.Auto(),
     ) : XraySecurity
 
     @Serializable

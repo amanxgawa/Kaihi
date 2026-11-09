@@ -74,7 +74,9 @@ module, Screen). Reference test: `StoredAppModeRepositoryTest`.
   `ShellHost.of(...)` values or compile-time constants. SNI candidates come from certificates
   controlled by strangers on the VPS's subnet, so treat them as attacker input.
 - Persisted and IPC-serialized models (`XrayVpnProfile`, `XraySubscription`, `XrayRuntimeConfig`)
-  must still decode data written by older versions: give every new field a default.
+  may change incompatibly until 1.0: the app has no users yet. Mark such a change as breaking
+  (`!` and a `BREAKING CHANGE:` footer, see `CONTRIBUTING.md`). Give a new field a default when
+  that costs nothing.
 - Put user-visible text in `res/values/<feature>_strings.xml` and the same keys in
   `res/values-ru/`; state carries `UiText`, not literals.
 - Icons are hand-written `ImageVector`s in `platform/ui/icons/sources/`, exposed via `KaihiIcons`.

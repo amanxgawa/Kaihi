@@ -2,8 +2,10 @@ package app.kaihi.android.core.vpn
 
 import app.kaihi.android.core.vpn.XrayStatsSource
 import app.kaihi.android.core.vpn.internal.ElapsedRealtimeSource
+import app.kaihi.android.core.vpn.internal.NoWorkingFingerprintException
 import app.kaihi.android.core.vpn.internal.SessionIdentity
 import app.kaihi.android.core.vpn.internal.XrayTelemetryMonitor
+import app.kaihi.android.core.vpn.spec.XrayFingerprint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -89,21 +91,24 @@ class XrayTelemetryMonitorTest {
         assertNull(monitor.sessionServerId.value)
 
         monitor.starting()
-        monitor.running(STATS_INTERVAL_MS, serverId = "server-a", settingsKey = "k")
+        monitor.running(STATS_INTERVAL_MS, serverId = "server-a", settingsKey = "k", fingerprint = "safari")
         assertEquals("server-a", monitor.sessionServerId.value)
         assertEquals("k", monitor.sessionSettingsKey.value)
-        assertEquals(SessionIdentity("server-a", "k"), monitor.sessionIdentity.value)
+        assertEquals(XrayFingerprint.SAFARI, monitor.sessionFingerprint.value)
+        assertEquals(SessionIdentity("server-a", "k", "safari"), monitor.sessionIdentity.value)
 
         monitor.stopping()
         assertNull("a stopped engine must not claim a session server", monitor.sessionServerId.value)
         assertNull("a stopped engine must not claim session settings", monitor.sessionSettingsKey.value)
+        assertNull("a stopped engine must not claim a session fingerprint", monitor.sessionFingerprint.value)
         assertNull("a stopped engine must not claim a session identity", monitor.sessionIdentity.value)
 
         monitor.starting()
-        monitor.running(STATS_INTERVAL_MS, serverId = "server-b", settingsKey = "k-2")
+        monitor.running(STATS_INTERVAL_MS, serverId = "server-b", settingsKey = "k-2", fingerprint = "firefox")
         assertEquals("a restart reports the server it switched to", "server-b", monitor.sessionServerId.value)
         assertEquals("a restart reports the settings it switched to", "k-2", monitor.sessionSettingsKey.value)
-        assertEquals(SessionIdentity("server-b", "k-2"), monitor.sessionIdentity.value)
+        assertEquals(XrayFingerprint.FIREFOX, monitor.sessionFingerprint.value)
+        assertEquals(SessionIdentity("server-b", "k-2", "firefox"), monitor.sessionIdentity.value)
 
         monitor.stopping()
     }
@@ -126,6 +131,20 @@ class XrayTelemetryMonitorTest {
     }
 
     @Test
+    fun `reports specific and generic failures and clears them on starting`() = runBlocking {
+        val monitor = monitor()
+
+        monitor.failed(NoWorkingFingerprintException(listOf(XrayFingerprint.SAFARI)))
+        assertEquals(XrayFailure.NO_WORKING_FINGERPRINT, monitor.failure.value)
+
+        monitor.failed(RuntimeException("other failure"))
+        assertEquals(XrayFailure.OTHER, monitor.failure.value)
+
+        monitor.starting()
+        assertNull(monitor.failure.value)
+    }
+
+    @Test
     fun `failing clears a running-since timestamp`() = runBlocking {
         val monitor = monitor()
 
@@ -141,11 +160,12 @@ class XrayTelemetryMonitorTest {
         val monitor = monitor()
 
         monitor.starting()
-        monitor.running(STATS_INTERVAL_MS, serverId = "server-a", settingsKey = "k")
+        monitor.running(STATS_INTERVAL_MS, serverId = "server-a", settingsKey = "k", fingerprint = "safari")
         monitor.failed(IllegalStateException("tunnel lost"))
 
         assertNull(monitor.sessionServerId.value)
         assertNull(monitor.sessionSettingsKey.value)
+        assertNull(monitor.sessionFingerprint.value)
         assertNull(monitor.sessionIdentity.value)
         monitor.stopping()
     }

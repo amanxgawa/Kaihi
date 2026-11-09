@@ -1,6 +1,8 @@
 package app.kaihi.android.core.vpn.internal
 
 import app.kaihi.android.core.vpn.XrayEngineState
+import app.kaihi.android.core.vpn.XrayFailure
+import app.kaihi.android.core.vpn.spec.XrayFingerprint
 import app.kaihi.android.core.vpn.XrayLogLevel
 import app.kaihi.android.core.vpn.XrayLogMessage
 import app.kaihi.android.core.vpn.XrayMonitoring
@@ -33,7 +35,11 @@ import kotlinx.coroutines.sync.withLock
 import libv2ray.CoreCallbackHandler
 import timber.log.Timber
 
-internal data class SessionIdentity(val serverId: String?, val settingsKey: String?)
+internal data class SessionIdentity(
+    val serverId: String?,
+    val settingsKey: String?,
+    val fingerprint: String? = null,
+)
 
 @Singleton
 internal class XrayTelemetryMonitor @Inject constructor(
@@ -75,11 +81,17 @@ internal class XrayTelemetryMonitor @Inject constructor(
     private val _sessionSettingsKey = MutableStateFlow<String?>(null)
     override val sessionSettingsKey: StateFlow<String?> = _sessionSettingsKey.asStateFlow()
 
+    private val _sessionFingerprint = MutableStateFlow<XrayFingerprint?>(null)
+    override val sessionFingerprint: StateFlow<XrayFingerprint?> = _sessionFingerprint.asStateFlow()
+
     private val _sessionIdentity = MutableStateFlow<SessionIdentity?>(null)
     internal val sessionIdentity: StateFlow<SessionIdentity?> = _sessionIdentity.asStateFlow()
 
     private val _runningSinceRealtime = MutableStateFlow<Long?>(null)
     override val runningSinceRealtime: StateFlow<Long?> = _runningSinceRealtime.asStateFlow()
+
+    private val _failure = MutableStateFlow<XrayFailure?>(null)
+    override val failure: StateFlow<XrayFailure?> = _failure.asStateFlow()
 
     private val lifecycle = Mutex()
     private var statsJob: Job? = null
@@ -92,6 +104,7 @@ internal class XrayTelemetryMonitor @Inject constructor(
     private var pollIntervalMillis = MIN_STATS_INTERVAL_MS
 
     suspend fun starting() = lifecycle.withLock {
+        _failure.value = null
         _state.value = XrayEngineState.STARTING
     }
 
@@ -100,6 +113,7 @@ internal class XrayTelemetryMonitor @Inject constructor(
         intervalMillis: Long,
         serverId: String? = null,
         settingsKey: String? = null,
+        fingerprint: String? = null,
     ) = lifecycle.withLock {
         check(statsJob == null) { "Telemetry is already tracking a running Xray session." }
         uplinkTotalBytes = 0L
@@ -109,7 +123,8 @@ internal class XrayTelemetryMonitor @Inject constructor(
         // Published before RUNNING, so a client reacting to RUNNING already knows which server it is on.
         _sessionServerId.value = serverId
         _sessionSettingsKey.value = settingsKey
-        _sessionIdentity.value = SessionIdentity(serverId, settingsKey)
+        _sessionFingerprint.value = fingerprint.toFingerprint()
+        _sessionIdentity.value = SessionIdentity(serverId, settingsKey, fingerprint)
         // elapsedRealtime(), not epoch time: monotonic and shared across processes, so a UI process
         // recreated under a live tunnel can compare against it instead of guessing a start time.
         _runningSinceRealtime.value = elapsedRealtimeSource.elapsedRealtimeMillis()
@@ -141,6 +156,7 @@ internal class XrayTelemetryMonitor @Inject constructor(
         endingLogcat?.stop()
         _sessionServerId.value = null
         _sessionSettingsKey.value = null
+        _sessionFingerprint.value = null
         _sessionIdentity.value = null
         _runningSinceRealtime.value = null
         _state.value = XrayEngineState.STOPPED
@@ -151,8 +167,13 @@ internal class XrayTelemetryMonitor @Inject constructor(
     }
 
     fun failed(error: Throwable) {
+        _failure.value = when (error) {
+            is NoWorkingFingerprintException -> XrayFailure.NO_WORKING_FINGERPRINT
+            else -> XrayFailure.OTHER
+        }
         _sessionServerId.value = null
         _sessionSettingsKey.value = null
+        _sessionFingerprint.value = null
         _sessionIdentity.value = null
         _runningSinceRealtime.value = null
         _state.value = XrayEngineState.ERROR
@@ -215,6 +236,9 @@ internal class XrayTelemetryMonitor @Inject constructor(
             ?: XrayLogLevel.INFO
         return XrayLogMessage(level, this, sequence = logSequence.getAndIncrement())
     }
+
+    private fun String?.toFingerprint(): XrayFingerprint? =
+        this?.let { wireValue -> XrayFingerprint.entries.firstOrNull { it.wireValue == wireValue } }
 
     private companion object {
         const val LOG_BUFFER_CAPACITY = 64

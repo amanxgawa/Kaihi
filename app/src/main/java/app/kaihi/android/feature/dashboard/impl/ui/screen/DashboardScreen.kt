@@ -231,6 +231,7 @@ private fun DashboardContent(
                     onReconnect = { onIntent(DashboardContract.Intent.ReconnectToApplyRequested) },
                     enabled = !state.isBusy,
                     modifier = Modifier
+                        .animateItem()
                         .fillMaxWidth()
                         .padding(bottom = dimens.l),
                 )
