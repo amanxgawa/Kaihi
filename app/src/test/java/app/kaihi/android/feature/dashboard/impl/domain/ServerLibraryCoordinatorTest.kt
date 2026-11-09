@@ -57,14 +57,11 @@ class ServerLibraryCoordinatorTest {
         val profile = XrayVpnProfile(
             id = SERVER_ID,
             name = "test",
-            sshHost = "ssh.example",
-            sshPort = 22,
-            sshUsername = "root",
             serverAddress = "proxy.example",
             serverPort = 443,
             uuid = "123e4567-e89b-12d3-a456-426614174000",
             security = XraySecurity.Reality("www.example.com", "public-key", "abcd", setting),
-            deployedAtMillis = 0L,
+            addedAtMillis = 0L,
         )
         val store = MemoryStore(
             listOf(XraySubscription("subscription", "Test", listOf(profile))),

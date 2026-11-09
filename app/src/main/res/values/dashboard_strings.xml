@@ -32,6 +32,7 @@
     <string name="dashboard_server_info_server">Server</string>
     <string name="dashboard_server_info_masking_as">Masking as</string>
     <string name="dashboard_server_info_deployed">Deployed</string>
+    <string name="dashboard_server_info_added">Added</string>
     <string name="dashboard_export_link_label">Share VLESS link</string>
     <string name="dashboard_server_forget">Forget this server</string>
     <string name="dashboard_server_forget_confirm_title">Forget this server?</string>

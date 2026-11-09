@@ -94,8 +94,11 @@ internal fun ServerDetailsSheet(
                     )
                 }
                 ServerInfoRow(
-                    label = stringResource(R.string.dashboard_server_info_deployed),
-                    value = details.deployedAtMillis.toDisplayDate(),
+                    label = stringResource(
+                        if (details.isDeployed) R.string.dashboard_server_info_deployed
+                        else R.string.dashboard_server_info_added,
+                    ),
+                    value = details.addedAtMillis.toDisplayDate(),
                 )
             }
 

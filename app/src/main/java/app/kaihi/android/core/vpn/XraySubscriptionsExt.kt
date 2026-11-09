@@ -23,9 +23,14 @@ fun List<XraySubscription>.withDeployedServer(
     newSubscription: () -> XraySubscription,
 ): List<XraySubscription> {
     findServerByAddress(server.serverAddress)?.let { existing ->
-        return withServerUpdated(existing.id) { server.copy(id = existing.id, name = existing.name) }
+        val existingSubscription = find { subscription -> subscription.servers.any { it.id == existing.id } }
+        if (existingSubscription?.source == XraySubscriptionSource.Deployed) {
+            return withServerUpdated(existing.id) { server.copy(id = existing.id, name = existing.name) }
+        }
     }
-    val target = targetSubscriptionId?.let(::findSubscription) ?: return this + newSubscription().copy(servers = listOf(server))
+    val target = targetSubscriptionId?.let(::findSubscription)
+        ?.takeIf { it.source == XraySubscriptionSource.Deployed }
+        ?: return this + newSubscription().copy(servers = listOf(server), source = XraySubscriptionSource.Deployed)
     return withSubscriptionUpdated(target.id) { it.copy(servers = it.servers + server) }
 }
 

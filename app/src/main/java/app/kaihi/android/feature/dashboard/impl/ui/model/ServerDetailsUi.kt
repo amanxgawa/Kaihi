@@ -10,5 +10,6 @@ internal data class ServerDetailsUi(
     val stack: String,
     val address: String,
     val maskingAs: String?,
-    val deployedAtMillis: Long,
+    val addedAtMillis: Long,
+    val isDeployed: Boolean,
 )

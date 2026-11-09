@@ -12,14 +12,11 @@ class XraySubscriptionsExtTest {
     private fun server(id: String, address: String, uuid: String = "uuid-$id") = XrayVpnProfile(
         id = id,
         name = "Server $id",
-        sshHost = address,
-        sshPort = 22,
-        sshUsername = "root",
         serverAddress = address,
         serverPort = 443,
         uuid = uuid,
         security = XraySecurity.Reality(serverName = "www.example.com", publicKey = "key", shortId = "ab"),
-        deployedAtMillis = 0L,
+        addedAtMillis = 0L,
     )
 
     private fun subscription(id: String, vararg servers: XrayVpnProfile) =
@@ -69,6 +66,32 @@ class XraySubscriptionsExtTest {
             assertTrue("target=$target must create a subscription", created)
             assertEquals(listOf("home", "new"), result.map { it.id })
             assertEquals(listOf("b"), result.findSubscription("new")!!.servers.map { it.id })
+        }
+    }
+
+    @Test
+    fun `imported and remote targets receive deployed servers in a new deployed subscription`() {
+        val sources = listOf(
+            XraySubscriptionSource.Imported,
+            XraySubscriptionSource.Remote("https://panel.example/sub/token"),
+        )
+
+        sources.forEachIndexed { index, source ->
+            val target = XraySubscription(
+                id = "source-$index",
+                name = "External",
+                servers = listOf(server("existing-$index", "203.0.113.$index")),
+                source = source,
+            )
+            val deployedServer = server("deployed-$index", "198.51.100.$index")
+            val result = listOf(target).withDeployedServer(deployedServer, target.id) {
+                XraySubscription(id = "deployed-group-$index", name = "Deployed", servers = emptyList())
+            }
+
+            assertEquals(source, result.first().source)
+            assertEquals(listOf("existing-$index"), result.first().servers.map { it.id })
+            assertEquals(XraySubscriptionSource.Deployed, result.last().source)
+            assertEquals(listOf("deployed-$index"), result.last().servers.map { it.id })
         }
     }
 

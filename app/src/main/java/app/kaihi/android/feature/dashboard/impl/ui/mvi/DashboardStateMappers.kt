@@ -33,7 +33,8 @@ internal fun XrayVpnProfile.toDetailsUi(): ServerDetailsUi {
         stack = stackLabel(),
         address = "$serverAddress:$serverPort",
         maskingAs = reality?.serverName ?: (security as? XraySecurity.Tls)?.serverName,
-        deployedAtMillis = deployedAtMillis,
+        addedAtMillis = addedAtMillis,
+        isDeployed = ssh != null,
     )
 }
 
