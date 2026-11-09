@@ -37,7 +37,7 @@ All paths below are under `app/src/main/java/app/kaihi/android/` unless stated.
 ## Commands
 
 - `./gradlew compileDebugKotlin`: fast loop while iterating.
-- `./gradlew testDebugUnitTest`: all unit tests (194 across 39 classes).
+- `./gradlew testDebugUnitTest`: all unit tests.
 - `./gradlew testDebugUnitTest --tests 'app.kaihi.android.core.ssh.HostnameValidationTest'`: one
   test class; `--tests '<class>.<method>'` selects a single test.
 - `./gradlew lintDebug`: Android Lint. No formatter or detekt is configured.
@@ -99,7 +99,8 @@ module, Screen). Reference test: `StoredAppModeRepositoryTest`.
 - Skip or weaken SHA-256 verification of any downloaded binary.
 - Rename or move `core/vpn/internal/TProxyService` or its package: native code binds to it by name
   (`-DPKGNAME` in `app/build.gradle.kts`, keep rule in `app/src/main/keepRules/rules.keep`).
-- Persist SSH passwords or keys. Store a host fingerprint only after authentication succeeds.
+- Persist SSH passwords or exportable keys. A device SSH key may exist only as a non-exportable
+  Android Keystore entry. Store a host fingerprint only after authentication succeeds.
 - Drop the SOCKS credentials or the UDP/443 blackhole from the client Xray config. Omit the `::/0`
   blackhole only when the user's IPv6 setting (`VpnPreferences`) is on; keep it when off.
 - Read, print or commit `keystore.properties`, `local.properties` or any `*.jks`.
