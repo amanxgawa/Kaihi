@@ -44,11 +44,24 @@ internal class ConnectionDelegate @Inject constructor(
                 serverId?.let(coordinator::select)
             }
             .launchIn(scope)
+        combine(
+            serviceProvider.monitoring.sessionServerId,
+            serviceProvider.monitoring.sessionFingerprint,
+        ) { serverId, fingerprint -> serverId to fingerprint }
+            .onEach { (serverId, fingerprint) ->
+                if (serverId != null && fingerprint != null) {
+                    coordinator.recordWorkingFingerprint(serverId, fingerprint)
+                }
+            }
+            .launchIn(scope)
         serviceProvider.monitoring.healthDegraded
             .onEach { handleHealthDegraded() }
             .launchIn(scope)
         serviceProvider.monitoring.state
             .onEach { engineState -> reduce { copy(engineState = engineState) } }
+            .launchIn(scope)
+        serviceProvider.monitoring.failure
+            .onEach { failure -> failureMessage(failure)?.let { message -> reduce { copy(errorMessage = message) } } }
             .launchIn(scope)
         combine(
             serviceProvider.monitoring.state,

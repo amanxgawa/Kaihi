@@ -1,5 +1,10 @@
 package app.kaihi.android.feature.dashboard.impl.ui.screen.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -29,7 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import app.kaihi.android.R
-import app.kaihi.android.core.vpn.spec.XrayFingerprint
+import app.kaihi.android.core.vpn.spec.XrayFingerprintSetting
 import app.kaihi.android.feature.dashboard.impl.ui.model.ServerDetailsUi
 import app.kaihi.android.platform.ui.components.ConfirmDialog
 import app.kaihi.android.platform.ui.icons.KaihiIcons
@@ -48,7 +53,7 @@ internal fun ServerDetailsSheet(
     onDismiss: () -> Unit,
     onShare: () -> Unit,
     onForget: () -> Unit,
-    onFingerprintChanged: (XrayFingerprint) -> Unit,
+    onFingerprintChanged: (XrayFingerprintSetting) -> Unit,
     onMuxEnabledChanged: (Boolean) -> Unit,
     onFragmentEnabledChanged: (Boolean) -> Unit,
     onMuxConcurrencyChanged: (Int) -> Unit,
@@ -124,23 +129,30 @@ internal fun ServerDetailsSheet(
 
             if (isAdvancedMode) {
                 HorizontalDivider()
-                if (showReconnectToApply) {
-                    ReconnectToApplyBanner(
-                        onReconnect = onReconnectToApply,
-                        enabled = !isBusy,
+                Column {
+                    AnimatedVisibility(
+                        visible = showReconnectToApply,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut(),
+                    ) {
+                        ReconnectToApplyBanner(
+                            onReconnect = onReconnectToApply,
+                            enabled = !isBusy,
+                            modifier = Modifier.padding(bottom = dimens.l),
+                        )
+                    }
+                    ServerAdvancedSection(
+                        fingerprint = details.fingerprint,
+                        isXhttp = details.isXhttp,
+                        muxEnabled = details.muxEnabled,
+                        muxConcurrency = details.muxConcurrency,
+                        fragmentEnabled = details.fragmentEnabled,
+                        onFingerprintChanged = onFingerprintChanged,
+                        onMuxEnabledChanged = onMuxEnabledChanged,
+                        onFragmentEnabledChanged = onFragmentEnabledChanged,
+                        onMuxConcurrencyChanged = onMuxConcurrencyChanged,
                     )
                 }
-                ServerAdvancedSection(
-                    fingerprint = details.fingerprint,
-                    isXhttp = details.isXhttp,
-                    muxEnabled = details.muxEnabled,
-                    muxConcurrency = details.muxConcurrency,
-                    fragmentEnabled = details.fragmentEnabled,
-                    onFingerprintChanged = onFingerprintChanged,
-                    onMuxEnabledChanged = onMuxEnabledChanged,
-                    onFragmentEnabledChanged = onFragmentEnabledChanged,
-                    onMuxConcurrencyChanged = onMuxConcurrencyChanged,
-                )
             }
 
             TextButton(

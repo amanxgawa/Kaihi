@@ -1,6 +1,15 @@
 package app.kaihi.android.core.vpn
 
+import app.kaihi.android.core.vpn.spec.XrayFingerprint
 import kotlinx.serialization.Serializable
+
+@Serializable
+data class FingerprintCandidate(
+    val fingerprint: XrayFingerprint,
+    val rawJson: String,
+) {
+    override fun toString(): String = "FingerprintCandidate(fingerprint=${fingerprint.wireValue})"
+}
 
 @Serializable
 data class XrayRuntimeConfig(
@@ -12,4 +21,9 @@ data class XrayRuntimeConfig(
     val ipv6Enabled: Boolean = false,
     // Nullable only so a restart intent scheduled by an older build still decodes.
     val settingsKey: String? = null,
-)
+    val fingerprintCandidates: List<FingerprintCandidate> = emptyList(),
+    val fingerprint: XrayFingerprint? = null,
+) {
+    override fun toString(): String =
+        "XrayRuntimeConfig(ipv6Enabled=$ipv6Enabled, fingerprintCandidates=${fingerprintCandidates.size})"
+}

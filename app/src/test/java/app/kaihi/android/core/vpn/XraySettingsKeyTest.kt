@@ -2,6 +2,7 @@ package app.kaihi.android.core.vpn
 
 import app.kaihi.android.core.vpn.configfactory.XrayClientConfigFactory
 import app.kaihi.android.core.vpn.spec.XrayFingerprint
+import app.kaihi.android.core.vpn.spec.XrayFingerprintSetting
 import app.kaihi.android.core.vpn.spec.XraySecurity
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -31,11 +32,44 @@ class XraySettingsKeyTest {
         assertNotEquals(
             key,
             XrayClientConfigFactory.settingsKey(
-                profile.copy(security = (profile.security as XraySecurity.Reality).copy(fingerprint = XrayFingerprint.CHROME)),
+                profile.copy(security = (profile.security as XraySecurity.Reality).copy(
+                    fingerprint = XrayFingerprintSetting.Fixed(XrayFingerprint.CHROME),
+                )),
                 false,
             ),
         )
         assertNotEquals(key, XrayClientConfigFactory.settingsKey(profile, ipv6Enabled = true))
+    }
+
+    @Test
+    fun `auto key ignores last working while fixed keys track the fingerprint`() {
+        val profile = profile()
+        val reality = profile.security as XraySecurity.Reality
+
+        assertEquals(
+            XrayClientConfigFactory.settingsKey(profile, false),
+            XrayClientConfigFactory.settingsKey(
+                profile.copy(security = reality.copy(fingerprint = XrayFingerprintSetting.Auto(XrayFingerprint.CHROME))),
+                false,
+            ),
+        )
+        assertNotEquals(
+            XrayClientConfigFactory.settingsKey(profile, false),
+            XrayClientConfigFactory.settingsKey(
+                profile.copy(security = reality.copy(fingerprint = XrayFingerprintSetting.Fixed(XrayFingerprint.FIREFOX))),
+                false,
+            ),
+        )
+        assertNotEquals(
+            XrayClientConfigFactory.settingsKey(
+                profile.copy(security = reality.copy(fingerprint = XrayFingerprintSetting.Fixed(XrayFingerprint.FIREFOX))),
+                false,
+            ),
+            XrayClientConfigFactory.settingsKey(
+                profile.copy(security = reality.copy(fingerprint = XrayFingerprintSetting.Fixed(XrayFingerprint.SAFARI))),
+                false,
+            ),
+        )
     }
 
     @Test

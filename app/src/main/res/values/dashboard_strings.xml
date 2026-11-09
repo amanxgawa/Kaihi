@@ -39,6 +39,8 @@
 
     <string name="dashboard_server_advanced_title">Advanced</string>
     <string name="dashboard_server_utls_fingerprint_title">TLS fingerprint</string>
+    <string name="dashboard_server_fingerprint_auto">Auto</string>
+    <string name="dashboard_server_fingerprint_auto_with_current">Auto · %1$s</string>
     <string name="dashboard_server_mux_title">Multiplexing</string>
     <string name="dashboard_server_mux_description_xhttp">Carry several streams over one HTTP connection. When off, each stream opens its own connection.</string>
     <string name="dashboard_server_mux_description_raw">Share one connection across multiple streams. With Vision, only UDP is multiplexed.</string>
@@ -56,6 +58,7 @@
     <string name="dashboard_error_reconnect_timed_out">Reconnect timed out. Try connecting again.</string>
     <string name="dashboard_error_no_server_configured">No server configured yet. Run the setup first.</string>
     <string name="dashboard_error_failed_to_start_vpn">Failed to start VPN.</string>
+    <string name="dashboard_error_no_working_fingerprint">Couldn\'t reach the server with any TLS fingerprint.</string>
 
     <string name="xray_logs_title">Xray logs</string>
     <string name="xray_logs_copy">Copy</string>
