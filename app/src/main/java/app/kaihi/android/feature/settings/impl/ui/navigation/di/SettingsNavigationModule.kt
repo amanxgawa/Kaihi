@@ -1,6 +1,8 @@
 package app.kaihi.android.feature.settings.impl.ui.navigation.di
 
 import app.kaihi.android.feature.settings.SettingsKey
+import app.kaihi.android.feature.settings.ExcludedAppsKey
+import app.kaihi.android.feature.settings.impl.ui.navigation.ExcludedAppsDestination
 import app.kaihi.android.feature.settings.impl.ui.navigation.SettingsDestination
 import app.kaihi.android.platform.navigation.Destination
 import app.kaihi.android.platform.navigation.NavDestination
@@ -19,5 +21,12 @@ abstract class SettingsNavigationModule {
     @NavDestination(SettingsKey::class)
     abstract fun bindSettingsDestination(
         destination: SettingsDestination
+    ): Destination<*>
+
+    @Binds
+    @IntoMap
+    @NavDestination(ExcludedAppsKey::class)
+    abstract fun bindExcludedAppsDestination(
+        destination: ExcludedAppsDestination,
     ): Destination<*>
 }

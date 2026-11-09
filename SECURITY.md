@@ -91,6 +91,10 @@ Stated because knowing them may change how you use this, not because they are op
   dual-stack fingerprint is itself something DPI can key on. Advanced mode has a Settings option,
   off by default, to route IPv6 through the tunnel on the next connect. When enabled, the TUN gets
   an IPv6 route so IPv6 still cannot bypass the tunnel, and the client's `::/0` blackhole is lifted.
+- **Apps outside VPN bypass the tunnel by design.** Apps selected in Settings send traffic directly
+  through the device's normal network connection, where the local network and ISP can see it. The
+  choice takes effect on the next connect. Android supplies the on-device list of launchable apps;
+  Kaihi does not request `QUERY_ALL_PACKAGES`.
 
 ## A note for users at risk
 

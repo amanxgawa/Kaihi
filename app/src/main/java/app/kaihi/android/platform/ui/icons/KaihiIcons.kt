@@ -32,6 +32,7 @@ import app.kaihi.android.platform.ui.icons.sources._more_vert_filled
 import app.kaihi.android.platform.ui.icons.sources._more_vert_outlined
 import app.kaihi.android.platform.ui.icons.sources._rocket_launch_filled
 import app.kaihi.android.platform.ui.icons.sources._rocket_launch_outlined
+import app.kaihi.android.platform.ui.icons.sources._search_outlined
 import app.kaihi.android.platform.ui.icons.sources._settings
 import app.kaihi.android.platform.ui.icons.sources._share_filled
 import app.kaihi.android.platform.ui.icons.sources._share_outlined
@@ -93,5 +94,6 @@ object KaihiIcons {
         val Info: ImageVector get() = _info_outlined
         val ExpandMore: ImageVector get() = _expand_more_outlined
         val ChevronRight: ImageVector get() = _chevron_right_outlined
+        val Search: ImageVector get() = _search_outlined
     }
 }

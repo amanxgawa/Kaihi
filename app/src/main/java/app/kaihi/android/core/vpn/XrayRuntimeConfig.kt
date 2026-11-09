@@ -23,7 +23,9 @@ data class XrayRuntimeConfig(
     val settingsKey: String? = null,
     val fingerprintCandidates: List<FingerprintCandidate> = emptyList(),
     val fingerprint: XrayFingerprint? = null,
+    val excludedPackages: List<String> = emptyList(),
 ) {
     override fun toString(): String =
-        "XrayRuntimeConfig(ipv6Enabled=$ipv6Enabled, fingerprintCandidates=${fingerprintCandidates.size})"
+        "XrayRuntimeConfig(ipv6Enabled=$ipv6Enabled, fingerprintCandidates=${fingerprintCandidates.size}, " +
+            "excludedPackages=${excludedPackages.size})"
 }

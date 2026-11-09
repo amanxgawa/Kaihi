@@ -19,16 +19,19 @@ internal class RepositoryTunnelSettingsSource @Inject constructor(
     override val settings: Flow<TunnelSettings> = combine(
         appModeRepository.mode,
         vpnPreferences.ipv6Enabled,
+        vpnPreferences.excludedPackages,
         ::tunnelSettings,
     )
 
     override fun current(): TunnelSettings = tunnelSettings(
         appModeRepository.mode.value,
         vpnPreferences.ipv6Enabled.value,
+        vpnPreferences.excludedPackages.value,
     )
 
-    private fun tunnelSettings(mode: AppMode, ipv6Enabled: Boolean) = TunnelSettings(
+    private fun tunnelSettings(mode: AppMode, ipv6Enabled: Boolean, excludedPackages: Set<String>) = TunnelSettings(
         advancedMode = mode == AppMode.ADVANCED,
         ipv6Enabled = ipv6Enabled,
+        excludedPackages = excludedPackages,
     )
 }

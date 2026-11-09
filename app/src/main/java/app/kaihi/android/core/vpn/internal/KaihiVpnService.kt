@@ -7,6 +7,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.VpnService
 import android.os.ParcelFileDescriptor
 import android.os.Process
@@ -149,7 +150,7 @@ internal class KaihiVpnService : VpnService() {
                             coreStarted = true
                             config.fingerprint?.wireValue
                         }
-                        val openedTun = establishTun(config.ipv6Enabled)
+                        val openedTun = establishTun(config.ipv6Enabled, config.excludedPackages)
                         establishedTun = openedTun
                         hevStartAttempted = true
                         hevSocks5Tunnel.start(openedTun, config.socksEndpoint, config.ipv6Enabled)
@@ -260,7 +261,10 @@ internal class KaihiVpnService : VpnService() {
             runCatching { XrayJson.default.decodeFromString<XrayRuntimeConfig>(payload) }.getOrNull()
         }
 
-    private fun establishTun(ipv6Enabled: Boolean): ParcelFileDescriptor = checkNotNull(
+    private fun establishTun(
+        ipv6Enabled: Boolean,
+        excludedPackages: List<String>,
+    ): ParcelFileDescriptor = checkNotNull(
         Builder()
             .addAddress(VpnTunnelDefaults.VPN_ADDRESS, VpnTunnelDefaults.VPN_PREFIX_LENGTH)
             .addRoute("0.0.0.0", 0)
@@ -274,7 +278,19 @@ internal class KaihiVpnService : VpnService() {
                 }
             }
             .addDnsServer("1.1.1.1")
-            .addDisallowedApplication(packageName)
+            .apply {
+                addDisallowedApplication(packageName)
+                excludedPackages
+                    .asSequence()
+                    .filterNot { it == packageName }
+                    .forEach { excludedPackage ->
+                        try {
+                            addDisallowedApplication(excludedPackage)
+                        } catch (error: PackageManager.NameNotFoundException) {
+                            Timber.w(error, "Excluded app %s is no longer installed", excludedPackage)
+                        }
+                    }
+            }
             .setMtu(VpnTunnelDefaults.VPN_MTU)
             .setSession("Kaihi Xray")
             .establish()

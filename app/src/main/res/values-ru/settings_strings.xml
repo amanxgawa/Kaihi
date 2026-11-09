@@ -6,11 +6,24 @@
     <string name="settings_view_logs_description">Что делал Xray за последнее время.</string>
 
     <string name="settings_network_section_title">Сеть</string>
+    <string name="settings_excluded_apps_title">Приложения вне VPN</string>
+    <string name="settings_excluded_apps_none">Нет</string>
+    <plurals name="settings_excluded_apps_count">
+        <item quantity="one">%d приложение</item>
+        <item quantity="few">%d приложения</item>
+        <item quantity="many">%d приложений</item>
+        <item quantity="other">%d приложения</item>
+    </plurals>
+    <string name="settings_excluded_apps_hint">Изменения применятся при следующем подключении.</string>
+    <string name="settings_excluded_apps_search">Поиск приложений</string>
+    <string name="settings_excluded_apps_empty">Приложения не найдены</string>
+    <string name="settings_excluded_apps_load_error">Не удалось загрузить приложения. Попробуйте позже.</string>
+    <string name="settings_excluded_apps_back">Назад</string>
+    <string name="settings_excluded_apps_clear_search">Очистить поиск</string>
     <string name="settings_ipv6_title">Пускать IPv6 через VPN</string>
     <string name="settings_ipv6_description">По умолчанию выключено. Если включено, IPv6-трафик идёт через ваш сервер, а не блокируется. Соединение с двумя стеками DPI распознаёт легче. Применяется при следующем подключении.</string>
 
     <string name="settings_danger_zone_title">Опасная зона</string>
     <string name="settings_advanced_mode_toggle_title">Расширенный режим</string>
     <string name="settings_advanced_mode_toggle_description">Ручная настройка транспорта, маскировки и конфига. Обычно это не нужно.</string>
-    <string name="settings_excluded_apps_back">Назад</string>
 </resources>
