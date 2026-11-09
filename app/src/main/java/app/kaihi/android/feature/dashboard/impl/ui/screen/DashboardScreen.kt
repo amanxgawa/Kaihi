@@ -9,6 +9,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.calculateEndPadding
@@ -39,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.kaihi.android.R
@@ -48,17 +52,21 @@ import app.kaihi.android.feature.dashboard.impl.ui.mvi.isBusy
 import app.kaihi.android.feature.dashboard.impl.ui.screen.components.ConnectFab
 import app.kaihi.android.feature.dashboard.impl.ui.screen.components.ConnectionHeader
 import app.kaihi.android.feature.dashboard.impl.ui.screen.components.DeployServerButton
+import app.kaihi.android.feature.dashboard.impl.ui.screen.components.ImportServersButton
 import app.kaihi.android.feature.dashboard.impl.ui.screen.components.ReconnectToApplyBanner
 import app.kaihi.android.feature.dashboard.impl.ui.screen.components.ServerDetailsSheet
 import app.kaihi.android.feature.dashboard.impl.ui.screen.components.SubscriptionEditorSheet
 import app.kaihi.android.feature.dashboard.impl.ui.screen.components.connectFabClearance
 import app.kaihi.android.feature.dashboard.impl.ui.screen.components.rememberIsConnectionToggleScrolledAway
 import app.kaihi.android.feature.dashboard.impl.ui.screen.components.subscriptionItems
+import app.kaihi.android.feature.dashboard.impl.ui.model.SubscriptionKind
 import app.kaihi.android.platform.ui.components.KaihiMark
+import app.kaihi.android.platform.ui.components.ConfirmDialog
 import app.kaihi.android.platform.ui.icons.KaihiIcons
 import app.kaihi.android.platform.ui.theme.size.dimens
 import app.kaihi.android.platform.ui.util.CollectAsEffect
 import app.kaihi.android.platform.ui.util.asString
+import app.kaihi.android.platform.ui.util.UiText
 
 private const val CONNECTION_ITEM_KEY = "connection"
 private const val RECONNECT_TO_APPLY_ITEM_KEY = "reconnect-to-apply"
@@ -70,6 +78,7 @@ internal fun DashboardScreen(
     selectServerId: String?,
     onSettingsClick: () -> Unit,
     onNavigateToWizard: (subscriptionId: String?) -> Unit,
+    onNavigateToImport: () -> Unit,
     onNavigateToServer: (serverId: String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: DashboardViewModel = hiltViewModel<DashboardViewModel, DashboardViewModel.Factory>(
@@ -114,6 +123,7 @@ internal fun DashboardScreen(
             }
 
             is DashboardContract.Effect.NavigateToWizard -> onNavigateToWizard(effect.subscriptionId)
+            DashboardContract.Effect.NavigateToImport -> onNavigateToImport()
             is DashboardContract.Effect.NavigateToServer -> onNavigateToServer(effect.serverId)
         }
     }
@@ -181,6 +191,16 @@ internal fun DashboardScreen(
             onDelete = { viewModel.processIntent(DashboardContract.Intent.SubscriptionDeleted(editor.id)) },
         )
     }
+
+    if (state.remoteShareConfirmationSubscriptionId != null) {
+        ConfirmDialog(
+            title = UiText.Resource(R.string.dashboard_subscription_share_link_confirm_title),
+            body = UiText.Resource(R.string.dashboard_subscription_share_link_confirm_body),
+            confirmText = UiText.Resource(R.string.dashboard_subscription_share_link_confirm_action),
+            onConfirm = { viewModel.processIntent(DashboardContract.Intent.RemoteSubscriptionShareConfirmed) },
+            onDismiss = { viewModel.processIntent(DashboardContract.Intent.RemoteSubscriptionShareDismissed) },
+        )
+    }
 }
 
 @Composable
@@ -229,22 +249,51 @@ private fun DashboardContent(
         subscriptionItems(
             subscriptions = state.subscriptions,
             onToggleExpanded = { id -> onIntent(DashboardContract.Intent.SubscriptionExpandToggled(id)) },
-            onAddServer = { id -> onIntent(DashboardContract.Intent.DeployServerRequested(id)) },
+            onAddServer = { subscription ->
+                if (subscription.kind == SubscriptionKind.IMPORTED) {
+                    onIntent(DashboardContract.Intent.ImportRequested)
+                } else {
+                    onIntent(DashboardContract.Intent.DeployServerRequested(subscription.id))
+                }
+            },
             onShare = { id -> onIntent(DashboardContract.Intent.ShareSubscriptionRequested(id)) },
             onEdit = { id -> onIntent(DashboardContract.Intent.SubscriptionEditorRequested(id)) },
+            onRefresh = { id -> onIntent(DashboardContract.Intent.RefreshSubscriptionRequested(id)) },
             onSelectServer = { id -> onIntent(DashboardContract.Intent.ServerSelected(id)) },
             onServerDetails = { id -> onIntent(DashboardContract.Intent.ServerDetailsRequested(id)) },
         )
 
         if (state.isLibraryLoaded) {
             item(key = DEPLOY_ITEM_KEY) {
-                DeployServerButton(
-                    showEmptyHint = state.subscriptions.isEmpty(),
-                    onClick = { onIntent(DashboardContract.Intent.DeployServerRequested(subscriptionId = null)) },
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = dimens.l),
-                )
+                ) {
+                    if (state.subscriptions.isEmpty()) {
+                        Text(
+                            text = stringResource(R.string.dashboard_empty_hint),
+                            modifier = Modifier.fillMaxWidth().padding(bottom = dimens.l),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(dimens.m),
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                    ) {
+                        DeployServerButton(
+                            showEmptyHint = false,
+                            onClick = { onIntent(DashboardContract.Intent.DeployServerRequested(subscriptionId = null)) },
+                            modifier = Modifier.weight(1f),
+                        )
+                        ImportServersButton(
+                            onClick = { onIntent(DashboardContract.Intent.ImportRequested) },
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
             }
         }
     }

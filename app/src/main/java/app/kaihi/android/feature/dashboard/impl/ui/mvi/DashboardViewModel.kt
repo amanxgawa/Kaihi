@@ -47,7 +47,11 @@ internal class DashboardViewModel @AssistedInject constructor(
             is Intent.ServerSelected -> if (libraryDelegate.select(intent.serverId)) connectionDelegate.followSelection()
             is Intent.SubscriptionExpandToggled -> libraryDelegate.toggleExpanded(intent.subscriptionId)
             is Intent.DeployServerRequested -> sendEffect(Effect.NavigateToWizard(intent.subscriptionId))
+            Intent.ImportRequested -> sendEffect(Effect.NavigateToImport)
             is Intent.ShareSubscriptionRequested -> libraryDelegate.shareSubscription(intent.subscriptionId)
+            is Intent.RefreshSubscriptionRequested -> libraryDelegate.refreshSubscription(intent.subscriptionId)
+            Intent.RemoteSubscriptionShareConfirmed -> libraryDelegate.confirmRemoteSubscriptionShare()
+            Intent.RemoteSubscriptionShareDismissed -> libraryDelegate.dismissRemoteSubscriptionShare()
 
             is Intent.SubscriptionEditorRequested -> libraryDelegate.openSubscriptionEditor(intent.subscriptionId)
             Intent.SubscriptionEditorDismissed -> libraryDelegate.dismissSubscriptionEditor()

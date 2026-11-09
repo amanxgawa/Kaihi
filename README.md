@@ -1,8 +1,9 @@
 # Kaihi
 
 An Android VPN client that provisions your own VPS over SSH and connects to it. There is no
-Kaihi server infrastructure: every server it talks to is one you own and gave it root SSH
-access to.
+Kaihi server infrastructure: every server it provisions is one you own and gave it root SSH
+access to. You can also import VLESS links or an HTTPS subscription URL from a provider's panel;
+those servers belong to whoever runs them.
 
 ## What it does
 
@@ -13,6 +14,9 @@ access to.
    fresh REALITY keys on the server itself, writes a config, and starts it as a system service.
 3. The app then connects to that server over VLESS + REALITY + XHTTP and routes your device's
    traffic through it.
+
+You can also import `vless://` links or an HTTPS subscription URL. Kaihi imports VLESS links using
+REALITY or TLS over TCP or XHTTP; unsupported link types are skipped.
 
 ## What it installs on your server
 
@@ -46,6 +50,11 @@ and service unit cleanly rather than accumulating leftovers.
   [2dust/AndroidLibXrayLite releases](https://github.com/2dust/AndroidLibXrayLite/releases), a
   `gomobile bind` wrapper that runs Xray-core in-process. Verified against a pinned SHA-256 before
   the build proceeds (see `downloadLibV2ray` in `app/build.gradle.kts`).
+- **On your phone**, at runtime: an HTTPS GET to the provider when you import a subscription, open
+  the dashboard with a stale subscription (24-hour default update interval), or refresh manually.
+  The request goes directly to the provider, outside the VPN, with only `Accept: */*` and a default
+  `User-Agent: Kaihi/<version>` (customizable in advanced mode). It follows at most three HTTPS
+  redirects and reads at most 1 MiB. No device identifiers or cookies are sent.
 
 Supported server distros: Debian/Ubuntu, RHEL/Fedora/Alma/Rocky, Arch, Alpine.
 
@@ -67,9 +76,9 @@ rm -f /etc/init.d/kaihi-xray
 rm -rf /usr/local/bin/xray /usr/local/etc/xray
 ```
 
-On your phone: uninstall the app. It stores only its own encrypted connection profile locally
-(Android Keystore-backed). Nothing is sent anywhere else, and there is no account or server-side
-state to clean up.
+On your phone: uninstall the app. Profiles, including subscription URLs, are stored encrypted
+locally (Android Keystore-backed). The phone contacts subscription providers directly when
+importing or refreshing; there is no account or Kaihi server-side state to clean up.
 
 ## Building it
 
@@ -92,6 +101,10 @@ the NDK installed (SDK Manager), then run the `app` module. Requires `minSdk` 26
 - Settings has an "Apps outside VPN" list in both modes. Apps you select bypass the tunnel on the
   next connect; their traffic goes directly to the local network and ISP. The list stays on your
   device and contains launchable apps returned by Android.
+- The local network and ISP can see the hostname of a subscription provider when the phone fetches
+  or refreshes that subscription outside the VPN.
+- Subscription URLs are credentials: they are encrypted locally, never logged, and sharing one
+  requires confirmation.
 
 Kaihi is pre-1.0 and has not been independently audited. Read the code before trusting it with
 anything where getting it wrong has real consequences.

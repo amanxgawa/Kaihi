@@ -71,8 +71,10 @@ class TunnelSettingsSourceTest {
     private class FakeVpnPreferences(initialIpv6Enabled: Boolean) : VpnPreferences {
         private val mutableIpv6Enabled = MutableStateFlow(initialIpv6Enabled)
         private val mutableExcludedPackages = MutableStateFlow(emptySet<String>())
+        private val mutableSubscriptionUserAgent = MutableStateFlow<String?>(null)
         override val ipv6Enabled: StateFlow<Boolean> = mutableIpv6Enabled.asStateFlow()
         override val excludedPackages: StateFlow<Set<String>> = mutableExcludedPackages.asStateFlow()
+        override val subscriptionUserAgent: StateFlow<String?> = mutableSubscriptionUserAgent.asStateFlow()
 
         override fun setIpv6Enabled(enabled: Boolean) {
             mutableIpv6Enabled.value = enabled
@@ -82,5 +84,9 @@ class TunnelSettingsSourceTest {
             mutableExcludedPackages.value = packages
         }
 
+        override fun setSubscriptionUserAgent(value: String?): Boolean {
+            mutableSubscriptionUserAgent.value = value
+            return true
+        }
     }
 }
