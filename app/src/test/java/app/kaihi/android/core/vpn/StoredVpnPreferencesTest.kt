@@ -1,5 +1,6 @@
 package app.kaihi.android.core.vpn
 
+import app.kaihi.android.BuildConfig
 import app.kaihi.android.core.storage.InMemoryAppStorage
 import app.kaihi.android.core.storage.StorageDomain
 import app.kaihi.android.core.vpn.internal.StoredVpnPreferences
@@ -49,4 +50,34 @@ class StoredVpnPreferencesTest {
         assertFalse(preferences.ipv6Enabled.value)
         assertFalse(StoredVpnPreferences(storage).ipv6Enabled.value)
     }
+
+    @Test
+    fun `excluded packages round trip exact package names and never store Kaihi`() {
+        val storage = InMemoryAppStorage()
+        val preferences = StoredVpnPreferences(storage)
+        val packages = setOf("org.example.bank_app", "com.example.bank.app", BuildConfig.APPLICATION_ID)
+
+        preferences.setExcludedPackages(packages)
+
+        val expected = setOf("org.example.bank_app", "com.example.bank.app")
+        assertEquals(expected, preferences.excludedPackages.value)
+        assertEquals(expected, StoredVpnPreferences(storage).excludedPackages.value)
+        assertEquals(
+            "com.example.bank.app,org.example.bank_app",
+            storage.getString(StorageDomain.EXPERIENCE, "excluded_packages"),
+        )
+    }
+
+    @Test
+    fun `empty excluded packages round trip as empty`() {
+        val storage = InMemoryAppStorage()
+        val preferences = StoredVpnPreferences(storage)
+
+        preferences.setExcludedPackages(setOf("com.example.bank.app"))
+        preferences.setExcludedPackages(emptySet())
+
+        assertEquals(emptySet<String>(), preferences.excludedPackages.value)
+        assertEquals(emptySet<String>(), StoredVpnPreferences(storage).excludedPackages.value)
+    }
+
 }

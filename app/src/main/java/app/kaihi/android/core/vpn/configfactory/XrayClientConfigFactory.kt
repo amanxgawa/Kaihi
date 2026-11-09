@@ -90,6 +90,7 @@ object XrayClientConfigFactory {
             settingsKey = settingsKey(effective),
             fingerprintCandidates = candidates,
             fingerprint = fingerprint,
+            excludedPackages = effective.excludedPackages.sorted(),
         )
     }
 
@@ -111,8 +112,13 @@ object XrayClientConfigFactory {
             probeUrl = ProbeTargets.urlForSettingsKey(),
             fingerprint = fingerprint,
         ).toJson() + if (setting is XrayFingerprintSetting.Auto) "\nfingerprint=auto" else ""
+        val settingsKeyInput = if (effective.excludedPackages.isEmpty()) {
+            config
+        } else {
+            "$config\nexcludedPackages=" + effective.excludedPackages.sorted().joinToString("\n")
+        }
         val digest = MessageDigest.getInstance("SHA-256").digest(
-            config.toByteArray(Charsets.UTF_8)
+            settingsKeyInput.toByteArray(Charsets.UTF_8)
         )
         return buildString(digest.size * 2) {
             digest.forEach { byte ->
@@ -290,7 +296,7 @@ object XrayClientConfigFactory {
 
     private fun resolve(profile: XrayVpnProfile, settings: TunnelSettings): EffectiveTunnelConfig {
         if (settings.advancedMode) {
-            return EffectiveTunnelConfig(profile, settings.ipv6Enabled)
+            return EffectiveTunnelConfig(profile, settings.ipv6Enabled, settings.excludedPackages)
         }
 
         val security = (profile.security as? XraySecurity.Reality)?.let { reality ->
@@ -307,11 +313,13 @@ object XrayClientConfigFactory {
                 fragmentEnabled = false,
             ),
             ipv6Enabled = false,
+            excludedPackages = settings.excludedPackages,
         )
     }
 
     private data class EffectiveTunnelConfig(
         val profile: XrayVpnProfile,
         val ipv6Enabled: Boolean,
+        val excludedPackages: Set<String>,
     )
 }

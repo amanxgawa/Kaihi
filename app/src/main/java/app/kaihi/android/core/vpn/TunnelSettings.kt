@@ -4,4 +4,5 @@ package app.kaihi.android.core.vpn
 data class TunnelSettings(
     val advancedMode: Boolean,
     val ipv6Enabled: Boolean,
+    val excludedPackages: Set<String> = emptySet(),
 )

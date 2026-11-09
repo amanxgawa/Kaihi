@@ -1,5 +1,6 @@
 package app.kaihi.android.core.vpn.internal
 
+import app.kaihi.android.BuildConfig
 import app.kaihi.android.core.storage.AppStorage
 import app.kaihi.android.core.storage.ExperienceKeys
 import app.kaihi.android.core.storage.StorageDomain
@@ -20,8 +21,33 @@ internal class StoredVpnPreferences @Inject constructor(
     )
     override val ipv6Enabled: StateFlow<Boolean> = _ipv6Enabled.asStateFlow()
 
+    private val _excludedPackages = MutableStateFlow(readExcludedPackages())
+    override val excludedPackages: StateFlow<Set<String>> = _excludedPackages.asStateFlow()
+
     override fun setIpv6Enabled(enabled: Boolean) {
         appStorage.putBoolean(StorageDomain.EXPERIENCE, ExperienceKeys.IPV6_ENABLED, enabled)
         _ipv6Enabled.value = enabled
+    }
+
+    override fun setExcludedPackages(packages: Set<String>) {
+        val filteredPackages = packages - BuildConfig.APPLICATION_ID
+        appStorage.putString(
+            StorageDomain.EXPERIENCE,
+            ExperienceKeys.EXCLUDED_PACKAGES,
+            filteredPackages.sorted().joinToString(PACKAGE_SEPARATOR),
+        )
+        _excludedPackages.value = filteredPackages
+    }
+
+    private fun readExcludedPackages(): Set<String> = appStorage.getString(
+        StorageDomain.EXPERIENCE,
+        ExperienceKeys.EXCLUDED_PACKAGES,
+    )
+        ?.split(PACKAGE_SEPARATOR)
+        ?.filterTo(mutableSetOf()) { it.isNotBlank() && it != BuildConfig.APPLICATION_ID }
+        .orEmpty()
+
+    private companion object {
+        const val PACKAGE_SEPARATOR = ","
     }
 }

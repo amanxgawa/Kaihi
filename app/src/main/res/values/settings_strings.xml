@@ -6,11 +6,22 @@
     <string name="settings_view_logs_description">See what Xray has been doing.</string>
 
     <string name="settings_network_section_title">Network</string>
+    <string name="settings_excluded_apps_title">Apps outside VPN</string>
+    <string name="settings_excluded_apps_none">None</string>
+    <plurals name="settings_excluded_apps_count">
+        <item quantity="one">%d app</item>
+        <item quantity="other">%d apps</item>
+    </plurals>
+    <string name="settings_excluded_apps_hint">Changes apply the next time you connect.</string>
+    <string name="settings_excluded_apps_search">Search apps</string>
+    <string name="settings_excluded_apps_empty">No apps found</string>
+    <string name="settings_excluded_apps_load_error">Could not load apps. Try again later.</string>
+    <string name="settings_excluded_apps_back">Back</string>
+    <string name="settings_excluded_apps_clear_search">Clear search</string>
     <string name="settings_ipv6_title">Route IPv6 through the VPN</string>
     <string name="settings_ipv6_description">Off by default. When on, IPv6 traffic goes through your server instead of being blocked. A dual-stack connection is easier for DPI to fingerprint. Applies on next connect.</string>
 
     <string name="settings_danger_zone_title">Danger zone</string>
     <string name="settings_advanced_mode_toggle_title">Advanced mode</string>
     <string name="settings_advanced_mode_toggle_description">Manual transport, camouflage, and config tuning. Most people don\'t need this.</string>
-    <string name="settings_excluded_apps_back">Back</string>
 </resources>

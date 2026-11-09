@@ -208,6 +208,26 @@ class XrayRuntimeConfigFactoryTest {
     }
 
     @Test
+    fun `excluded apps are sorted into runtime config in both modes`() {
+        val packages = setOf("org.example.bank_app", "com.example.bank.app")
+
+        listOf(false, true).forEach { advancedMode ->
+            val config = XrayClientConfigFactory.createRuntimeConfig(
+                profile(),
+                TunnelSettings(
+                    advancedMode = advancedMode,
+                    ipv6Enabled = false,
+                    excludedPackages = packages,
+                ),
+            )
+
+            assertEquals(listOf("com.example.bank.app", "org.example.bank_app"), config.excludedPackages)
+            assertFalse(config.toString().contains("org.example.bank_app"))
+            assertTrue(config.toString().contains("excludedPackages=2"))
+        }
+    }
+
+    @Test
     fun `restart payload without an IPv6 choice defaults to disabled`() {
         val payload = """
             {
@@ -226,12 +246,14 @@ class XrayRuntimeConfigFactoryTest {
         val config = XrayJson.default.decodeFromString<XrayRuntimeConfig>(payload)
 
         assertFalse(config.ipv6Enabled)
+        assertEquals(emptyList<String>(), config.excludedPackages)
         assertEquals("server-1", config.serverId)
         assertNull(config.settingsKey)
         assertEquals(SocksEndpoint("127.0.0.1", 10_808, "kaihi", "secret"), config.socksEndpoint)
         val reencoded = XrayJson.default.encodeToString(config)
         assertFalse(reencoded.contains("ipv6Enabled"))
         assertFalse(reencoded.contains("settingsKey"))
+        assertFalse(reencoded.contains("excludedPackages"))
     }
 
     private fun JsonObject.outbound(tag: String) = getValue("outbounds").jsonArray

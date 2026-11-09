@@ -3,6 +3,7 @@ package app.kaihi.android.feature.settings.impl.ui.navigation
 import androidx.compose.runtime.Composable
 import app.kaihi.android.feature.dashboard.XrayLogsKey
 import app.kaihi.android.feature.hello.AdvancedModeIntroKey
+import app.kaihi.android.feature.settings.ExcludedAppsKey
 import app.kaihi.android.feature.settings.SettingsKey
 import app.kaihi.android.feature.settings.impl.ui.screen.SettingsScreen
 import app.kaihi.android.platform.navigation.Destination
@@ -18,6 +19,7 @@ class SettingsDestination @Inject constructor() : Destination<SettingsKey> {
         SettingsScreen(
             onNavigateToLogs = { navigator.navigate(XrayLogsKey) },
             onNavigateToAdvancedModeIntro = { navigator.navigate(AdvancedModeIntroKey) },
+            onNavigateToExcludedApps = { navigator.navigate(ExcludedAppsKey) },
             onNavigateBack = navigator::back,
         )
     }

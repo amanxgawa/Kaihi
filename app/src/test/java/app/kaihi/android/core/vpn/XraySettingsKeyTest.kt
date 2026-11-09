@@ -124,6 +124,42 @@ class XraySettingsKeyTest {
     }
 
     @Test
+    fun `empty excluded package set preserves the key and non-empty sets are order independent`() {
+        val profile = profile()
+        val originalSettings = settings(ipv6Enabled = false)
+        val keyWithoutExclusions = XrayClientConfigFactory.settingsKey(profile, originalSettings)
+
+        assertEquals("30419f82d00bbdab6a05c39024885b1817a6ad9e11914f4a96e809ce13e852b8", keyWithoutExclusions)
+        assertEquals(
+            keyWithoutExclusions,
+            XrayClientConfigFactory.settingsKey(
+                profile,
+                originalSettings.copy(excludedPackages = emptySet()),
+            ),
+        )
+        assertEquals(
+            XrayClientConfigFactory.settingsKey(
+                profile,
+                originalSettings.copy(excludedPackages = setOf("com.example.bank.app", "org.example.bank_app")),
+            ),
+            XrayClientConfigFactory.settingsKey(
+                profile,
+                originalSettings.copy(excludedPackages = setOf("org.example.bank_app", "com.example.bank.app")),
+            ),
+        )
+        assertNotEquals(
+            XrayClientConfigFactory.settingsKey(
+                profile,
+                originalSettings.copy(excludedPackages = setOf("com.example.bank.app")),
+            ),
+            XrayClientConfigFactory.settingsKey(
+                profile,
+                originalSettings.copy(excludedPackages = setOf("com.example.bank.app", "org.example.bank_app")),
+            ),
+        )
+    }
+
+    @Test
     fun `key is lowercase SHA-256 hex and does not contain the profile UUID`() {
         val profile = profile()
         val key = XrayClientConfigFactory.settingsKey(profile, settings(ipv6Enabled = false))

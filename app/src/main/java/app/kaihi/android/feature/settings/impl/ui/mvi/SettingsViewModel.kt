@@ -19,6 +19,7 @@ internal class SettingsViewModel @Inject constructor(
     SettingsContract.State(
         mode = appModeRepository.mode.value,
         ipv6Enabled = vpnPreferences.ipv6Enabled.value,
+        excludedAppsCount = vpnPreferences.excludedPackages.value.size,
     )
 ) {
 
@@ -29,6 +30,10 @@ internal class SettingsViewModel @Inject constructor(
 
         vpnPreferences.ipv6Enabled
             .onEach { enabled -> reduce { copy(ipv6Enabled = enabled) } }
+            .launchIn(scope)
+
+        vpnPreferences.excludedPackages
+            .onEach { packages -> reduce { copy(excludedAppsCount = packages.size) } }
             .launchIn(scope)
     }
 
@@ -41,6 +46,7 @@ internal class SettingsViewModel @Inject constructor(
             }
 
             is SettingsContract.Intent.Ipv6Toggled -> vpnPreferences.setIpv6Enabled(intent.enabled)
+            SettingsContract.Intent.ExcludedAppsRequested -> sendEffect(SettingsContract.Effect.NavigateToExcludedApps)
             SettingsContract.Intent.ViewLogsRequested -> sendEffect(SettingsContract.Effect.NavigateToLogs)
             SettingsContract.Intent.BackRequested -> sendEffect(SettingsContract.Effect.NavigateBack)
         }
