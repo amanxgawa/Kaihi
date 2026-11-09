@@ -13,9 +13,6 @@ class VlessUriTest {
         XrayVpnProfile(
             id = "server-1",
             name = name,
-            sshHost = "203.0.113.1",
-            sshPort = 22,
-            sshUsername = "root",
             serverAddress = "203.0.113.1",
             serverPort = 443,
             uuid = "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
@@ -24,7 +21,7 @@ class VlessUriTest {
                 publicKey = "publicKeyValue",
                 shortId = "shortIdValue",
             ),
-            deployedAtMillis = 0L,
+            addedAtMillis = 0L,
         )
 
     @Test

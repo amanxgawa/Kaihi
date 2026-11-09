@@ -176,9 +176,6 @@ class XraySettingsKeyTest {
     private fun profile() = XrayVpnProfile(
         id = "server-1",
         name = "test",
-        sshHost = "ssh.example",
-        sshPort = 22,
-        sshUsername = "root",
         serverAddress = "proxy.example",
         serverPort = 443,
         uuid = "123e4567-e89b-12d3-a456-426614174000",
@@ -187,7 +184,7 @@ class XraySettingsKeyTest {
             publicKey = "public-key",
             shortId = "abcd",
         ),
-        deployedAtMillis = 0L,
+        addedAtMillis = 0L,
     )
 
     private fun settings(ipv6Enabled: Boolean, advancedMode: Boolean = true) = TunnelSettings(

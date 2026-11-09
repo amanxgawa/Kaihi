@@ -6,6 +6,7 @@ import app.kaihi.android.core.ssh.model.SshAuth
 import app.kaihi.android.core.ssh.model.SshConfig
 import app.kaihi.android.core.vpn.XraySubscription
 import app.kaihi.android.core.vpn.XraySubscriptionStore
+import app.kaihi.android.core.vpn.XraySshAccess
 import app.kaihi.android.core.vpn.XrayVpnProfile
 import app.kaihi.android.core.vpn.configfactory.XrayServerConfigFactory
 import app.kaihi.android.core.vpn.findServerByAddress
@@ -49,10 +50,12 @@ internal class WizardSetupCoordinator @Inject constructor(
         val deployed = XrayVpnProfile(
             id = newXrayId(),
             name = generateNickname(draft.serverAddress),
-            sshHost = draft.serverAddress,
-            sshPort = draft.sshPort,
-            sshUsername = draft.sshUsername,
-            sshExpectedFingerprint = draft.sshExpectedFingerprint,
+            ssh = XraySshAccess(
+                host = draft.serverAddress,
+                port = draft.sshPort,
+                username = draft.sshUsername,
+                expectedFingerprint = draft.sshExpectedFingerprint,
+            ),
             serverAddress = draft.serverAddress,
             serverPort = XrayServerConfigFactory.DEFAULT_SERVER_PORT,
             uuid = draft.uuid,
@@ -61,7 +64,7 @@ internal class WizardSetupCoordinator @Inject constructor(
                 publicKey = draft.realityPublicKey,
                 shortId = draft.realityShortId,
             ),
-            deployedAtMillis = System.currentTimeMillis(),
+            addedAtMillis = System.currentTimeMillis(),
             countryCode = draft.countryCode,
             muxEnabled = true,
         )
