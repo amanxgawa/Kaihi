@@ -37,6 +37,7 @@ import app.kaihi.android.platform.ui.util.CollectAsEffect
 internal fun SettingsScreen(
     onNavigateToLogs: () -> Unit,
     onNavigateToAdvancedModeIntro: () -> Unit,
+    onNavigateToExcludedApps: () -> Unit,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = hiltViewModel(),
@@ -46,6 +47,7 @@ internal fun SettingsScreen(
     viewModel.effect.CollectAsEffect { effect ->
         when (effect) {
             SettingsContract.Effect.NavigateToAdvancedModeIntro -> onNavigateToAdvancedModeIntro()
+            SettingsContract.Effect.NavigateToExcludedApps -> onNavigateToExcludedApps()
             SettingsContract.Effect.NavigateToLogs -> onNavigateToLogs()
             SettingsContract.Effect.NavigateBack -> onNavigateBack()
         }
@@ -61,6 +63,9 @@ internal fun SettingsScreen(
         onIpv6Toggled = { enabled ->
             viewModel.processIntent(SettingsContract.Intent.Ipv6Toggled(enabled))
         },
+        onExcludedAppsClick = {
+            viewModel.processIntent(SettingsContract.Intent.ExcludedAppsRequested)
+        },
         modifier = modifier,
     )
 }
@@ -72,6 +77,7 @@ private fun SettingsContent(
     onViewLogsClick: () -> Unit,
     onAdvancedModeToggled: (Boolean) -> Unit,
     onIpv6Toggled: (Boolean) -> Unit,
+    onExcludedAppsClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val dimens = MaterialTheme.dimens
@@ -111,12 +117,13 @@ private fun SettingsContent(
         ) {
             SettingsGeneralSection(onViewLogsClick = onViewLogsClick)
 
-            if (advancedModeEnabled) {
-                SettingsNetworkSection(
-                    ipv6Enabled = state.ipv6Enabled,
-                    onIpv6Toggled = onIpv6Toggled,
-                )
-            }
+            SettingsNetworkSection(
+                excludedAppsCount = state.excludedAppsCount,
+                onExcludedAppsClick = onExcludedAppsClick,
+                ipv6Enabled = state.ipv6Enabled,
+                onIpv6Toggled = onIpv6Toggled,
+                showIpv6 = advancedModeEnabled,
+            )
 
             SettingsDangerZoneSection(
                 advancedModeEnabled = advancedModeEnabled,
