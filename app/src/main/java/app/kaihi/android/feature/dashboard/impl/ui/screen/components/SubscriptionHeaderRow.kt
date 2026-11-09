@@ -26,6 +26,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import app.kaihi.android.R
 import app.kaihi.android.feature.dashboard.impl.ui.model.SubscriptionUi
+import app.kaihi.android.feature.dashboard.impl.ui.model.SubscriptionKind
 import app.kaihi.android.platform.ui.icons.KaihiIcons
 import app.kaihi.android.platform.ui.theme.size.dimens
 
@@ -93,7 +94,11 @@ internal fun SubscriptionHeaderRow(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = subscription.name,
+                    text = if (subscription.kind == SubscriptionKind.IMPORTED) {
+                        stringResource(R.string.dashboard_subscription_imported_name)
+                    } else {
+                        subscription.name
+                    },
                     style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -106,18 +111,20 @@ internal fun SubscriptionHeaderRow(
                 )
             }
 
-            Row {
-                IconButton(onClick = onShare) {
-                    Icon(
-                        imageVector = KaihiIcons.Outlined.Share,
-                        contentDescription = stringResource(R.string.dashboard_subscription_share_cd, subscription.name),
-                    )
-                }
-                IconButton(onClick = onEdit) {
-                    Icon(
-                        imageVector = KaihiIcons.Outlined.Edit,
-                        contentDescription = stringResource(R.string.dashboard_subscription_edit_cd, subscription.name),
-                    )
+            if (subscription.kind != SubscriptionKind.IMPORTED) {
+                Row {
+                    IconButton(onClick = onShare) {
+                        Icon(
+                            imageVector = KaihiIcons.Outlined.Share,
+                            contentDescription = stringResource(R.string.dashboard_subscription_share_cd, subscription.name),
+                        )
+                    }
+                    IconButton(onClick = onEdit) {
+                        Icon(
+                            imageVector = KaihiIcons.Outlined.Edit,
+                            contentDescription = stringResource(R.string.dashboard_subscription_edit_cd, subscription.name),
+                        )
+                    }
                 }
             }
         }

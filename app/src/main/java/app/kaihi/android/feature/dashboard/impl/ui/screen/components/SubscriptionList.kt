@@ -15,7 +15,7 @@ private const val SUBSCRIPTION_CONTENT_TYPE = "subscription"
 internal fun LazyListScope.subscriptionItems(
     subscriptions: ImmutableList<SubscriptionUi>,
     onToggleExpanded: (subscriptionId: String) -> Unit,
-    onAddServer: (subscriptionId: String) -> Unit,
+    onAddServer: (SubscriptionUi) -> Unit,
     onShare: (subscriptionId: String) -> Unit,
     onEdit: (subscriptionId: String) -> Unit,
     onSelectServer: (serverId: String) -> Unit,
@@ -29,7 +29,7 @@ internal fun LazyListScope.subscriptionItems(
         SubscriptionGroup(
             subscription = subscription,
             onToggleExpanded = { onToggleExpanded(subscription.id) },
-            onAddServer = { onAddServer(subscription.id) },
+            onAddServer = { onAddServer(subscription) },
             onShare = { onShare(subscription.id) },
             onEdit = { onEdit(subscription.id) },
             onSelectServer = onSelectServer,

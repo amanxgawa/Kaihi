@@ -7,10 +7,17 @@ import kotlinx.collections.immutable.ImmutableList
 internal data class SubscriptionUi(
     val id: String,
     val name: String,
+    val kind: SubscriptionKind,
     val isExpanded: Boolean,
     val containsSelectedServer: Boolean,
     val servers: ImmutableList<ServerUi>,
 )
+
+internal enum class SubscriptionKind {
+    DEPLOYED,
+    IMPORTED,
+    REMOTE,
+}
 
 @Immutable
 internal data class ServerUi(

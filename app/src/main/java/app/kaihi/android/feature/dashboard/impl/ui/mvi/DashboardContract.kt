@@ -37,6 +37,7 @@ internal object DashboardContract {
         data class SubscriptionExpandToggled(val subscriptionId: String) : Intent
         /** A null [subscriptionId] deploys into a new subscription. */
         data class DeployServerRequested(val subscriptionId: String?) : Intent
+        data object ImportRequested : Intent
         data class ShareSubscriptionRequested(val subscriptionId: String) : Intent
 
         data class SubscriptionEditorRequested(val subscriptionId: String) : Intent
@@ -53,8 +54,11 @@ internal object DashboardContract {
 
     sealed interface Effect {
         data class RequestVpnPermission(val permissionIntent: SystemIntent) : Effect
-        data class ShareText(val text: String) : Effect
+        data class ShareText(val text: String) : Effect {
+            override fun toString(): String = "ShareText(text=<redacted>)"
+        }
         data class NavigateToWizard(val subscriptionId: String?) : Effect
+        data object NavigateToImport : Effect
         data class NavigateToServer(val serverId: String) : Effect
     }
 }

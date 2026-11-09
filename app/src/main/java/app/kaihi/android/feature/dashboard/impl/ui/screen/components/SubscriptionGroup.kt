@@ -17,6 +17,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import app.kaihi.android.feature.dashboard.impl.ui.model.SubscriptionUi
+import app.kaihi.android.feature.dashboard.impl.ui.model.SubscriptionKind
+import app.kaihi.android.R
 import app.kaihi.android.platform.ui.theme.size.dimens
 
 private val revealShape = RoundedCornerShape(bottomStart = SegmentOuterCorner, bottomEnd = SegmentOuterCorner)
@@ -25,7 +27,7 @@ private val revealShape = RoundedCornerShape(bottomStart = SegmentOuterCorner, b
 internal fun SubscriptionGroup(
     subscription: SubscriptionUi,
     onToggleExpanded: () -> Unit,
-    onAddServer: () -> Unit,
+    onAddServer: (SubscriptionUi) -> Unit,
     onShare: () -> Unit,
     onEdit: () -> Unit,
     onSelectServer: (serverId: String) -> Unit,
@@ -72,7 +74,12 @@ internal fun SubscriptionGroup(
 
                 AddServerRow(
                     shape = segmentShape(index = segmentCount - 1, count = segmentCount),
-                    onClick = onAddServer,
+                    onClick = { onAddServer(subscription) },
+                    labelRes = if (subscription.kind == SubscriptionKind.IMPORTED) {
+                        R.string.dashboard_import
+                    } else {
+                        R.string.dashboard_subscription_add_server
+                    },
                 )
             }
         }
