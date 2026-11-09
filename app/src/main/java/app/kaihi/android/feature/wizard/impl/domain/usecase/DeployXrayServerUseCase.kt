@@ -3,20 +3,27 @@ package app.kaihi.android.feature.wizard.impl.domain.usecase
 import app.kaihi.android.core.ssh.SshConnection
 import app.kaihi.android.core.ssh.ext.execute
 import app.kaihi.android.core.vpn.configfactory.XrayServerConfigFactory
+import app.kaihi.android.core.vpn.XrayProtectionState
+import app.kaihi.android.core.vpn.XrayServerProtection
 import app.kaihi.android.feature.wizard.impl.domain.deployment.XrayOpenRcServiceFactory
 import app.kaihi.android.feature.wizard.impl.domain.deployment.XraySystemdServiceFactory
 import app.kaihi.android.feature.wizard.impl.domain.model.DeploymentEvent
 import app.kaihi.android.feature.wizard.impl.domain.model.DeploymentStep
 import app.kaihi.android.feature.wizard.impl.domain.model.PackageManager
+import app.kaihi.android.feature.wizard.impl.domain.model.ProtectionPlan
 import app.kaihi.android.feature.wizard.impl.domain.model.SniSelector
 import app.kaihi.android.feature.wizard.impl.domain.model.XrayServerCredentials
 import app.kaihi.android.feature.wizard.impl.domain.model.XrayServerSecrets
+import app.kaihi.android.feature.wizard.impl.domain.model.protectionPlan
+import app.kaihi.android.feature.wizard.impl.domain.ssh.CreateXrayServiceUserCommand
 import app.kaihi.android.feature.wizard.impl.domain.ssh.DetectIpv6SupportCommand
 import app.kaihi.android.feature.wizard.impl.domain.ssh.DetectPackageManagerCommand
 import app.kaihi.android.feature.wizard.impl.domain.ssh.DetectServerCountryCommand
 import app.kaihi.android.feature.wizard.impl.domain.ssh.GenerateXrayServerSecretsCommand
 import app.kaihi.android.feature.wizard.impl.domain.ssh.InstallXrayRuntimeCommand
+import app.kaihi.android.feature.wizard.impl.domain.ssh.ProtectServerCommand
 import app.kaihi.android.feature.wizard.impl.domain.ssh.ScanSniCommand
+import app.kaihi.android.feature.wizard.impl.domain.ssh.SecureXrayConfigCommand
 import app.kaihi.android.feature.wizard.impl.domain.ssh.StartXrayServiceCommand
 import app.kaihi.android.feature.wizard.impl.domain.ssh.VerifySniCandidateCommand
 import kotlinx.coroutines.CancellationException
@@ -29,7 +36,11 @@ import timber.log.Timber
 
 internal class DeployXrayServerUseCase @Inject constructor() {
 
-    operator fun invoke(connection: SshConnection, architecture: String): Flow<DeploymentEvent> =
+    operator fun invoke(
+        connection: SshConnection,
+        architecture: String,
+        protectServer: Boolean,
+    ): Flow<DeploymentEvent> =
         flow {
             val packageManager = runStep(DeploymentStep.INSTALL_RUNTIME) {
                 val detected = connection.execute(DetectPackageManagerCommand()).getOrThrow()
@@ -39,6 +50,8 @@ internal class DeployXrayServerUseCase @Inject constructor() {
                     InstallXrayRuntimeCommand(detected, InstallXrayRuntimeCommand.releaseAssetFor(architecture)),
                     onOutputLine = { line -> emit(DeploymentEvent.LogLine(DeploymentStep.INSTALL_RUNTIME, line)) },
                 ).getOrThrow()
+                connection.execute(CreateXrayServiceUserCommand(detected)).getOrThrow()
+                emit(DeploymentEvent.LogLine(DeploymentStep.INSTALL_RUNTIME, "Service user: kaihi-xray"))
                 detected
             }
 
@@ -69,7 +82,36 @@ internal class DeployXrayServerUseCase @Inject constructor() {
                 ).getOrThrow()
             }
 
-            emit(DeploymentEvent.Completed(credentials.copy(countryCode = detectCountryCode(connection))))
+            val protection = runStep(DeploymentStep.PROTECT_SERVER) {
+                val result = when (val plan = protectionPlan(protectServer, packageManager)) {
+                    is ProtectionPlan.Skip -> plan.protection
+                    ProtectionPlan.Run -> try {
+                        connection.execute(
+                            ProtectServerCommand(),
+                            onOutputLine = { line -> emit(DeploymentEvent.LogLine(DeploymentStep.PROTECT_SERVER, line)) },
+                        ).getOrElse { error ->
+                            if (error is CancellationException) throw error
+                            failedProtection()
+                        }
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (_: Throwable) {
+                        failedProtection()
+                    }
+                }
+                emit(DeploymentEvent.LogLine(DeploymentStep.PROTECT_SERVER, "Password-guessing protection: ${result.bruteForceGuard.logLabel()}"))
+                emit(DeploymentEvent.LogLine(DeploymentStep.PROTECT_SERVER, "Automatic security updates: ${result.securityUpdates.logLabel()}"))
+                result
+            }
+
+            emit(
+                DeploymentEvent.Completed(
+                    credentials.copy(
+                        countryCode = detectCountryCode(connection),
+                        protection = protection,
+                    ),
+                ),
+            )
         }.catch { error ->
             // A failed step has already emitted StepFailed. Everything else, cancellation
             // included, belongs to the caller.
@@ -128,6 +170,7 @@ internal class DeployXrayServerUseCase @Inject constructor() {
             serverConfigJson.toByteArray(),
             permissions = CONFIG_PERMISSIONS
         ).getOrThrow()
+        connection.execute(SecureXrayConfigCommand()).getOrThrow()
 
         if (packageManager == PackageManager.APK) {
             emit(DeploymentEvent.LogLine(DeploymentStep.WRITE_CONFIGURATION, "Uploading OpenRC service"))
@@ -159,6 +202,18 @@ internal class DeployXrayServerUseCase @Inject constructor() {
         Timber.w(error, "Detecting the server's country failed")
         null
     }
+
+    private fun XrayProtectionState.logLabel(): String = when (this) {
+        XrayProtectionState.ENABLED -> "on"
+        XrayProtectionState.OFF -> "off"
+        XrayProtectionState.UNSUPPORTED -> "not available on this system"
+        XrayProtectionState.FAILED -> "could not be turned on"
+    }
+
+    private fun failedProtection() = XrayServerProtection(
+        bruteForceGuard = XrayProtectionState.FAILED,
+        securityUpdates = XrayProtectionState.FAILED,
+    )
 
     /**
      * Reports the step around [block] and, on failure, ends the deployment. Aborting by exception

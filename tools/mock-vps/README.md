@@ -49,6 +49,8 @@ accepts a root password.
 - The exec channel and the SFTP upload, as `SshjConnection` uses them.
 - The `apt` dependency install, and `uname -m` as `aarch64` on Apple Silicon (the `arm64-v8a` asset).
 - Installing and starting the `kaihi-xray` unit through `systemctl`.
+- The protection step: sshguard and unattended-upgrades. Three wrong passwords from the phone block
+  it for 2 minutes. To unblock: `docker exec kaihi-mock-vps nft flush set ip sshguard attackers`.
 - The VPN itself, end to end: phone, USB, Mac, container Xray, internet.
 
 It does not exercise the dnf, yum or pacman paths, or the Alpine/OpenRC service path. For an

@@ -53,6 +53,7 @@ internal class WizardViewModel @AssistedInject constructor(
             is Intent.ServerAuthMethodChanged -> reduce { copy(serverAuthMethod = intent.method) }
             is Intent.ServerAddressChanged -> reduce { copy(serverAddress = intent.address) }
             is Intent.PasswordChanged -> reduce { copy(password = intent.password) }
+            is Intent.ProtectServerChanged -> reduce { copy(protectServer = intent.enabled) }
             is Intent.SshKeyChanged -> reduce { copy(sshKey = intent.sshKey) }
             is Intent.SshPortChanged -> reduce { copy(sshPort = intent.port) }
             is Intent.UsernameChanged -> reduce { copy(username = intent.username) }

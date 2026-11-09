@@ -101,5 +101,6 @@ private fun DeploymentStep.label(): String = stringResource(
         DeploymentStep.GENERATE_SECRETS -> R.string.wizard_deployment_step_generate_secrets
         DeploymentStep.WRITE_CONFIGURATION -> R.string.wizard_deployment_step_write_configuration
         DeploymentStep.START_SERVICE -> R.string.wizard_deployment_step_start_service
+        DeploymentStep.PROTECT_SERVER -> R.string.wizard_deployment_step_protect_server
     }
 )

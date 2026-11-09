@@ -33,6 +33,7 @@
     <string name="wizard_server_data_username">Имя пользователя</string>
     <string name="wizard_server_data_entry">Данные сервера</string>
     <string name="wizard_server_data_fingerprint">Отпечаток SSH-ключа хоста (необязательно, при первом подключении вы его подтвердите)</string>
+    <string name="wizard_server_data_short_password_hint">Короткий пароль проще подобрать. Надёжнее — от 12 символов.</string>
 
     <!-- Connection check dialog -->
     <string name="wizard_connection_check_checking">Проверяем подключение к серверу…</string>
@@ -40,6 +41,8 @@
     <string name="wizard_connection_check_failed_title">Не удалось подключиться</string>
     <string name="wizard_connection_check_failed_message">Нам не удалось установить подключение к вашему серверу. Это могло произойти по разным причинам:\n\n• Неверный адрес или порт\n• Файрвол или группа безопасности блокирует порт\n• Неверный логин, пароль или SSH-ключ\n• Сервер выключен или недоступен\n• SSH-ключ хоста ещё не подтверждён как доверенный</string>
     <string name="wizard_connection_check_failed_detail_prefix">Подробности: </string>
+    <string name="wizard_error_wrong_credentials">Сервер не принял имя пользователя или пароль (или ключ).</string>
+    <string name="wizard_error_blocked_after_wrong_passwords">Сервер перестал отвечать после нескольких неверных паролей. Это защита: подождите несколько минут и попробуйте снова с правильным паролем.</string>
 
     <string name="wizard_untrusted_host_title">Первое подключение к этому серверу</string>
     <string name="wizard_untrusted_host_body">Если вы сами создавали этот сервер, продолжайте. Если данные для входа передал кто-то другой, уточните у него, что сервер именно тот.\n\nОтпечаток ключа хоста: %1$s</string>
@@ -61,6 +64,8 @@
     <string name="wizard_confirmation_strategy_label">Стратегия</string>
     <string name="wizard_confirmation_note_title">На всякий случай</string>
     <string name="wizard_confirmation_note_body">Закрыть приложение во время установки не страшно. Сервер останется рабочим, а повторный запуск начнёт всё заново.</string>
+    <string name="wizard_protect_server_title">Защитить сервер</string>
+    <string name="wizard_protect_server_body">Блокирует подбор пароля и автоматически устанавливает обновления безопасности (Debian и Ubuntu). Три неверных пароля подряд блокируют ваш адрес на несколько минут — в том числе при входе не через Kaihi.</string>
 
     <!-- Errors -->
     <string name="wizard_error_vpn_permission_required">Kaihi нужно разрешение на VPN, чтобы запустить соединение.</string>
@@ -77,6 +82,7 @@
     <string name="wizard_deployment_step_generate_secrets">Создаём секретные данные для защиты соединения</string>
     <string name="wizard_deployment_step_write_configuration">Применяем настройки</string>
     <string name="wizard_deployment_step_start_service">Включаем VPN</string>
+    <string name="wizard_deployment_step_protect_server">Защищаем сервер</string>
 
     <string name="wizard_deployment_terminal_show">Показать журнал установки</string>
     <string name="wizard_deployment_terminal_hide">Скрыть журнал установки</string>
@@ -96,4 +102,8 @@
     <string name="wizard_deployment_success_title">Установка завершена</string>
     <string name="wizard_deployment_success_body">Можно выходить в интернет защищённо.</string>
     <string name="wizard_deployment_success_cta">Начать использовать VPN</string>
+    <string name="wizard_protection_outcome_both_enabled">Сервер защищён: подбор пароля блокируется, обновления безопасности ставятся автоматически. Три неверных пароля подряд блокируют ваш адрес на несколько минут.</string>
+    <string name="wizard_protection_outcome_guard_enabled">Подбор пароля блокируется. Три неверных пароля подряд блокируют ваш адрес на несколько минут.</string>
+    <string name="wizard_protection_outcome_unsupported">Для этого дистрибутива Linux автоматическая защита пока недоступна.</string>
+    <string name="wizard_protection_outcome_failed">Часть защиты не удалось включить. Сервер работает и без неё.</string>
 </resources>

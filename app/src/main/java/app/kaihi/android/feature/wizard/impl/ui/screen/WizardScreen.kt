@@ -23,6 +23,7 @@ import app.kaihi.android.feature.wizard.impl.ui.mvi.WizardContract
 import app.kaihi.android.feature.wizard.impl.ui.mvi.WizardContract.Intent
 import app.kaihi.android.feature.wizard.impl.ui.mvi.WizardContract.Intent.SetupStrategyChanged
 import app.kaihi.android.feature.wizard.impl.ui.mvi.WizardContract.WizardPage
+import app.kaihi.android.feature.wizard.impl.ui.mvi.protectionOutcomeText
 import app.kaihi.android.feature.wizard.impl.ui.mvi.WizardViewModel
 import app.kaihi.android.feature.wizard.impl.ui.mvi.isInProgress
 import app.kaihi.android.feature.wizard.impl.ui.mvi.isSshValid
@@ -133,12 +134,16 @@ internal fun WizardScreen(
                     username = uiState.username,
                     authMethod = uiState.serverAuthMethod,
                     setupStrategy = uiState.setupStrategy,
+                    appMode = uiState.appMode,
+                    protectServer = uiState.protectServer,
+                    onProtectServerChange = { viewModel.processIntent(Intent.ProtectServerChanged(it)) },
                 )
             }
 
             WizardPage.DEPLOYMENT -> WizardStep(title = UiText.Resource(R.string.wizard_step_deployment)) {
                 DeploymentProgressPage(
                     deployment = uiState.deployment,
+                    protectionOutcome = uiState.protectionOutcomeText(),
                     onToggleTerminal = { viewModel.processIntent(Intent.ToggleTerminalVisibility) },
                     onRetry = { viewModel.processIntent(Intent.RetryDeployment) },
                     onBack = {

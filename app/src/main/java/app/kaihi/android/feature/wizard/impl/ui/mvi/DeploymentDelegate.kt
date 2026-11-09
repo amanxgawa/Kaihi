@@ -4,6 +4,7 @@ import androidx.annotation.StringRes
 import app.kaihi.android.R
 import app.kaihi.android.feature.wizard.impl.domain.WizardSetupCoordinator
 import app.kaihi.android.feature.wizard.impl.domain.model.DeploymentEvent
+import app.kaihi.android.platform.mode.AppMode
 import app.kaihi.android.platform.ui.mvi.ViewModelDelegate
 import app.kaihi.android.platform.ui.util.UiText
 import javax.inject.Inject
@@ -33,7 +34,12 @@ internal class DeploymentDelegate @Inject constructor(
             val events = if (sshConfig == null) {
                 flowOf(DeploymentEvent.Failed(IllegalArgumentException("Complete the SSH connection details first.")))
             } else {
-                coordinator.deploy(sshConfig, currentState.toSshAuth(), architecture)
+                coordinator.deploy(
+                    sshConfig,
+                    currentState.toSshAuth(),
+                    architecture,
+                    protectServer = effectiveProtectServer(currentState.appMode, currentState.protectServer),
+                )
             }
             events.collect { event ->
                 reduce {
@@ -45,6 +51,7 @@ internal class DeploymentDelegate @Inject constructor(
                             realityShortId = event.credentials.shortId,
                             realityServerName = event.credentials.realityServerName,
                             serverCountryCode = event.credentials.countryCode,
+                            serverProtection = event.credentials.protection,
                         )
                     } else {
                         next
@@ -68,3 +75,6 @@ internal class DeploymentDelegate @Inject constructor(
         }
     }
 }
+
+internal fun effectiveProtectServer(appMode: AppMode, protectServer: Boolean): Boolean =
+    appMode != AppMode.ADVANCED || protectServer

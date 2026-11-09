@@ -33,9 +33,14 @@ internal class WizardSetupCoordinator @Inject constructor(
             connection.execute(DetectServerArchCommand())
         }
 
-    fun deploy(sshConfig: SshConfig, auth: SshAuth, architecture: String): Flow<DeploymentEvent> = flow {
+    fun deploy(
+        sshConfig: SshConfig,
+        auth: SshAuth,
+        architecture: String,
+        protectServer: Boolean,
+    ): Flow<DeploymentEvent> = flow {
         sshManager.withConnection(sshConfig, auth) { connection ->
-            deployXrayServerUseCase(connection, architecture).collect { event -> emit(event) }
+            deployXrayServerUseCase(connection, architecture, protectServer).collect { event -> emit(event) }
             Result.success(Unit)
         }.onFailure { error -> emit(DeploymentEvent.Failed(error)) }
     }
@@ -67,6 +72,7 @@ internal class WizardSetupCoordinator @Inject constructor(
             addedAtMillis = System.currentTimeMillis(),
             countryCode = draft.countryCode,
             muxEnabled = true,
+            serverProtection = draft.serverProtection,
         )
         return try {
             val stored = subscriptionStore.update { subscriptions ->

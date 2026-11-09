@@ -1,5 +1,7 @@
 package app.kaihi.android.feature.wizard.impl.domain.model
 
+import app.kaihi.android.core.vpn.XrayServerProtection
+
 internal data class WizardProfileDraft(
     val serverAddress: String,
     val sshPort: Int,
@@ -10,4 +12,5 @@ internal data class WizardProfileDraft(
     val realityPublicKey: String,
     val realityShortId: String,
     val countryCode: String?,
+    val serverProtection: XrayServerProtection? = null,
 )

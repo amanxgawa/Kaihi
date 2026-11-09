@@ -3,8 +3,13 @@ package app.kaihi.android.feature.wizard.impl.ui.mvi
 import app.kaihi.android.core.security.Secret
 import app.kaihi.android.core.ssh.model.SshAuth
 import app.kaihi.android.core.ssh.model.SshConfig
+import app.kaihi.android.core.vpn.XrayProtectionState
+import app.kaihi.android.core.vpn.XrayServerProtection
+import app.kaihi.android.R
 import app.kaihi.android.feature.wizard.impl.domain.model.WizardProfileDraft
+import app.kaihi.android.platform.mode.AppMode
 import app.kaihi.android.platform.ui.util.UiSecret
+import app.kaihi.android.platform.ui.util.UiText
 
 internal fun WizardContract.State.toSshConfigOrNull(): SshConfig? =
     sshPort.toIntOrNull()?.takeIf { it in 1..65_535 }?.let { port ->
@@ -32,4 +37,25 @@ internal fun WizardContract.State.toProfileDraft(): WizardProfileDraft = WizardP
     realityPublicKey = realityPublicKey.trim(),
     realityShortId = realityShortId.trim(),
     countryCode = serverCountryCode,
+    serverProtection = serverProtection,
 )
+
+internal fun WizardContract.State.protectionOutcomeText(): UiText? {
+    val guard = serverProtection?.bruteForceGuard
+    val updates = serverProtection?.securityUpdates
+    val resource = when {
+        guard == XrayProtectionState.ENABLED && updates == XrayProtectionState.ENABLED ->
+            R.string.wizard_protection_outcome_both_enabled
+
+        guard == XrayProtectionState.ENABLED -> R.string.wizard_protection_outcome_guard_enabled
+        guard == XrayProtectionState.UNSUPPORTED && updates == XrayProtectionState.UNSUPPORTED ->
+            if (appMode == AppMode.ADVANCED) R.string.wizard_protection_outcome_unsupported else null
+
+        guard == XrayProtectionState.FAILED || updates == XrayProtectionState.FAILED ||
+            (updates == XrayProtectionState.ENABLED && guard != XrayProtectionState.ENABLED) ->
+            if (appMode == AppMode.ADVANCED) R.string.wizard_protection_outcome_failed else null
+
+        else -> null
+    }
+    return resource?.let(UiText::Resource)
+}

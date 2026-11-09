@@ -31,6 +31,10 @@ It is built to resist:
   and stored profiles are encrypted under a non-exportable Keystore key;
 - whoever else shares your VPS's subnet, since masking-domain candidates come from certificates
   those neighbours control.
+- password guessing against the server's SSH on Debian/Ubuntu, where `sshguard` blocks repeated
+  failed logins.
+- an exploit in the server's Xray: it runs as an unprivileged user with only the capability to bind
+  its port (plus a systemd sandbox where systemd is used), so an exploit does not hand over root.
 
 It does **not** protect you from:
 
@@ -87,6 +91,9 @@ to be malicious or vulnerable, moving the pin is our job.
 
 Stated because knowing them may change how you use this, not because they are open bugs:
 
+- **Typing the server password wrong three times locks you out for a few minutes.** sshguard blocks
+  the address, not the person: the first block lasts 2 minutes and repeat blocks get longer. Other
+  distros do not get these protections yet.
 - **No independent audit.** The code has been reviewed only by the people who wrote it.
 - **First-connection trust is often unverifiable in practice.** Trust-on-first-use pins a host key
   the first time you connect, but many hosting providers do not surface the server's fingerprint

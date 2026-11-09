@@ -6,8 +6,10 @@ import app.kaihi.android.core.ssh.model.SshHostKeyException
 import app.kaihi.android.core.ssh.model.SshHostKeyUnverifiableException
 import app.kaihi.android.core.ssh.model.SshUntrustedHostException
 import app.kaihi.android.feature.wizard.impl.domain.WizardSetupCoordinator
+import app.kaihi.android.feature.wizard.impl.domain.model.AuthFailureTracker
 import app.kaihi.android.platform.ui.mvi.ViewModelDelegate
 import app.kaihi.android.platform.ui.util.UiText
+import net.schmizz.sshj.userauth.UserAuthException
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.Job
@@ -19,6 +21,7 @@ internal class ConnectionCheckDelegate @Inject constructor(
 ) : ViewModelDelegate<WizardContract.State, WizardContract.Effect>() {
 
     private var job: Job? = null
+    private val authFailureTracker = AuthFailureTracker()
 
     fun validate() {
         job?.cancel()
@@ -55,6 +58,21 @@ internal class ConnectionCheckDelegate @Inject constructor(
                     val hostKeyError = generateSequence(error) { it.cause }
                         .filterIsInstance<SshHostKeyException>()
                         .firstOrNull()
+                    val authFailure = generateSequence(error) { it.cause }
+                        .filterIsInstance<UserAuthException>()
+                        .firstOrNull()
+                    val authFailureMessage = when {
+                        hostKeyError != null -> null
+                        authFailure != null -> {
+                            authFailureTracker.recordAuthFailure(sshConfig.host, sshConfig.port)
+                            R.string.wizard_error_wrong_credentials
+                        }
+
+                        authFailureTracker.isLikelyBlocked(sshConfig.host, sshConfig.port) ->
+                            R.string.wizard_error_blocked_after_wrong_passwords
+
+                        else -> null
+                    }
                     reduce {
                         copy(
                             connectionCheck = when (hostKeyError) {
@@ -70,7 +88,9 @@ internal class ConnectionCheckDelegate @Inject constructor(
                                     ConnectionCheckState.HostKeyUnverifiable(hostKeyError.fingerprint)
 
                                 null -> ConnectionCheckState.Failed(
-                                    error.message?.let(UiText::Raw) ?: UiText.Resource(R.string.wizard_error_unknown)
+                                    authFailureMessage?.let(UiText::Resource)
+                                        ?: error.message?.let(UiText::Raw)
+                                        ?: UiText.Resource(R.string.wizard_error_unknown)
                                 )
                             }
                         )
