@@ -7,6 +7,7 @@ import app.kaihi.android.core.vpn.ImportInput
 import app.kaihi.android.core.vpn.SubscriptionFetchFailure
 import app.kaihi.android.core.vpn.SubscriptionFetchResult
 import app.kaihi.android.core.vpn.SubscriptionFetcher
+import app.kaihi.android.core.vpn.SubscriptionMetadata
 import app.kaihi.android.core.vpn.VlessLinkResult
 import app.kaihi.android.core.vpn.XraySubscription
 import app.kaihi.android.core.vpn.XraySubscriptionSource
@@ -27,13 +28,46 @@ internal data class ImportCounts(
     val truncated: Boolean = false,
 )
 
+internal sealed interface ImportPreview {
+    val profiles: List<XrayVpnProfile>
+    val counts: ImportCounts
+
+    /** Pasted vless:// links. `counts.duplicates` includes links already in Imported at prepare time. */
+    data class Links(
+        override val profiles: List<XrayVpnProfile>,
+        override val counts: ImportCounts,
+    ) : ImportPreview {
+        override fun toString(): String = "Links(profileCount=${profiles.size}, counts=$counts)"
+    }
+
+    /** An HTTPS subscription, fetched once. */
+    data class Subscription(
+        val url: String,
+        val host: String,
+        val metadata: SubscriptionMetadata,
+        override val profiles: List<XrayVpnProfile>,
+        override val counts: ImportCounts,
+        val fetchedAtMillis: Long,
+    ) : ImportPreview {
+        override fun toString(): String =
+            "Subscription(url=<redacted>, host=$host, metadata=$metadata, profileCount=${profiles.size}, " +
+                "counts=$counts, fetchedAtMillis=$fetchedAtMillis)"
+    }
+}
+
+internal sealed interface ImportPreparation {
+    data class Ready(val preview: ImportPreview) : ImportPreparation
+    data class AlreadyAdded(val subscriptionId: String, val name: String, val firstServerId: String?) : ImportPreparation
+    data class FetchFailed(val reason: SubscriptionFetchFailure) : ImportPreparation
+    data class NothingImportable(val counts: ImportCounts) : ImportPreparation
+    data object InsecureUrl : ImportPreparation
+    data object Unrecognized : ImportPreparation
+}
+
 internal sealed interface ImportOutcome {
     data class Success(val counts: ImportCounts, val firstAddedServerId: String) : ImportOutcome
     data class AlreadyAdded(val subscriptionId: String) : ImportOutcome
-    data class FetchFailed(val reason: SubscriptionFetchFailure) : ImportOutcome
-    data class NothingImportable(val counts: ImportCounts) : ImportOutcome
-    data object InsecureUrl : ImportOutcome
-    data object Unrecognized : ImportOutcome
+    data class NothingNew(val counts: ImportCounts) : ImportOutcome
 }
 
 internal class ImportCoordinator @Inject constructor(
@@ -41,30 +75,88 @@ internal class ImportCoordinator @Inject constructor(
     private val subscriptionFetcher: SubscriptionFetcher,
     private val appStorage: AppStorage,
 ) {
-    suspend fun import(text: String): ImportOutcome {
+    suspend fun prepare(text: String): ImportPreparation {
         val nowMillis = System.currentTimeMillis()
         return when (val input = classifyImportInput(text)) {
-            is ImportInput.Links -> importLinks(input.lines, nowMillis)
-            is ImportInput.RemoteSubscription -> importRemote(input.url, nowMillis)
-            is ImportInput.InsecureUrl -> ImportOutcome.InsecureUrl
-            ImportInput.Unrecognized -> ImportOutcome.Unrecognized
+            is ImportInput.Links -> prepareLinks(input.lines, nowMillis)
+            is ImportInput.RemoteSubscription -> prepareRemote(input.url, nowMillis)
+            is ImportInput.InsecureUrl -> ImportPreparation.InsecureUrl
+            ImportInput.Unrecognized -> ImportPreparation.Unrecognized
         }
     }
 
-    private suspend fun importLinks(lines: List<String>, nowMillis: Long): ImportOutcome {
+    suspend fun add(preview: ImportPreview): ImportOutcome = when (preview) {
+        is ImportPreview.Links -> addLinks(preview)
+        is ImportPreview.Subscription -> addSubscription(preview)
+    }
+
+    private suspend fun prepareLinks(lines: List<String>, nowMillis: Long): ImportPreparation {
         val parsed = parseLinks(lines, nowMillis)
         if (parsed.profiles.isEmpty()) {
-            return ImportOutcome.NothingImportable(parsed.counts)
+            return ImportPreparation.NothingImportable(parsed.counts)
         }
 
-        var counts = parsed.counts
+        val importedProfiles = subscriptionStore.subscriptions.first()
+            .firstOrNull { it.id == XraySubscription.IMPORTED_ID }
+            ?.servers.orEmpty()
+        val uniqueProfiles = mutableListOf<XrayVpnProfile>()
+        var duplicates = 0
+        parsed.profiles.forEach { profile ->
+            if (uniqueProfiles.any { it.matchesImport(profile) }) {
+                duplicates++
+            } else {
+                uniqueProfiles += profile
+                if (importedProfiles.any { it.matchesImport(profile) }) duplicates++
+            }
+        }
+        return ImportPreparation.Ready(
+            ImportPreview.Links(
+                profiles = uniqueProfiles,
+                counts = parsed.counts.copy(duplicates = duplicates),
+            ),
+        )
+    }
+
+    private suspend fun prepareRemote(url: String, nowMillis: Long): ImportPreparation {
+        val existing = subscriptionStore.subscriptions.first().firstRemoteWithUrl(url)
+        if (existing != null) {
+            return ImportPreparation.AlreadyAdded(existing.id, existing.name, existing.servers.firstOrNull()?.id)
+        }
+
+        val fetched = when (val result = subscriptionFetcher.fetch(url)) {
+            is SubscriptionFetchResult.Failure -> return ImportPreparation.FetchFailed(result.reason)
+            is SubscriptionFetchResult.Success -> result
+        }
+        val parsed = parseLinks(fetched.links, nowMillis)
+        val uniqueProfiles = mutableListOf<XrayVpnProfile>()
+        var duplicates = 0
+        parsed.profiles.forEach { profile ->
+            if (uniqueProfiles.any { it.matchesImport(profile) }) duplicates++ else uniqueProfiles += profile
+        }
+        val counts = parsed.counts.copy(duplicates = duplicates, truncated = fetched.truncated)
+        if (uniqueProfiles.isEmpty()) return ImportPreparation.NothingImportable(counts)
+
+        return ImportPreparation.Ready(
+            ImportPreview.Subscription(
+                url = url,
+                host = requireNotNull(URI(url).host),
+                metadata = fetched.metadata,
+                profiles = uniqueProfiles,
+                counts = counts,
+                fetchedAtMillis = nowMillis,
+            ),
+        )
+    }
+
+    private suspend fun addLinks(preview: ImportPreview.Links): ImportOutcome {
+        var counts = preview.counts
         var firstAddedServerId: String? = null
         subscriptionStore.update { subscriptions ->
             val imported = subscriptions.firstOrNull { it.id == XraySubscription.IMPORTED_ID }
             val knownProfiles = imported?.servers.orEmpty().toMutableList()
             val added = mutableListOf<XrayVpnProfile>()
             var duplicates = 0
-            parsed.profiles.forEach { profile ->
+            preview.profiles.forEach { profile ->
                 if (knownProfiles.any { it.matchesImport(profile) }) {
                     duplicates++
                 } else {
@@ -73,7 +165,7 @@ internal class ImportCoordinator @Inject constructor(
                 }
             }
 
-            counts = parsed.counts.copy(added = added.size, duplicates = duplicates)
+            counts = preview.counts.copy(added = added.size, duplicates = duplicates)
             firstAddedServerId = added.firstOrNull()?.id
             if (added.isEmpty()) {
                 subscriptions
@@ -89,55 +181,41 @@ internal class ImportCoordinator @Inject constructor(
             }
         }
 
-        val firstId = firstAddedServerId ?: return ImportOutcome.NothingImportable(counts)
+        val firstId = firstAddedServerId ?: return ImportOutcome.NothingNew(counts)
         markWizardCompleted()
         return ImportOutcome.Success(counts, firstId)
     }
 
-    private suspend fun importRemote(url: String, nowMillis: Long): ImportOutcome {
-        val existing = subscriptionStore.subscriptions.first().firstRemoteWithUrl(url)
-        if (existing != null) return ImportOutcome.AlreadyAdded(existing.id)
-
-        val fetched = when (val result = subscriptionFetcher.fetch(url)) {
-            is SubscriptionFetchResult.Failure -> return ImportOutcome.FetchFailed(result.reason)
-            is SubscriptionFetchResult.Success -> result
-        }
-        val parsed = parseLinks(fetched.links, nowMillis)
-        val uniqueProfiles = mutableListOf<XrayVpnProfile>()
-        var duplicates = 0
-        parsed.profiles.forEach { profile ->
-            if (uniqueProfiles.any { it.matchesImport(profile) }) duplicates++ else uniqueProfiles += profile
-        }
-        val counts = parsed.counts.copy(duplicates = duplicates, truncated = fetched.truncated)
-        if (uniqueProfiles.isEmpty()) return ImportOutcome.NothingImportable(counts)
-
-        val uri = URI(url)
+    private suspend fun addSubscription(preview: ImportPreview.Subscription): ImportOutcome {
         val subscriptionId = newXrayId()
-        val metadata = fetched.metadata
+        val metadata = preview.metadata
         val subscription = XraySubscription(
             id = subscriptionId,
-            name = metadata.title ?: requireNotNull(uri.host),
-            servers = uniqueProfiles,
+            name = metadata.title ?: preview.host,
+            servers = preview.profiles,
             source = XraySubscriptionSource.Remote(
-                url = url,
+                url = preview.url,
                 title = metadata.title,
                 userInfo = metadata.userInfo,
                 updateIntervalHours = metadata.updateIntervalHours,
                 supportUrl = metadata.supportUrl,
                 webPageUrl = metadata.webPageUrl,
                 announce = metadata.announce,
-                lastUpdatedMillis = nowMillis,
+                lastUpdatedMillis = preview.fetchedAtMillis,
             ),
         )
 
         var outcome: ImportOutcome? = null
         subscriptionStore.update { subscriptions ->
-            val concurrentlyAdded = subscriptions.firstRemoteWithUrl(url)
+            val concurrentlyAdded = subscriptions.firstRemoteWithUrl(preview.url)
             if (concurrentlyAdded != null) {
                 outcome = ImportOutcome.AlreadyAdded(concurrentlyAdded.id)
                 subscriptions
             } else {
-                outcome = ImportOutcome.Success(counts.copy(added = uniqueProfiles.size), uniqueProfiles.first().id)
+                outcome = ImportOutcome.Success(
+                    preview.counts.copy(added = preview.profiles.size),
+                    preview.profiles.first().id,
+                )
                 subscriptions + subscription
             }
         }

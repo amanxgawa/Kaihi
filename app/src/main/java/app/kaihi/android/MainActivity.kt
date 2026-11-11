@@ -1,5 +1,6 @@
 package app.kaihi.android
 
+import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -13,9 +14,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavEntry
@@ -28,6 +32,7 @@ import app.kaihi.android.core.storage.ExperienceKeys
 import app.kaihi.android.core.storage.StorageDomain
 import app.kaihi.android.feature.dashboard.DashboardKey
 import app.kaihi.android.feature.hello.HelloKey
+import app.kaihi.android.feature.importing.ImportKey
 import app.kaihi.android.platform.di.IoDispatcher
 import app.kaihi.android.platform.navigation.AppNavigator
 import app.kaihi.android.platform.navigation.Destination
@@ -41,6 +46,8 @@ import kotlinx.coroutines.withContext
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
+    private var pendingImportText by mutableStateOf<String?>(null)
+
     @Inject
     lateinit var destinations: Map<Class<out NavKey>, @JvmSuppressWildcards Destination<*>>
 
@@ -53,6 +60,14 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (savedInstanceState == null) {
+            pendingImportText = incomingImportText(
+                intent.action,
+                intent.dataString,
+                intent.type,
+                intent.getCharSequenceExtra(Intent.EXTRA_TEXT),
+            )
+        }
         // The theme is dark-only, so the bars must stay dark-styled even when the system is in light mode.
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
@@ -100,6 +115,12 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
+                    LaunchedEffect(pendingImportText) {
+                        val text = pendingImportText ?: return@LaunchedEffect
+                        pendingImportText = null
+                        navigator.navigate(ImportKey(text))
+                    }
+
                     CompositionLocalProvider(LocalAppNavigator provides navigator) {
                         NavDisplay(
                             backStack = backStack,
@@ -138,5 +159,16 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        incomingImportText(
+            intent.action,
+            intent.dataString,
+            intent.type,
+            intent.getCharSequenceExtra(Intent.EXTRA_TEXT),
+        )?.let { pendingImportText = it }
     }
 }

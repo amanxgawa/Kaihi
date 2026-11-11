@@ -5,6 +5,8 @@ import app.kaihi.android.R
 import app.kaihi.android.core.vpn.SubscriptionFetchFailure
 import app.kaihi.android.feature.importing.impl.domain.ImportCoordinator
 import app.kaihi.android.feature.importing.impl.domain.ImportOutcome
+import app.kaihi.android.feature.importing.impl.domain.ImportPreparation
+import app.kaihi.android.feature.importing.impl.domain.ImportPreview
 import app.kaihi.android.platform.ui.mvi.MviViewModel
 import app.kaihi.android.platform.ui.util.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -22,49 +24,94 @@ internal class ImportViewModel @Inject constructor(
 ) : MviViewModel<ImportContract.State, ImportContract.Intent, ImportContract.Effect>(ImportContract.State()) {
 
     private var importJob: Job? = null
+    private var addJob: Job? = null
+    private var preparedPreview: ImportPreview? = null
+    private var prefillConsumed = false
 
     override suspend fun onIntent(intent: ImportContract.Intent) {
         when (intent) {
             is ImportContract.Intent.TextChanged -> reduce { copy(text = intent.text, errorMessage = null) }
+            is ImportContract.Intent.Prefilled -> if (!prefillConsumed) {
+                prefillConsumed = true
+                reduce { copy(text = intent.text, errorMessage = null) }
+                startImport()
+            }
             ImportContract.Intent.ImportRequested -> startImport()
+            ImportContract.Intent.AddRequested -> startAdd()
+            ImportContract.Intent.PreviewDismissed -> dismissPreview()
+            is ImportContract.Intent.GroupToggled -> reduce {
+                copy(
+                    expandedGroups = if (intent.key in expandedGroups) {
+                        expandedGroups - intent.key
+                    } else {
+                        expandedGroups + intent.key
+                    },
+                )
+            }
+            ImportContract.Intent.ShowExistingRequested -> state.value.alreadyAdded?.let {
+                sendEffect(ImportContract.Effect.ShowExisting(it.firstServerId))
+            }
             ImportContract.Intent.CancelRequested -> cancelImport()
             ImportContract.Intent.BackRequested -> {
-                cancelImport()
-                sendEffect(ImportContract.Effect.NavigateBack)
+                if (state.value.preview != null || state.value.alreadyAdded != null) {
+                    dismissPreview()
+                } else {
+                    cancelImport()
+                    sendEffect(ImportContract.Effect.NavigateBack)
+                }
             }
         }
     }
 
     private fun startImport() {
         val text = state.value.text
-        if (text.isBlank() || state.value.isImporting) return
+        if (
+            text.isBlank() || state.value.isImporting || state.value.isAdding ||
+            state.value.preview != null || state.value.alreadyAdded != null
+        ) return
 
         reduce { copy(isImporting = true, errorMessage = null) }
         val job = scope.launch(start = CoroutineStart.LAZY) {
             try {
-                when (val outcome = coordinator.import(text)) {
-                    is ImportOutcome.Success -> sendEffect(
-                        ImportContract.Effect.ImportSucceeded(outcome.counts, outcome.firstAddedServerId),
-                    )
-                    is ImportOutcome.AlreadyAdded -> reduce {
-                        copy(errorMessage = UiText.Resource(R.string.import_error_already_added))
+                when (val preparation = coordinator.prepare(text)) {
+                    is ImportPreparation.Ready -> {
+                        preparedPreview = preparation.preview
+                        reduce {
+                            copy(
+                                isImporting = false,
+                                preview = preparation.preview.toUi(System.currentTimeMillis()),
+                                alreadyAdded = null,
+                                expandedGroups = emptySet(),
+                                errorMessage = null,
+                            )
+                        }
                     }
-                    is ImportOutcome.FetchFailed -> reduce {
-                        copy(errorMessage = outcome.reason.toUiText())
+                    is ImportPreparation.AlreadyAdded -> {
+                        preparedPreview = null
+                        reduce {
+                            copy(
+                                isImporting = false,
+                                preview = null,
+                                alreadyAdded = preparation.toUi(),
+                                expandedGroups = emptySet(),
+                                errorMessage = null,
+                            )
+                        }
                     }
-                    is ImportOutcome.NothingImportable -> reduce {
+                    is ImportPreparation.FetchFailed -> reduce {
+                        copy(errorMessage = preparation.reason.toUiText())
+                    }
+                    is ImportPreparation.NothingImportable -> reduce {
                         copy(
                             errorMessage = UiText.Resource(
                                 R.string.import_error_nothing_importable,
-                                outcome.counts.unsupported,
-                                outcome.counts.invalid,
                             ),
                         )
                     }
-                    ImportOutcome.InsecureUrl -> reduce {
+                    ImportPreparation.InsecureUrl -> reduce {
                         copy(errorMessage = UiText.Resource(R.string.import_error_use_https))
                     }
-                    ImportOutcome.Unrecognized -> reduce {
+                    ImportPreparation.Unrecognized -> reduce {
                         copy(errorMessage = UiText.Resource(R.string.import_error_unrecognized))
                     }
                 }
@@ -81,6 +128,80 @@ internal class ImportViewModel @Inject constructor(
         }
         importJob = job
         job.start()
+    }
+
+    private fun startAdd() {
+        val preview = preparedPreview ?: return
+        if (state.value.isAdding || state.value.isImporting) return
+
+        reduce { copy(isAdding = true, errorMessage = null) }
+        val job = scope.launch(start = CoroutineStart.LAZY) {
+            var succeeded = false
+            try {
+                when (val outcome = coordinator.add(preview)) {
+                    is ImportOutcome.Success -> {
+                        succeeded = true
+                        preparedPreview = null
+                        sendEffect(
+                            ImportContract.Effect.ImportSucceeded(outcome.counts, outcome.firstAddedServerId),
+                        )
+                    }
+                    is ImportOutcome.AlreadyAdded -> showInputError(
+                        UiText.Resource(R.string.import_error_already_added),
+                    )
+                    is ImportOutcome.NothingNew -> showInputError(
+                        UiText.Resource(
+                            if (outcome.counts.duplicates > 0) {
+                                R.string.import_error_already_added
+                            } else {
+                                R.string.import_error_nothing_importable
+                            },
+                        ),
+                    )
+                }
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (_: Throwable) {
+                showInputError(UiText.Resource(R.string.import_error_unexpected))
+            } finally {
+                if (addJob === currentCoroutineContext()[Job]) {
+                    addJob = null
+                    if (!succeeded) reduce { copy(isAdding = false) }
+                }
+            }
+        }
+        addJob = job
+        job.start()
+    }
+
+    private fun showInputError(error: UiText) {
+        preparedPreview = null
+        reduce {
+            copy(
+                preview = null,
+                alreadyAdded = null,
+                expandedGroups = emptySet(),
+                errorMessage = error,
+            )
+        }
+    }
+
+    private fun dismissPreview() {
+        importJob?.cancel()
+        importJob = null
+        addJob?.cancel()
+        addJob = null
+        preparedPreview = null
+        reduce {
+            copy(
+                preview = null,
+                alreadyAdded = null,
+                expandedGroups = emptySet(),
+                isImporting = false,
+                isAdding = false,
+                errorMessage = null,
+            )
+        }
     }
 
     private fun cancelImport() {

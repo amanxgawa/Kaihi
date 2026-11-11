@@ -22,7 +22,7 @@ import app.kaihi.android.platform.ui.util.UiText
 @Composable
 internal fun HelloContent(
     onSetUpServerClick: () -> Unit,
-    onConnectOrImportClick: () -> Unit,
+    onAddServerClick: () -> Unit,
     onViewSourceCodeClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -49,7 +49,7 @@ internal fun HelloContent(
                 title = UiText.Resource(R.string.hello_connect_title),
                 description = UiText.Resource(R.string.hello_connect_description),
                 icon = KaihiIcons.Outlined.Cable,
-                onClick = onConnectOrImportClick,
+                onClick = onAddServerClick,
                 emphasized = true,
             )
 
