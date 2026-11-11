@@ -21,7 +21,6 @@ internal fun HelloScreen(
         modifier = modifier,
         onSetUpServerClick = onSetUpServerClick,
         onConnectOrImportClick = onConnectOrImportClick,
-        onLearnFirstClick = {},
         onViewSourceCodeClick = {
             context.startActivity(Intent(Intent.ACTION_VIEW, SOURCE_CODE_URL.toUri()))
         },

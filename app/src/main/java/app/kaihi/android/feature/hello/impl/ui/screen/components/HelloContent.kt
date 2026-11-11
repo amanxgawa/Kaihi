@@ -23,7 +23,6 @@ import app.kaihi.android.platform.ui.util.UiText
 internal fun HelloContent(
     onSetUpServerClick: () -> Unit,
     onConnectOrImportClick: () -> Unit,
-    onLearnFirstClick: () -> Unit,
     onViewSourceCodeClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -47,26 +46,18 @@ internal fun HelloContent(
             HelloHeader(subtitle = UiText.Resource(R.string.hello_header_subtitle))
 
             HelloActionCard(
-                title = UiText.Resource(R.string.hello_setup_title),
-                description = UiText.Resource(R.string.hello_setup_description),
-                icon = KaihiIcons.Outlined.Dns,
-                onClick = onSetUpServerClick,
-            )
-
-            HelloActionCard(
                 title = UiText.Resource(R.string.hello_connect_title),
                 description = UiText.Resource(R.string.hello_connect_description),
                 icon = KaihiIcons.Outlined.Cable,
                 onClick = onConnectOrImportClick,
+                emphasized = true,
             )
 
             HelloActionCard(
-                title = UiText.Resource(R.string.hello_learn_title),
-                description = UiText.Resource(R.string.hello_learn_description),
-                icon = KaihiIcons.Outlined.AutoStories,
-                onClick = onLearnFirstClick,
-                enabled = false,
-                badgeText = UiText.Resource(R.string.badge_soon),
+                title = UiText.Resource(R.string.hello_setup_title),
+                description = UiText.Resource(R.string.hello_setup_description),
+                icon = KaihiIcons.Outlined.Dns,
+                onClick = onSetUpServerClick,
             )
 
             HelloBottomActions(
