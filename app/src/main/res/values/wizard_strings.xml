@@ -75,6 +75,9 @@
     <string name="wizard_error_unknown">Unknown error</string>
     <string name="wizard_error_save_failed">Couldn\'t save the server details.</string>
     <string name="wizard_error_start_failed">Couldn\'t start the VPN.</string>
+    <string name="wizard_error_port_busy_named">Port 443 on this server is already taken by %1$s. Stop that program or use another server, then run setup again.</string>
+    <string name="wizard_error_port_busy">Port 443 on this server is already taken by another program. Stop it or use another server, then run setup again.</string>
+    <string name="wizard_error_xray_stopped">The VPN engine stopped right after starting. The install log shows why.</string>
 
     <!-- Deployment progress page -->
     <string name="wizard_deployment_step_install_runtime">Installing the VPN engine</string>

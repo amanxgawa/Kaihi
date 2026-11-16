@@ -14,6 +14,8 @@ import app.kaihi.android.feature.wizard.impl.domain.model.ProtectionPlan
 import app.kaihi.android.feature.wizard.impl.domain.model.SniSelector
 import app.kaihi.android.feature.wizard.impl.domain.model.XrayServerCredentials
 import app.kaihi.android.feature.wizard.impl.domain.model.XrayServerSecrets
+import app.kaihi.android.feature.wizard.impl.domain.model.XrayStartFailure
+import app.kaihi.android.feature.wizard.impl.domain.model.XrayStartOutcome
 import app.kaihi.android.feature.wizard.impl.domain.model.protectionPlan
 import app.kaihi.android.feature.wizard.impl.domain.ssh.CreateXrayServiceUserCommand
 import app.kaihi.android.feature.wizard.impl.domain.ssh.DetectIpv6SupportCommand
@@ -76,10 +78,11 @@ internal class DeployXrayServerUseCase @Inject constructor() {
             }
 
             runStep(DeploymentStep.START_SERVICE) {
-                connection.execute(
+                val outcome = connection.execute(
                     StartXrayServiceCommand(packageManager),
                     onOutputLine = { line -> emit(DeploymentEvent.LogLine(DeploymentStep.START_SERVICE, line)) },
                 ).getOrThrow()
+                if (outcome != XrayStartOutcome.Running) throw XrayStartFailure(outcome)
             }
 
             val protection = runStep(DeploymentStep.PROTECT_SERVER) {
