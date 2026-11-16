@@ -5,11 +5,9 @@ internal object XrayOpenRcServiceFactory {
     fun create(): String = """
         #!/sbin/openrc-run
 
-        name="kaihi-xray"
-        description="Kaihi Xray service"
         command="/usr/local/bin/xray"
         command_args="run -config /usr/local/etc/xray/config.json"
-        command_user="kaihi-xray:kaihi-xray"
+        command_user="xray:xray"
         capabilities="^cap_net_bind_service"
         no_new_privs="yes"
         command_background="yes"
@@ -23,7 +21,7 @@ internal object XrayOpenRcServiceFactory {
         }
 
         start_pre() {
-            checkpath --file --owner kaihi-xray:kaihi-xray --mode 0640 "/var/log/${'$'}{RC_SVCNAME}.log"
+            checkpath --file --owner xray:xray --mode 0640 "/var/log/${'$'}{RC_SVCNAME}.log"
         }
     """.trimIndent()
 }

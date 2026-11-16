@@ -10,7 +10,7 @@ internal class SecureXrayConfigCommand : BashScriptCommand<Unit> {
 
     private companion object {
         const val SCRIPT = """set -eu
-chown root:kaihi-xray /usr/local/etc/xray /usr/local/etc/xray/config.json
+chown root:xray /usr/local/etc/xray /usr/local/etc/xray/config.json
 chmod 0750 /usr/local/etc/xray
 chmod 0640 /usr/local/etc/xray/config.json"""
     }

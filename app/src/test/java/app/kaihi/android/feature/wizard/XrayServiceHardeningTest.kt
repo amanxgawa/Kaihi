@@ -16,7 +16,11 @@ class XrayServiceHardeningTest {
         val lines = XraySystemdServiceFactory.create().split("\n")
 
         listOf(
-            "User=kaihi-xray",
+            "Description=Xray Service",
+            "Documentation=https://xtls.github.io/",
+            "After=network.target nss-lookup.target",
+            "User=xray",
+            "Group=xray",
             "CapabilityBoundingSet=CAP_NET_BIND_SERVICE",
             "AmbientCapabilities=CAP_NET_BIND_SERVICE",
             "NoNewPrivileges=true",
@@ -33,7 +37,7 @@ class XrayServiceHardeningTest {
     fun `OpenRC service sets its user and bind capability`() {
         val lines = XrayOpenRcServiceFactory.create().split("\n")
 
-        assertTrue("command_user=\"kaihi-xray:kaihi-xray\"" in lines)
+        assertTrue("command_user=\"xray:xray\"" in lines)
         assertTrue("capabilities=\"^cap_net_bind_service\"" in lines)
         assertTrue("no_new_privs=\"yes\"" in lines)
     }
@@ -57,12 +61,12 @@ class XrayServiceHardeningTest {
     fun `config permissions make the private key group readable only`() {
         val script = SecureXrayConfigCommand().script
 
-        assertTrue(script.contains("chown root:kaihi-xray"))
+        assertTrue(script.contains("chown root:xray"))
         assertTrue(script.contains("chmod 0640 /usr/local/etc/xray/config.json"))
     }
 
     private companion object {
         const val UID_GID_NON_ROOT_CHECK =
-            "test \"\$(id -u kaihi-xray)\" -ne 0 && test \"\$(id -g kaihi-xray)\" -ne 0"
+            "test \"\$(id -u xray)\" -ne 0 && test \"\$(id -g xray)\" -ne 0"
     }
 }

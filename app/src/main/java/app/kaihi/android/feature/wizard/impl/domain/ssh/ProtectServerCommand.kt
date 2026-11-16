@@ -39,11 +39,9 @@ internal class ProtectServerCommand : BashScriptCommand<XrayServerProtection> {
             updates=failed
             if apt_install unattended-upgrades \
               && printf '%s\n' \
-                '// Written by Kaihi: install security updates automatically, never reboot.' \
                 'APT::Periodic::Update-Package-Lists "1";' \
                 'APT::Periodic::Unattended-Upgrade "1";' \
-                'Unattended-Upgrade::Automatic-Reboot "false";' \
-                > /etc/apt/apt.conf.d/52kaihi-auto-upgrades; then
+                > /etc/apt/apt.conf.d/20auto-upgrades; then
               updates=enabled
             fi
 

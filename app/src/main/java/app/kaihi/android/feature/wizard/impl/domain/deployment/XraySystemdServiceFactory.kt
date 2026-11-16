@@ -3,14 +3,14 @@ package app.kaihi.android.feature.wizard.impl.domain.deployment
 internal object XraySystemdServiceFactory {
     fun create(): String = """
         [Unit]
-        Description=Kaihi Xray service
-        After=network-online.target
-        Wants=network-online.target
+        Description=Xray Service
+        Documentation=https://xtls.github.io/
+        After=network.target nss-lookup.target
 
         [Service]
         Type=simple
-        User=kaihi-xray
-        Group=kaihi-xray
+        User=xray
+        Group=xray
         ExecStart=/usr/local/bin/xray run -config /usr/local/etc/xray/config.json
         Restart=on-failure
         RestartSec=3

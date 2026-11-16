@@ -51,7 +51,7 @@ internal class DeployXrayServerUseCase @Inject constructor() {
                     onOutputLine = { line -> emit(DeploymentEvent.LogLine(DeploymentStep.INSTALL_RUNTIME, line)) },
                 ).getOrThrow()
                 connection.execute(CreateXrayServiceUserCommand(detected)).getOrThrow()
-                emit(DeploymentEvent.LogLine(DeploymentStep.INSTALL_RUNTIME, "Service user: kaihi-xray"))
+                emit(DeploymentEvent.LogLine(DeploymentStep.INSTALL_RUNTIME, "Service user: xray"))
                 detected
             }
 
@@ -239,8 +239,8 @@ internal class DeployXrayServerUseCase @Inject constructor() {
 
     private companion object {
         const val CONFIG_PATH = "/usr/local/etc/xray/config.json"
-        const val SYSTEMD_UNIT_PATH = "/etc/systemd/system/kaihi-xray.service"
-        const val OPENRC_SERVICE_PATH = "/etc/init.d/kaihi-xray"
+        const val SYSTEMD_UNIT_PATH = "/etc/systemd/system/xray.service"
+        const val OPENRC_SERVICE_PATH = "/etc/init.d/xray"
         const val OPENRC_SERVICE_PERMISSIONS = 0b111_101_101 // rwxr-xr-x (0755)
         const val CONFIG_PERMISSIONS = 0b110_000_000 // rw------- (0600)
         const val MAX_SNI_VERIFICATION_ATTEMPTS = 5

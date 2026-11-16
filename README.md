@@ -22,23 +22,24 @@ REALITY or TLS over TCP or XHTTP; unsupported link types are skipped.
 
 - `/usr/local/bin/xray`, the Xray-core binary, downloaded from
   [XTLS/Xray-core releases](https://github.com/XTLS/Xray-core/releases).
-- A `kaihi-xray` system user and group. The service runs as this user with only the
+- An `xray` system user and group. The service runs as this user with only the
   `CAP_NET_BIND_SERVICE` capability needed to bind port 443.
-- `/usr/local/etc/xray`, owned by `root:kaihi-xray` with mode 0750, and
-  `/usr/local/etc/xray/config.json`, owned by `root:kaihi-xray` with mode 0640. The config upload
+- `/usr/local/etc/xray`, owned by `root:xray` with mode 0750, and
+  `/usr/local/etc/xray/config.json`, owned by `root:xray` with mode 0640. The config upload
   uses mode 0600 before these final permissions are applied, since it contains the REALITY private
   key.
-- A service unit that starts Xray on boot: `/etc/systemd/system/kaihi-xray.service` on
-  systemd-based distros, `/etc/init.d/kaihi-xray` (OpenRC) on Alpine.
+- A service unit that starts Xray on boot: `/etc/systemd/system/xray.service` on systemd-based
+  distros, `/etc/init.d/xray` (OpenRC) on Alpine. These names and paths match the official XTLS
+  install script, so a server set up by Kaihi looks like a standard Xray install.
 - A temporary copy of [RealiTLScanner](https://github.com/XTLS/RealiTLScanner/releases), used once
   during setup to find a masking domain and deleted afterward (`mktemp -d` + `trap ... EXIT`).
 - Any of `ca-certificates`, `curl`, `unzip` and `openssl` that the server lacks, installed with its
   package manager. The "How to remove everything" steps below do not uninstall them.
 - On Debian/Ubuntu, `sshguard` blocks an address after repeated failed SSH logins: three wrong
   passwords block it for 2 minutes, with longer blocks for repeat offenders. `unattended-upgrades`
-  installs security updates automatically using `/etc/apt/apt.conf.d/52kaihi-auto-upgrades`; it
-  never reboots automatically. Other distros do not get these protections yet. Advanced users can
-  opt out during setup.
+  installs security updates automatically using `/etc/apt/apt.conf.d/20auto-upgrades`, its standard
+  config file. Kaihi does not turn on automatic reboots. Other distros do not get these protections
+  yet. Advanced users can opt out during setup.
 
 Re-running the setup wizard against the same server overwrites the config and service unit cleanly
 and reuses the service account.
@@ -73,27 +74,28 @@ On the server:
 
 ```sh
 # systemd (Debian/Ubuntu, RHEL family, Arch)
-systemctl disable --now kaihi-xray.service
-rm -f /etc/systemd/system/kaihi-xray.service
+systemctl disable --now xray.service
+rm -f /etc/systemd/system/xray.service
 
 # OpenRC (Alpine)
-rc-service kaihi-xray stop
-rc-update del kaihi-xray default
-rm -f /etc/init.d/kaihi-xray
+rc-service xray stop
+rc-update del xray default
+rm -f /etc/init.d/xray
 
 # either way
 rm -rf /usr/local/bin/xray /usr/local/etc/xray
 
 # Debian/Ubuntu: the default protections
 systemctl disable --now sshguard; apt-get purge -y sshguard
-rm -f /etc/apt/apt.conf.d/52kaihi-auto-upgrades
+rm -f /etc/apt/apt.conf.d/20auto-upgrades    # only if you want automatic updates off
 
 # remove the service account
-userdel kaihi-xray 2>/dev/null; groupdel kaihi-xray 2>/dev/null        # most distros
-deluser kaihi-xray 2>/dev/null; delgroup kaihi-xray 2>/dev/null        # Alpine
+userdel xray 2>/dev/null; groupdel xray 2>/dev/null        # most distros
+deluser xray 2>/dev/null; delgroup xray 2>/dev/null        # Alpine
 ```
 
-Ubuntu ships `unattended-upgrades` itself, so removing Kaihi's file does not turn it off there.
+`20auto-upgrades` is the package's standard file and may have existed before Kaihi; Ubuntu turns
+`unattended-upgrades` on by default. Keep the file if you want automatic security updates.
 
 On your phone: uninstall the app. Profiles, including subscription URLs, are stored encrypted
 locally (Android Keystore-backed). The phone contacts subscription providers directly when

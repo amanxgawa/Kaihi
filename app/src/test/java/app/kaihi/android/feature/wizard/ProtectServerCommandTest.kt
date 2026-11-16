@@ -50,7 +50,10 @@ class ProtectServerCommandTest {
         val lines = command.script.lineSequence().map(String::trim).toList()
 
         assertTrue("&& systemctl enable --now sshguard >/dev/null 2>&1 \\" in lines)
-        assertTrue("'Unattended-Upgrade::Automatic-Reboot \"false\";' \\" in lines)
+        assertTrue(command.script.contains("/etc/apt/apt.conf.d/20auto-upgrades"))
+        assertTrue(command.script.contains("APT::Periodic::Update-Package-Lists \"1\";"))
+        assertTrue(command.script.contains("APT::Periodic::Unattended-Upgrade \"1\";"))
+        assertFalse(command.script.contains("Automatic-Reboot"))
         assertTrue("  && nft list table ip sshguard >/dev/null 2>&1; then" in command.script.lines())
         assertFalse(command.script.contains("nftables.service"))
     }

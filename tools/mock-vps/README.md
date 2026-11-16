@@ -48,7 +48,7 @@ accepts a root password.
 - SSH login as root with a password, the trust-on-first-use prompt, and the changed-key warning.
 - The exec channel and the SFTP upload, as `SshjConnection` uses them.
 - The `apt` dependency install, and `uname -m` as `aarch64` on Apple Silicon (the `arm64-v8a` asset).
-- Installing and starting the `kaihi-xray` unit through `systemctl`.
+- Installing and starting the `xray` unit through `systemctl`.
 - The protection step: sshguard and unattended-upgrades. Three wrong passwords from the phone block
   it for 2 minutes. To unblock: `docker exec kaihi-mock-vps nft flush set ip sshguard attackers`.
 - The VPN itself, end to end: phone, USB, Mac, container Xray, internet.
@@ -111,11 +111,11 @@ why the compose file does not mount one. Some hardened real VPS images mount `/t
 | `down` | remove the container and the forwards (keeps host keys) |
 | `reset` | `down`, and forget the host keys |
 | `reverse` | (re)create only the `adb reverse` forwards, for example after replugging the phone |
-| `status` | container, `kaihi-xray` service and forward state |
+| `status` | container, `xray` service and forward state |
 | `password` | print the root password |
 | `fingerprints` | print the SSH host key fingerprints |
 | `shell` | root shell in the container |
-| `logs` | follow the `kaihi-xray` journal |
+| `logs` | follow the `xray` journal |
 
 Environment: `MOCK_VPS_SSH_PORT` (default `2222`), `MOCK_VPS_XRAY_PORT` (default `443`, the host
 port, so set another if the Mac's 443 is busy and the phone still sees 443), `MOCK_VPS_BIND`

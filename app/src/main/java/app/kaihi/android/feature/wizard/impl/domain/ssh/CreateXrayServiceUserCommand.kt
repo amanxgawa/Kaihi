@@ -14,15 +14,15 @@ internal class CreateXrayServiceUserCommand(
     private companion object {
         const val SYSTEM_SCRIPT = $$"""set -eu
 nologin="$(command -v nologin || echo /bin/false)"
-getent group kaihi-xray >/dev/null || groupadd --system kaihi-xray
-getent passwd kaihi-xray >/dev/null || useradd --system --gid kaihi-xray --no-create-home \
-  --home-dir /nonexistent --shell "$nologin" kaihi-xray
-test "$(id -u kaihi-xray)" -ne 0 && test "$(id -g kaihi-xray)" -ne 0"""
+getent group xray >/dev/null || groupadd --system xray
+getent passwd xray >/dev/null || useradd --system --gid xray --no-create-home \
+  --home-dir /nonexistent --shell "$nologin" xray
+test "$(id -u xray)" -ne 0 && test "$(id -g xray)" -ne 0"""
 
         const val APK_SCRIPT = $$"""set -eu
 nologin="$(command -v nologin || echo /bin/false)"
-getent group kaihi-xray >/dev/null || addgroup -S kaihi-xray
-getent passwd kaihi-xray >/dev/null || adduser -S -D -H -h /nonexistent -s "$nologin" -G kaihi-xray kaihi-xray
-test "$(id -u kaihi-xray)" -ne 0 && test "$(id -g kaihi-xray)" -ne 0"""
+getent group xray >/dev/null || addgroup -S xray
+getent passwd xray >/dev/null || adduser -S -D -H -h /nonexistent -s "$nologin" -G xray xray
+test "$(id -u xray)" -ne 0 && test "$(id -g xray)" -ne 0"""
     }
 }

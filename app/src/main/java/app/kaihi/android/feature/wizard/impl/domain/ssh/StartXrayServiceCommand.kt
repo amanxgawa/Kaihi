@@ -14,17 +14,17 @@ internal class StartXrayServiceCommand(
     private val openRcScript: String
         get() = """
             set -eu
-            rc-update add kaihi-xray default
-            rc-service kaihi-xray restart
-            rc-service kaihi-xray status
+            rc-update add xray default
+            rc-service xray restart
+            rc-service xray status
         """.trimIndent()
 
     private val systemdScript: String
         get() = """
             set -eu
             systemctl daemon-reload
-            systemctl enable kaihi-xray.service
-            systemctl restart kaihi-xray.service
-            systemctl is-active --quiet kaihi-xray.service
+            systemctl enable xray.service
+            systemctl restart xray.service
+            systemctl is-active --quiet xray.service
         """.trimIndent()
 }
