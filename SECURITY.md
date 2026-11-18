@@ -35,6 +35,9 @@ It is built to resist:
   failed logins.
 - an exploit in the server's Xray: it runs as an unprivileged user with only the capability to bind
   its port (plus a systemd sandbox where systemd is used), so an exploit does not hand over root.
+- a record of where users went, left on the server: Xray's access log is off, so the server keeps no
+  per-connection history of destinations. Xray's warnings and errors are still logged to the system
+  journal.
 
 It does **not** protect you from:
 

@@ -27,7 +27,7 @@ object XrayServerConfigFactory {
         realityServerName: String,
         listenAddress: String = IPV4_ANY,
     ): XrayConfig = XrayConfig(
-        log = LogObject(loglevel = "warning"),
+        log = LogObject(access = "none", loglevel = "warning", dnsLog = false),
         inbounds = listOf(
             InboundObject(
                 listen = listenAddress,
