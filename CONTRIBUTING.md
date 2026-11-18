@@ -99,7 +99,10 @@ Breaking changes take a `!` (`feat(vpn)!: drop the legacy profile format`) plus 
 `BREAKING CHANGE:` footer in the description.
 
 The description becomes the commit body, so write it for someone reading `git log` in a year: the
-reason and the consequence, not a restatement of the diff.
+reason and the consequence, not a restatement of the diff. The
+[pull request template](.github/pull_request_template.md) lists what to cover; delete the sections
+that don't apply, and put notes meant only for reviewers, such as a stacked PR's merge order, in a
+comment rather than the description.
 
 ## Pull requests
 
