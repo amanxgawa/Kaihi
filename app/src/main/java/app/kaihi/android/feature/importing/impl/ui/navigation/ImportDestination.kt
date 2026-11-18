@@ -13,8 +13,10 @@ class ImportDestination @Inject constructor() : Destination<ImportKey> {
     override fun Content(key: ImportKey) {
         val navigator = LocalAppNavigator.current
         ImportScreen(
+            initialText = key.text,
             onBack = navigator::back,
             onNavigateToDashboard = { serverId -> navigator.replaceAll(DashboardKey(selectServerId = serverId)) },
+            onShowExisting = { serverId -> navigator.replaceAll(DashboardKey(selectServerId = serverId)) },
         )
     }
 }

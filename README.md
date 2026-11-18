@@ -17,6 +17,8 @@ those servers belong to whoever runs them.
 
 You can also import `vless://` links or an HTTPS subscription URL. Kaihi imports VLESS links using
 REALITY or TLS over TCP or XHTTP; unsupported link types are skipped.
+Tapping a `vless://` link, or sharing a link to Kaihi from another app, opens it in Kaihi for review
+before anything is added.
 
 ## What it installs on your server
 

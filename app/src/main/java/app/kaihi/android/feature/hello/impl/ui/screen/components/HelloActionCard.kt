@@ -1,5 +1,6 @@
 package app.kaihi.android.feature.hello.impl.ui.screen.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,15 +17,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import app.kaihi.android.platform.ui.components.StatusBadge
 import app.kaihi.android.platform.ui.theme.size.dimens
 import app.kaihi.android.platform.ui.util.UiText
 import app.kaihi.android.platform.ui.util.asString
-import app.kaihi.android.platform.ui.util.dashedBorder
 
 @Composable
 internal fun HelloActionCard(
@@ -33,27 +30,23 @@ internal fun HelloActionCard(
     icon: ImageVector,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    badgeText: UiText? = null,
+    emphasized: Boolean = false,
 ) {
     val dimens = MaterialTheme.dimens
-    val shape = CardDefaults.shape
-    val dashedColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
 
     Card(
         onClick = onClick,
-        enabled = enabled,
-        shape = shape,
         modifier = modifier
-            .fillMaxWidth()
-            .then(if (!enabled) Modifier.dashedBorder(color = dashedColor, shape = shape) else Modifier)
-            .alpha(if (enabled) 1f else 0.5f),
+            .fillMaxWidth(),
+        border = if (emphasized) BorderStroke(1.dp, MaterialTheme.colorScheme.primary) else null,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-            disabledContainerColor = Color.Transparent,
-            disabledContentColor = MaterialTheme.colorScheme.onSurface,
+            containerColor = if (emphasized) {
+                MaterialTheme.colorScheme.surfaceContainerHigh
+            } else {
+                MaterialTheme.colorScheme.surfaceContainerLow
+            },
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, disabledElevation = 0.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(
             modifier = Modifier
@@ -78,10 +71,6 @@ internal fun HelloActionCard(
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f)
                 )
-
-                if (badgeText != null) {
-                    StatusBadge(text = badgeText)
-                }
             }
 
             Spacer(modifier = Modifier.height(dimens.s))

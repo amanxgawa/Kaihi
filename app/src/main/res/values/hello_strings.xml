@@ -1,16 +1,13 @@
 <resources>
-    <string name="hello_header_title">Your very own VPN, %1$s</string>
+    <string name="hello_header_title">A VPN that works, %1$s</string>
     <string name="hello_header_title_highlight">chaos omitted</string>
-    <string name="hello_header_subtitle">Kaihi does the setup. The server stays yours.</string>
+    <string name="hello_header_subtitle">Connect with a link from someone you trust, or run a server for your people.</string>
 
-    <string name="hello_setup_title">Set up my own server</string>
-    <string name="hello_setup_description">Give the app access to your server. It installs everything, sets it up, and hides your traffic from filters.</string>
+    <string name="hello_setup_title">Run a VPN for me and my people</string>
+    <string name="hello_setup_description">Kaihi installs everything on a server you rent. It stays yours.</string>
 
-    <string name="hello_connect_title">Connect or import</string>
-    <string name="hello_connect_description">Already have a VPN link from a friend or another service? Just paste it in.</string>
-
-    <string name="hello_learn_title">Learn first</string>
-    <string name="hello_learn_description">New to REALITY, XHTTP, or what any of this actually protects you from? Start here.</string>
+    <string name="hello_connect_title">I got a link</string>
+    <string name="hello_connect_description">Someone set up a VPN for you? Paste their link here.</string>
 
     <string name="hello_view_source_code">View source code</string>
 

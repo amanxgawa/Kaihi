@@ -1,16 +1,13 @@
 <resources>
-    <string name="hello_header_title">Свой VPN, %1$s</string>
+    <string name="hello_header_title">VPN, который работает, %1$s</string>
     <string name="hello_header_title_highlight">без хаоса</string>
-    <string name="hello_header_subtitle">Kaihi берёт настройку на себя. Сервер остаётся вашим.</string>
+    <string name="hello_header_subtitle">Подключитесь по ссылке от того, кому доверяете, или запустите сервер для своих.</string>
 
-    <string name="hello_setup_title">Развернуть свой сервер</string>
-    <string name="hello_setup_description">Дайте приложению доступ к серверу. Оно всё установит, настроит и спрячет ваш трафик от фильтров.</string>
+    <string name="hello_setup_title">Запустить VPN для себя и своих</string>
+    <string name="hello_setup_description">Kaihi всё установит на арендованный вами сервер. Он остаётся вашим.</string>
 
-    <string name="hello_connect_title">Подключить или импортировать</string>
-    <string name="hello_connect_description">Есть готовая ссылка на VPN от друга или другого сервиса? Просто вставьте её.</string>
-
-    <string name="hello_learn_title">Сначала изучить</string>
-    <string name="hello_learn_description">Не знаете, что такое REALITY, XHTTP, или от чего это вообще защищает? Начните здесь.</string>
+    <string name="hello_connect_title">Мне дали ссылку</string>
+    <string name="hello_connect_description">Кто-то настроил для вас VPN? Вставьте ссылку сюда.</string>
 
     <string name="hello_view_source_code">Открыть исходный код</string>
 
