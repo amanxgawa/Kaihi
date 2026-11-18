@@ -14,8 +14,8 @@
     <string name="dashboard_reconnect_to_apply_message">Changes apply after you reconnect.</string>
     <string name="dashboard_reconnect_to_apply_action">Reconnect</string>
 
-    <string name="dashboard_deploy_server">Deploy server</string>
     <string name="dashboard_import">Import</string>
+    <string name="dashboard_add_server">Add a server</string>
     <string name="dashboard_subscription_imported_name">Imported</string>
     <string name="dashboard_empty_hint">No servers yet. Deploy Xray to your own VPS and it shows up here.</string>
 
