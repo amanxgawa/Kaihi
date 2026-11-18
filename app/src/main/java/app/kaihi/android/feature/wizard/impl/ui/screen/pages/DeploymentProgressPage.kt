@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import app.kaihi.android.R
 import app.kaihi.android.feature.wizard.impl.ui.mvi.DeploymentPhase
 import app.kaihi.android.feature.wizard.impl.ui.mvi.DeploymentUiState
@@ -45,6 +46,7 @@ import app.kaihi.android.platform.ui.util.asString
 @Composable
 internal fun DeploymentProgressPage(
     deployment: DeploymentUiState,
+    protectionOutcome: UiText?,
     onToggleTerminal: () -> Unit,
     onRetry: () -> Unit,
     onBack: () -> Unit,
@@ -58,7 +60,21 @@ internal fun DeploymentProgressPage(
     ) { isSucceeded ->
         if (isSucceeded) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                DeploymentSuccessCelebration(onFinishClick = onFinish, modifier = Modifier.padding(horizontal = MaterialTheme.dimens.l))
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.dimens.l),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    DeploymentSuccessCelebration(onFinishClick = onFinish)
+                    if (protectionOutcome != null) {
+                        Text(
+                            text = protectionOutcome.asString(),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(top = MaterialTheme.dimens.m),
+                        )
+                    }
+                }
             }
         } else {
             DeploymentInProgressContent(

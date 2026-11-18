@@ -21,6 +21,7 @@ data class XrayVpnProfile(
     val muxEnabled: Boolean = false,
     val muxConcurrency: Int = DEFAULT_MUX_CONCURRENCY,
     val fragmentEnabled: Boolean = false,
+    val serverProtection: XrayServerProtection? = null,
 ) {
     companion object {
         const val DEFAULT_MUX_CONCURRENCY = 8

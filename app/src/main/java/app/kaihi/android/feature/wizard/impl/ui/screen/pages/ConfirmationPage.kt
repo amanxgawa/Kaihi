@@ -8,15 +8,18 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import app.kaihi.android.R
 import app.kaihi.android.feature.wizard.impl.ui.mvi.WizardContract.ServerAuthMethod
 import app.kaihi.android.feature.wizard.impl.ui.mvi.WizardContract.SetupStrategy
+import app.kaihi.android.platform.mode.AppMode
 import app.kaihi.android.feature.wizard.impl.ui.screen.components.WizardPage
 import app.kaihi.android.platform.ui.theme.JetBrainsMono
 import app.kaihi.android.platform.ui.theme.size.dimens
@@ -28,6 +31,9 @@ internal fun ConfirmationPage(
     username: String,
     authMethod: ServerAuthMethod,
     setupStrategy: SetupStrategy,
+    appMode: AppMode,
+    protectServer: Boolean,
+    onProtectServerChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val dimens = MaterialTheme.dimens
@@ -60,6 +66,29 @@ internal fun ConfirmationPage(
                 SetupStrategy.NAIVEPROXY -> stringResource(R.string.wizard_strategy_resilience_title)
             }
         )
+
+        if (appMode == AppMode.ADVANCED) {
+            Spacer(modifier = Modifier.height(dimens.m))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top,
+            ) {
+                Checkbox(checked = protectServer, onCheckedChange = onProtectServerChange)
+                Column(modifier = Modifier.padding(top = dimens.s)) {
+                    Text(
+                        text = stringResource(R.string.wizard_protect_server_title),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Spacer(modifier = Modifier.height(dimens.xs))
+                    Text(
+                        text = stringResource(R.string.wizard_protect_server_body),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
 
         Spacer(modifier = Modifier.height(dimens.l))
 

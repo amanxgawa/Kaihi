@@ -115,8 +115,8 @@ cmd_status() {
   need_docker
   docker compose ps
   if in_container true >/dev/null 2>&1; then
-    echo "--- kaihi-xray service"
-    in_container systemctl is-active kaihi-xray.service 2>&1 || true
+    echo "--- xray service"
+    in_container systemctl is-active xray.service 2>&1 || true
   fi
   command -v adb >/dev/null 2>&1 && { echo "--- adb reverse"; adb reverse --list 2>&1 || true; }
 }
@@ -129,11 +129,11 @@ usage: ./mock-vps.sh <command>
   down          stop and remove the container and the adb forwards (host keys are kept)
   reset         down, and also forget the host keys (new fingerprint on the next up)
   reverse       (re)create just the adb reverse forwards
-  status        container, kaihi-xray service and forward state
+  status        container, xray service and forward state
   password      print the root password
   fingerprints  print the SSH host key fingerprints
   shell         open a root shell in the container
-  logs          follow the kaihi-xray journal
+  logs          follow the xray journal
 
 environment: MOCK_VPS_SSH_PORT (2222), MOCK_VPS_XRAY_PORT (443), MOCK_VPS_BIND (127.0.0.1)
 EOF
@@ -148,6 +148,6 @@ case "${1:-}" in
   password) root_password ;;
   fingerprints) need_docker; fingerprints ;;
   shell) need_docker; docker exec -it "$CONTAINER" bash ;;
-  logs) need_docker; docker exec -i "$CONTAINER" journalctl -u kaihi-xray.service -f ;;
+  logs) need_docker; docker exec -i "$CONTAINER" journalctl -u xray.service -f ;;
   *) usage; [ -z "${1:-}" ] || exit 1 ;;
 esac

@@ -6,4 +6,5 @@ internal enum class DeploymentStep {
     GENERATE_SECRETS,
     WRITE_CONFIGURATION,
     START_SERVICE,
+    PROTECT_SERVER,
 }

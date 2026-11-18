@@ -11,9 +11,11 @@ services:
 
     # systemd as PID 1 needs a writable cgroup tree and tmpfs mounts for /run. Not /tmp: Docker mounts
     # tmpfs noexec, and the wizard runs the RealiTLScanner binary it downloads into `mktemp -d`
-    # (exit 126, "Permission denied"). Debian 12 keeps /tmp on the root filesystem anyway.
+    # (exit 126, "Permission denied"). Debian 12 keeps /tmp on the root filesystem anyway. NET_ADMIN
+    # lets sshguard (installed by the wizard's protection step) create nftables tables in this
+    # container's own network namespace.
     cgroup: host
-    cap_add: [SYS_ADMIN]
+    cap_add: [SYS_ADMIN, NET_ADMIN]
     security_opt: ["apparmor=unconfined"]
     tmpfs: [/run, /run/lock]
     volumes:

@@ -1,6 +1,7 @@
 package app.kaihi.android.feature.wizard.impl.ui.mvi
 
 import androidx.compose.runtime.Immutable
+import app.kaihi.android.core.vpn.XrayServerProtection
 import app.kaihi.android.platform.mode.AppMode
 import app.kaihi.android.platform.ui.util.UiSecret
 import app.kaihi.android.platform.ui.util.UiText
@@ -32,6 +33,8 @@ object WizardContract {
         val realityShortId: String = "",
         val realityServerName: String = "",
         val serverCountryCode: String? = null,
+        val serverProtection: XrayServerProtection? = null,
+        val protectServer: Boolean = true,
         val serverArchitecture: String? = null,
         val connectionCheck: ConnectionCheckState = ConnectionCheckState.Idle,
         val deployment: DeploymentUiState = DeploymentUiState(),
@@ -47,6 +50,7 @@ object WizardContract {
         data class ServerAuthMethodChanged(val method: ServerAuthMethod) : Intent
         data class ServerAddressChanged(val address: String) : Intent
         data class PasswordChanged(val password: UiSecret) : Intent
+        data class ProtectServerChanged(val enabled: Boolean) : Intent
         data class SshKeyChanged(val sshKey: UiSecret) : Intent
         data class SshPortChanged(val port: String) : Intent
         data class UsernameChanged(val username: String) : Intent

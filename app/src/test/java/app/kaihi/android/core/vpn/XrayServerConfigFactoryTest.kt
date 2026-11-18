@@ -2,6 +2,7 @@ package app.kaihi.android.core.vpn
 
 import app.kaihi.android.core.vpn.configfactory.XrayServerConfigFactory
 import app.kaihi.android.core.vpn.XrayJson
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -10,6 +11,15 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class XrayServerConfigFactoryTest {
+    @Test
+    fun `disables access and DNS logs while retaining warnings in serialized config`() {
+        val log = parsedConfig().getValue("log").jsonObject
+
+        assertEquals(JsonPrimitive("none"), log.getValue("access"))
+        assertEquals(JsonPrimitive(false), log.getValue("dnsLog"))
+        assertEquals(JsonPrimitive("warning"), log.getValue("loglevel"))
+    }
+
     @Test
     fun `defaults server inbound listen address to IPv4 wildcard`() {
         val config = parsedConfig()

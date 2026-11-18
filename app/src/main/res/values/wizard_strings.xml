@@ -33,6 +33,7 @@
     <string name="wizard_server_data_username">Username</string>
     <string name="wizard_server_data_entry">Server details</string>
     <string name="wizard_server_data_fingerprint">SSH host key fingerprint (optional; you\'ll confirm it on first connect)</string>
+    <string name="wizard_server_data_short_password_hint">Short passwords are easier to guess. 12 characters or more is safer.</string>
 
     <!-- Connection check dialog -->
     <string name="wizard_connection_check_checking">Checking connection to your server…</string>
@@ -40,6 +41,8 @@
     <string name="wizard_connection_check_failed_title">Couldn\'t connect</string>
     <string name="wizard_connection_check_failed_message">We couldn\'t reach your server. This can happen for a few reasons:\n\n• Wrong address or port\n• A firewall or security group is blocking the port\n• Wrong username, password or SSH key\n• The server is offline\n• The server\'s SSH host key isn\'t trusted yet</string>
     <string name="wizard_connection_check_failed_detail_prefix">Details: </string>
+    <string name="wizard_error_wrong_credentials">The server didn\'t accept this username or password (or key).</string>
+    <string name="wizard_error_blocked_after_wrong_passwords">The server stopped answering after several wrong passwords. It\'s protecting itself: wait a few minutes, then try again with the right password.</string>
 
     <string name="wizard_untrusted_host_title">First connection to this server</string>
     <string name="wizard_untrusted_host_body">If you created this server yourself, go ahead. If someone else gave you these details, check with them that this is the right server.\n\nHost key fingerprint: %1$s</string>
@@ -61,6 +64,8 @@
     <string name="wizard_confirmation_strategy_label">Strategy</string>
     <string name="wizard_confirmation_note_title">Good to know</string>
     <string name="wizard_confirmation_note_body">Closing the app mid-install is safe. The server stays usable, and running setup again starts over cleanly.</string>
+    <string name="wizard_protect_server_title">Protect the server</string>
+    <string name="wizard_protect_server_body">Blocks password guessing and installs security updates automatically (Debian and Ubuntu). Three wrong passwords block your address for a few minutes, also when you log in from elsewhere.</string>
 
     <!-- Errors -->
     <string name="wizard_error_vpn_permission_required">Kaihi needs VPN permission to start the connection.</string>
@@ -77,6 +82,7 @@
     <string name="wizard_deployment_step_generate_secrets">Creating secret data to protect the connection</string>
     <string name="wizard_deployment_step_write_configuration">Applying settings</string>
     <string name="wizard_deployment_step_start_service">Turning on the VPN</string>
+    <string name="wizard_deployment_step_protect_server">Protecting your server</string>
 
     <string name="wizard_deployment_terminal_show">Show install log</string>
     <string name="wizard_deployment_terminal_hide">Hide install log</string>
@@ -96,4 +102,8 @@
     <string name="wizard_deployment_success_title">Installation complete</string>
     <string name="wizard_deployment_success_body">You can browse securely now.</string>
     <string name="wizard_deployment_success_cta">Start using the VPN</string>
+    <string name="wizard_protection_outcome_both_enabled">Your server is protected: password guessing is blocked and security updates install automatically. Three wrong passwords block your address for a few minutes.</string>
+    <string name="wizard_protection_outcome_guard_enabled">Password guessing is blocked. Three wrong passwords block your address for a few minutes.</string>
+    <string name="wizard_protection_outcome_unsupported">Automatic protection isn\'t available for this Linux distribution yet.</string>
+    <string name="wizard_protection_outcome_failed">Some protection couldn\'t be turned on. Your server works without it.</string>
 </resources>
