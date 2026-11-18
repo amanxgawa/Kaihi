@@ -14,6 +14,7 @@ import app.kaihi.android.feature.dashboard.impl.ui.model.RemoteSubscriptionUi
 import app.kaihi.android.feature.dashboard.impl.ui.model.SubscriptionEditorUi
 import app.kaihi.android.feature.dashboard.impl.ui.model.SubscriptionUi
 import app.kaihi.android.feature.dashboard.impl.ui.model.SubscriptionKind
+import app.kaihi.android.platform.ui.util.toFlagEmoji
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 
