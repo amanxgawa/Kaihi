@@ -156,16 +156,18 @@ internal fun ServerDataEntryPage(
                                 )
                             }
                         },
+                        supportingText = {
+                            if (password.length in 1..11) {
+                                Text(
+                                    text = stringResource(R.string.wizard_server_data_short_password_hint),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(top = dimens.xs),
+                                )
+                            }
+                        },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     )
-                    if (password.length in 1..11) {
-                        Text(
-                            text = stringResource(R.string.wizard_server_data_short_password_hint),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = dimens.xs),
-                        )
-                    }
                 }
 
                 ServerAuthMethod.SSH_KEY -> {
