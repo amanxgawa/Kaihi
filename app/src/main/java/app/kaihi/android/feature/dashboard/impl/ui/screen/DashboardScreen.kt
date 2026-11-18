@@ -9,9 +9,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.calculateEndPadding
@@ -26,6 +24,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -38,6 +37,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -51,8 +53,6 @@ import app.kaihi.android.feature.dashboard.impl.ui.mvi.DashboardViewModel
 import app.kaihi.android.feature.dashboard.impl.ui.mvi.isBusy
 import app.kaihi.android.feature.dashboard.impl.ui.screen.components.ConnectFab
 import app.kaihi.android.feature.dashboard.impl.ui.screen.components.ConnectionHeader
-import app.kaihi.android.feature.dashboard.impl.ui.screen.components.DeployServerButton
-import app.kaihi.android.feature.dashboard.impl.ui.screen.components.ImportServersButton
 import app.kaihi.android.feature.dashboard.impl.ui.screen.components.ReconnectToApplyBanner
 import app.kaihi.android.feature.dashboard.impl.ui.screen.components.ServerDetailsSheet
 import app.kaihi.android.feature.dashboard.impl.ui.screen.components.SubscriptionEditorSheet
@@ -61,6 +61,7 @@ import app.kaihi.android.feature.dashboard.impl.ui.screen.components.rememberIsC
 import app.kaihi.android.feature.dashboard.impl.ui.screen.components.subscriptionItems
 import app.kaihi.android.feature.dashboard.impl.ui.model.SubscriptionKind
 import app.kaihi.android.platform.ui.components.KaihiMark
+import app.kaihi.android.platform.ui.components.AddServerSheet
 import app.kaihi.android.platform.ui.components.ConfirmDialog
 import app.kaihi.android.platform.ui.icons.KaihiIcons
 import app.kaihi.android.platform.ui.theme.size.dimens
@@ -72,13 +73,15 @@ private const val CONNECTION_ITEM_KEY = "connection"
 private const val RECONNECT_TO_APPLY_ITEM_KEY = "reconnect-to-apply"
 private const val DEPLOY_ITEM_KEY = "deploy"
 
+private enum class AddSheetMode { WITH_SETUP, WITHOUT_SETUP }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun DashboardScreen(
     selectServerId: String?,
     onSettingsClick: () -> Unit,
     onNavigateToWizard: (subscriptionId: String?) -> Unit,
-    onNavigateToImport: () -> Unit,
+    onNavigateToImport: (text: String?) -> Unit,
     onNavigateToServer: (serverId: String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: DashboardViewModel = hiltViewModel<DashboardViewModel, DashboardViewModel.Factory>(
@@ -90,6 +93,7 @@ internal fun DashboardScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val listState = rememberLazyListState()
     val isToggleScrolledAway by rememberIsConnectionToggleScrolledAway(listState)
+    var addSheetMode by rememberSaveable { mutableStateOf<AddSheetMode?>(null) }
 
     LaunchedEffect(state.errorMessage) {
         state.errorMessage?.let { message ->
@@ -123,7 +127,6 @@ internal fun DashboardScreen(
             }
 
             is DashboardContract.Effect.NavigateToWizard -> onNavigateToWizard(effect.subscriptionId)
-            DashboardContract.Effect.NavigateToImport -> onNavigateToImport()
             is DashboardContract.Effect.NavigateToServer -> onNavigateToServer(effect.serverId)
         }
     }
@@ -169,6 +172,9 @@ internal fun DashboardScreen(
             listState = listState,
             innerPadding = innerPadding,
             onIntent = viewModel::processIntent,
+            onShowAddSheet = { withSetup ->
+                addSheetMode = if (withSetup) AddSheetMode.WITH_SETUP else AddSheetMode.WITHOUT_SETUP
+            },
         )
     }
 
@@ -201,6 +207,26 @@ internal fun DashboardScreen(
             onDismiss = { viewModel.processIntent(DashboardContract.Intent.RemoteSubscriptionShareDismissed) },
         )
     }
+
+    addSheetMode?.let { mode ->
+        AddServerSheet(
+            onDismiss = { addSheetMode = null },
+            onPaste = { text ->
+                addSheetMode = null
+                onNavigateToImport(text)
+            },
+            onEnterManually = {
+                addSheetMode = null
+                onNavigateToImport(null)
+            },
+            onSetUpServer = if (mode == AddSheetMode.WITH_SETUP) {
+                {
+                    addSheetMode = null
+                    viewModel.processIntent(DashboardContract.Intent.DeployServerRequested(subscriptionId = null))
+                }
+            } else null,
+        )
+    }
 }
 
 @Composable
@@ -209,6 +235,7 @@ private fun DashboardContent(
     listState: LazyListState,
     innerPadding: PaddingValues,
     onIntent: (DashboardContract.Intent) -> Unit,
+    onShowAddSheet: (withSetup: Boolean) -> Unit,
 ) {
     val dimens = MaterialTheme.dimens
     val layoutDirection = LocalLayoutDirection.current
@@ -251,7 +278,7 @@ private fun DashboardContent(
             onToggleExpanded = { id -> onIntent(DashboardContract.Intent.SubscriptionExpandToggled(id)) },
             onAddServer = { subscription ->
                 if (subscription.kind == SubscriptionKind.IMPORTED) {
-                    onIntent(DashboardContract.Intent.ImportRequested)
+                    onShowAddSheet(false)
                 } else {
                     onIntent(DashboardContract.Intent.DeployServerRequested(subscription.id))
                 }
@@ -279,18 +306,15 @@ private fun DashboardContent(
                             textAlign = TextAlign.Center,
                         )
                     }
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(dimens.m),
-                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                    Button(
+                        onClick = { onShowAddSheet(true) },
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
-                        DeployServerButton(
-                            showEmptyHint = false,
-                            onClick = { onIntent(DashboardContract.Intent.DeployServerRequested(subscriptionId = null)) },
-                            modifier = Modifier.weight(1f),
-                        )
-                        ImportServersButton(
-                            onClick = { onIntent(DashboardContract.Intent.ImportRequested) },
-                            modifier = Modifier.weight(1f),
+                        Icon(imageVector = KaihiIcons.Outlined.Add, contentDescription = null)
+                        Text(
+                            text = stringResource(R.string.dashboard_add_server),
+                            modifier = Modifier.padding(start = dimens.s),
+                            style = MaterialTheme.typography.labelLarge,
                         )
                     }
                 }
