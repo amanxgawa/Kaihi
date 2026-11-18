@@ -11,6 +11,9 @@ export MOCK_VPS_BIND="${MOCK_VPS_BIND:-127.0.0.1}"
 export MOCK_VPS_SSH_PORT="${MOCK_VPS_SSH_PORT:-2222}"
 export MOCK_VPS_XRAY_PORT="${MOCK_VPS_XRAY_PORT:-443}"
 
+# On WSL, ADB=adb.exe drives the Windows adb, which can see USB devices; WSL's own adb cannot.
+ADB="${ADB:-adb}"
+
 # The app always dials the server on 443 (XrayServerConfigFactory.DEFAULT_SERVER_PORT), so that is
 # the port that has to exist on the phone, whichever host port the container answers on.
 DEVICE_XRAY_PORT=443
@@ -19,7 +22,7 @@ die() { echo "error: $*" >&2; exit 1; }
 
 need_docker() {
   command -v docker >/dev/null 2>&1 || die "docker not found on PATH"
-  docker info >/dev/null 2>&1 || die "the Docker daemon is not running (start Docker Desktop)"
+  docker info >/dev/null 2>&1 || die "the Docker daemon is not running (start Docker Desktop, or the docker service on Linux)"
 }
 
 # Random per machine, kept out of git, and set from outside the image so it is never baked in.
@@ -56,18 +59,18 @@ fingerprints() {
 }
 
 cmd_reverse() {
-  command -v adb >/dev/null 2>&1 || die "adb not found on PATH"
-  adb get-state >/dev/null 2>&1 || die "no single adb device (check 'adb devices', or set ANDROID_SERIAL)"
+  command -v "$ADB" >/dev/null 2>&1 || die "$ADB not found on PATH"
+  "$ADB" get-state >/dev/null 2>&1 || die "no single adb device (check 'adb devices', or set ANDROID_SERIAL)"
   # Explicit returns: `set -e` is off inside a function that cmd_up calls from an `if`.
-  adb reverse "tcp:${MOCK_VPS_SSH_PORT}" "tcp:${MOCK_VPS_SSH_PORT}" || return 1
-  adb reverse "tcp:${DEVICE_XRAY_PORT}" "tcp:${MOCK_VPS_XRAY_PORT}" || return 1
-  echo "adb reverse: phone 127.0.0.1:${MOCK_VPS_SSH_PORT} -> Mac :${MOCK_VPS_SSH_PORT}, phone 127.0.0.1:${DEVICE_XRAY_PORT} -> Mac :${MOCK_VPS_XRAY_PORT}"
+  "$ADB" reverse "tcp:${MOCK_VPS_SSH_PORT}" "tcp:${MOCK_VPS_SSH_PORT}" || return 1
+  "$ADB" reverse "tcp:${DEVICE_XRAY_PORT}" "tcp:${MOCK_VPS_XRAY_PORT}" || return 1
+  echo "adb reverse: phone 127.0.0.1:${MOCK_VPS_SSH_PORT} -> host :${MOCK_VPS_SSH_PORT}, phone 127.0.0.1:${DEVICE_XRAY_PORT} -> host :${MOCK_VPS_XRAY_PORT}"
 }
 
 remove_reverse() {
-  command -v adb >/dev/null 2>&1 || return 0
-  adb reverse --remove "tcp:${MOCK_VPS_SSH_PORT}" >/dev/null 2>&1 || true
-  adb reverse --remove "tcp:${DEVICE_XRAY_PORT}" >/dev/null 2>&1 || true
+  command -v "$ADB" >/dev/null 2>&1 || return 0
+  "$ADB" reverse --remove "tcp:${MOCK_VPS_SSH_PORT}" >/dev/null 2>&1 || true
+  "$ADB" reverse --remove "tcp:${DEVICE_XRAY_PORT}" >/dev/null 2>&1 || true
 }
 
 cmd_up() {
@@ -88,7 +91,7 @@ cmd_up() {
   cat <<EOF
 
 Mock VPS is up. In the wizard:
-  Address   127.0.0.1  (emulator: 10.0.2.2, Wi-Fi: this Mac's LAN IP)
+  Address   127.0.0.1  (emulator: 10.0.2.2, Wi-Fi: this computer's LAN IP)
   SSH port  ${MOCK_VPS_SSH_PORT}
   Username  root
   Password  run: ./mock-vps.sh password
@@ -118,7 +121,7 @@ cmd_status() {
     echo "--- xray service"
     in_container systemctl is-active xray.service 2>&1 || true
   fi
-  command -v adb >/dev/null 2>&1 && { echo "--- adb reverse"; adb reverse --list 2>&1 || true; }
+  command -v "$ADB" >/dev/null 2>&1 && { echo "--- adb reverse"; "$ADB" reverse --list 2>&1 || true; }
 }
 
 usage() {
@@ -135,7 +138,7 @@ usage: ./mock-vps.sh <command>
   shell         open a root shell in the container
   logs          follow the xray journal
 
-environment: MOCK_VPS_SSH_PORT (2222), MOCK_VPS_XRAY_PORT (443), MOCK_VPS_BIND (127.0.0.1)
+environment: MOCK_VPS_SSH_PORT (2222), MOCK_VPS_XRAY_PORT (443), MOCK_VPS_BIND (127.0.0.1), ADB (adb)
 EOF
 }
 
