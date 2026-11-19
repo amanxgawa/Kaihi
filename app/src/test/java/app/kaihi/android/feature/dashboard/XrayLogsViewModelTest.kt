@@ -1,15 +1,16 @@
 package app.kaihi.android.feature.dashboard
 
+import app.kaihi.android.core.mode.AppModeRepository
+import app.kaihi.android.core.storage.InMemoryAppStorage
+import app.kaihi.android.core.vpn.TunnelSettingsSource
+import app.kaihi.android.core.vpn.VpnPreferences
 import app.kaihi.android.core.vpn.XrayControl
 import app.kaihi.android.core.vpn.XrayEngineState
 import app.kaihi.android.core.vpn.XrayFailure
 import app.kaihi.android.core.vpn.XrayLogMessage
 import app.kaihi.android.core.vpn.XrayMonitoring
 import app.kaihi.android.core.vpn.XrayRuntimeConfig
-import app.kaihi.android.core.vpn.XrayServiceProvider
-import app.kaihi.android.core.vpn.XraySessionLauncher
 import app.kaihi.android.core.vpn.XrayTrafficStats
-import app.kaihi.android.core.vpn.XrayVpnProfile
 import app.kaihi.android.feature.dashboard.impl.domain.VpnSession
 import app.kaihi.android.core.vpn.spec.XrayFingerprint
 import app.kaihi.android.feature.dashboard.impl.ui.mvi.XrayLogsViewModel
@@ -75,29 +76,24 @@ class XrayLogsViewModelTest {
         )
     }
 
-    private fun message(text: String) = XrayLogMessage(level = 1, message = text, timestampMillis = 0L)
+    private fun message(text: String) = XrayLogMessage(message = text, timestampMillis = 0L)
 
     private fun session(logs: Flow<XrayLogMessage>) = VpnSession(
-        FakeServiceProvider(logs),
-        object : XraySessionLauncher {
-            override suspend fun start(profile: XrayVpnProfile) = Result.success(Unit)
+        FakeMonitoring(logs),
+        object : XrayControl {
+            override fun needsVpnPermission() = false
+            override suspend fun start(config: XrayRuntimeConfig) = Result.success(Unit)
+            override suspend fun stop() = Result.success(Unit)
         },
+        TunnelSettingsSource(
+            VpnPreferences(InMemoryAppStorage()),
+            AppModeRepository(InMemoryAppStorage()),
+        ),
     )
 
     private companion object {
         /** Stated here rather than read off the view model, so changing the bound has to be deliberate. */
         const val MAX_LINES = 1000
-    }
-}
-
-private class FakeServiceProvider(override val monitoring: XrayMonitoring) : XrayServiceProvider {
-    constructor(logs: Flow<XrayLogMessage>) : this(FakeMonitoring(logs))
-
-    override val control: XrayControl = object : XrayControl {
-        override fun needsVpnPermission() = false
-        override suspend fun start(config: XrayRuntimeConfig) = Result.success(Unit)
-        override suspend fun reload(config: XrayRuntimeConfig) = Result.success(Unit)
-        override suspend fun stop() = Result.success(Unit)
     }
 }
 

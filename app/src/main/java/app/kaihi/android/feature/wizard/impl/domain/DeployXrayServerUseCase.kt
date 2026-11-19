@@ -1,7 +1,7 @@
-package app.kaihi.android.feature.wizard.impl.domain.usecase
+package app.kaihi.android.feature.wizard.impl.domain
 
 import app.kaihi.android.core.ssh.SshConnection
-import app.kaihi.android.core.ssh.ext.execute
+import app.kaihi.android.core.ssh.execute
 import app.kaihi.android.core.vpn.configfactory.XrayServerConfigFactory
 import app.kaihi.android.core.vpn.XrayProtectionState
 import app.kaihi.android.core.vpn.XrayServerProtection

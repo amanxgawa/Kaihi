@@ -1,6 +1,5 @@
 package app.kaihi.android.core.ssh.internal
 
-import app.kaihi.android.core.ssh.internal.util.SecurityUtils
 import app.kaihi.android.core.ssh.model.SshHostKeyChangedException
 import app.kaihi.android.core.ssh.model.SshHostKeyUnverifiableException
 import app.kaihi.android.core.ssh.model.SshUntrustedHostException

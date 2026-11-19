@@ -21,7 +21,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import app.kaihi.android.R
 import app.kaihi.android.core.vpn.XrayTrafficStats
-import app.kaihi.android.platform.ui.theme.size.dimens
+import app.kaihi.android.platform.ui.theme.dimens
 
 @Composable
 internal fun StatsRow(

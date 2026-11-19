@@ -62,7 +62,7 @@ internal class ServerViewModel @AssistedInject constructor(
     }
 
     private suspend fun reconnectToApply() {
-        if (state.value.isBusy || state.value.engineState != XrayEngineState.RUNNING) return
+        if (state.value.engineState.isBusy || state.value.engineState != XrayEngineState.RUNNING) return
         if (!state.value.showReconnectToApply) return
         reduce { copy(engineState = XrayEngineState.STARTING, errorMessage = null) }
         pendingSettingsMonitor.restart(serverId).onFailure { error ->

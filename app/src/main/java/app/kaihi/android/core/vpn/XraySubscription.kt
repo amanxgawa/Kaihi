@@ -50,4 +50,11 @@ data class XraySubscriptionUserInfo(
     val downloadBytes: Long? = null,
     val totalBytes: Long? = null,
     val expireEpochSeconds: Long? = null,
-)
+) {
+    fun usedBytes(): Long? {
+        if (uploadBytes == null && downloadBytes == null) return null
+        val upload = uploadBytes ?: 0L
+        val download = downloadBytes ?: 0L
+        return if (Long.MAX_VALUE - upload < download) Long.MAX_VALUE else upload + download
+    }
+}

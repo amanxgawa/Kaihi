@@ -7,7 +7,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import app.kaihi.android.platform.ui.theme.size.dimens
+import app.kaihi.android.platform.ui.theme.dimens
 import app.kaihi.android.platform.ui.util.UiText
 import app.kaihi.android.platform.ui.util.asString
 

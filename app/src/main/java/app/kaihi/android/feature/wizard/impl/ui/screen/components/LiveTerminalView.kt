@@ -49,7 +49,7 @@ import app.kaihi.android.R
 import app.kaihi.android.platform.ui.components.KaihiMark
 import app.kaihi.android.platform.ui.components.MonospaceLogList
 import app.kaihi.android.platform.ui.icons.KaihiIcons
-import app.kaihi.android.platform.ui.theme.size.dimens
+import app.kaihi.android.platform.ui.theme.dimens
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.delay
 

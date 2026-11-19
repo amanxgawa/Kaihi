@@ -1,4 +1,4 @@
-package app.kaihi.android.core.ssh.internal.util
+package app.kaihi.android.core.ssh.internal
 
 import net.schmizz.sshj.common.Buffer
 import org.junit.Assert.assertEquals

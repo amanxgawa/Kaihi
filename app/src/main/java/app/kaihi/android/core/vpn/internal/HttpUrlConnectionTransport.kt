@@ -1,5 +1,7 @@
 package app.kaihi.android.core.vpn.internal
 
+import app.kaihi.android.core.vpn.HttpTransport
+import app.kaihi.android.core.vpn.HttpTransportResponse
 import app.kaihi.android.platform.di.IoDispatcher
 import java.io.ByteArrayOutputStream
 import java.net.HttpURLConnection

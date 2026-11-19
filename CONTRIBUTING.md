@@ -125,7 +125,7 @@ enforces every rule in this section. A change to a rule changes this section and
 
 | Package | Ring | Holds |
 | --- | --- | --- |
-| `core.<module>` (outside `.internal`, `.di`) | Entities and ports | Data, enum, sealed and value types, exceptions, interfaces, pure stateless code (parsers, config factories, extension functions) |
+| `core.<module>` (outside `.internal`, `.di`) | Entities and ports | Data, enum, sealed and value types, exceptions, interfaces at boundaries, pure classes and functions (parsers, config factories, extension functions, logic built on ports) |
 | `feature.<name>.impl.domain` | Use cases | Coordinators, use cases, feature models, interfaces the feature owns, `SshCommand`s |
 | `feature.<name>.impl.ui`, `feature.<name>.impl.data`, `core.<module>.internal` | Adapters | ViewModels and screens; implementations of the interfaces above |
 | `core.<module>.di`, `feature.<name>.impl.di`, `feature.<name>.impl.ui.navigation.di`, the app root | Wiring | Hilt modules, `MainActivity`, `KaihiApp` |
@@ -134,6 +134,12 @@ enforces every rule in this section. A change to a rule changes this section and
 Dependencies point inward: an adapter depends on the ports it implements or calls, a use case on
 entities and ports, and nothing inward knows about an adapter. `platform` sits beside the rings:
 any layer may use it, and it uses nothing in the app.
+
+**Interfaces mark boundaries.** An interface exists only where its implementation crosses a
+boundary: the Android framework, disk or the Keystore, the network, sshj, native code, or
+another process. That implementation lives in `.internal`. Code built on those interfaces is a
+plain class in the public API, and tests run it on a fake of the boundary rather than a fake of the
+class. An interface with a second real implementation is the one other reason to have one.
 
 ### Core module order
 
@@ -149,7 +155,7 @@ line and to `CORE_MODULE_ORDER` in the test in the same change.
 | Code in | May import from the app | Must not import |
 | --- | --- | --- |
 | `platform.<module>` | Its own and other `platform` modules, `R`, `BuildConfig` | Anything in `core`, `feature` or the app root |
-| `core.<module>` public | Its own module, core modules to its left, `platform.di` | `platform.ui`, `platform.navigation`, `feature`, the app root; framework or I/O code: `android.*`, `androidx.*` (except `androidx.annotation`), sshj, Bouncy Castle, libv2ray, `java.io.File*`, `javax.net`, `java.net.*` except `URI`, `URLEncoder`, `URLDecoder`, `IDN` |
+| `core.<module>` public | Its own module, core modules to its left, `platform.di` | `platform.ui`, `platform.navigation`, `feature`, the app root; framework or I/O code: `android.*`, `androidx.*` (except `androidx.annotation`), sshj, Bouncy Castle, libv2ray, `java.io.File*`, `javax.net`, `java.net.*` except `URI`, `URLEncoder`, `URLDecoder`, `IDN` and exception types |
 | `core.<module>.internal` | As the public API, plus any library and the Android framework | `feature`, the app root (except `R`, `BuildConfig`) |
 | `core.<module>.di` | Its own module, including `.internal` | |
 | `feature.<name>.impl.domain` | Its own `domain`, public `core`, `platform.di` | `android.*`, `androidx.*` (except `androidx.annotation`), `platform.ui`, `platform.navigation`, its own `ui` or `data`, other features, the raw key-value store (`AppStorage`, `StorageDomain`, `ExperienceKeys`) |
@@ -164,8 +170,8 @@ Rules that apply everywhere:
   `Destination<Key>` under that feature's `.impl`, or navigation fails at runtime instead of at
   build time.
 - Only the app root itself imports from the app root, other than `R` and `BuildConfig`.
-- `ExperienceKeys` is used only in `core.<module>.internal`: each stored flag has one owner,
-  which exposes it through an interface.
+- `ExperienceKeys` is used only inside `core`: features and the app root reach a stored flag
+  through the core class that owns it.
 - Public `core` objects and top-level declarations hold no `var`.
 
 `core.security.Secret` is a data-layer type. UI state holds `platform.ui.util.UiSecret` instead,
@@ -185,6 +191,9 @@ and the conversion happens in the state mappers.
    runs as root, and isolate nothing.
 4. **Xray JSON in core.** `core.vpn.configfactory` builds Xray's wire format in the public API. It
    is pure, and the routing and blackhole policy it encodes is business logic.
+5. **Domain entry points that forward.** `ui` never calls `core` directly, so a screen that only
+   reads or writes a setting still goes through a small `domain` class that forwards to `core`
+   (`SettingsPreferences`, `AdvancedModeSwitch`). This is the price of that rule, paid knowingly.
 
 A change that goes beyond one of these exceptions is a violation, not a new exception.
 
@@ -196,6 +205,10 @@ without swallowing `CancellationException`.
 Coverage is not a target. What earns a test is code that fails *silently* (wrong output rather
 than a crash) and code whose failure is expensive: wire formats, routing policy, trust decisions,
 anything parsing input the app did not author.
+
+A UI-logic test (reducers, state mappers, string mapping) earns its place only when it guards a
+silent property, such as a secret staying out of `toString` or untrusted text being cleaned
+before display. A wrong label or ordering shows on screen and is caught by looking.
 
 Thin adapters over JNI, the Go runtime or the Android framework are deliberately left to
 instrumented tests and reading, not wrapped in interfaces for the sake of a number.

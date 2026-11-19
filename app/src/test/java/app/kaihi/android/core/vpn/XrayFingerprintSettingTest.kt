@@ -5,6 +5,7 @@ import app.kaihi.android.core.vpn.spec.XrayFingerprintSetting
 import app.kaihi.android.core.vpn.spec.candidates
 import app.kaihi.android.core.vpn.spec.preferred
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class XrayFingerprintSettingTest {
@@ -39,5 +40,14 @@ class XrayFingerprintSettingTest {
             XrayFingerprintSetting.Fixed(XrayFingerprint.SAFARI).candidates(),
         )
         assertEquals(XrayFingerprint.FIREFOX, XrayFingerprintSetting.Auto().preferred())
+    }
+
+    @Test
+    fun `wire values round trip and unknown values return null`() {
+        XrayFingerprint.entries.forEach { fingerprint ->
+            assertEquals(fingerprint, XrayFingerprint.fromWireValue(fingerprint.wireValue))
+        }
+        assertNull(XrayFingerprint.fromWireValue(null))
+        assertNull(XrayFingerprint.fromWireValue("not-a-fingerprint"))
     }
 }

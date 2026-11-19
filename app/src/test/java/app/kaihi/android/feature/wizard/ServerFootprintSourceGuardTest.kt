@@ -14,7 +14,7 @@ class ServerFootprintSourceGuardTest {
             val path = file.path.replace('\\', '/')
             path.contains("/main/java/app/kaihi/android/feature/wizard/impl/domain/command/") ||
                 path.contains("/main/java/app/kaihi/android/feature/wizard/impl/domain/deployment/") ||
-                path.endsWith("/main/java/app/kaihi/android/feature/wizard/impl/domain/usecase/DeployXrayServerUseCase.kt") ||
+                path.endsWith("/main/java/app/kaihi/android/feature/wizard/impl/domain/DeployXrayServerUseCase.kt") ||
                 path.endsWith("/main/java/app/kaihi/android/core/vpn/configfactory/XrayServerConfigFactory.kt")
         }
 

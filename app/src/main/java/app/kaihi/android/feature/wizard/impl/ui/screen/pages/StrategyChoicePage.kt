@@ -29,7 +29,7 @@ import app.kaihi.android.feature.wizard.impl.ui.mvi.WizardContract.SetupStrategy
 import app.kaihi.android.feature.wizard.impl.ui.screen.components.WizardPage
 import app.kaihi.android.platform.ui.components.StatusBadge
 import app.kaihi.android.platform.ui.icons.KaihiIcons
-import app.kaihi.android.platform.ui.theme.size.dimens
+import app.kaihi.android.platform.ui.theme.dimens
 import app.kaihi.android.platform.ui.util.UiText
 import app.kaihi.android.platform.ui.util.asString
 import app.kaihi.android.platform.ui.util.dashedBorder
@@ -69,24 +69,6 @@ internal fun StrategyChoicePage(
             isSelected = selectedStrategy == SetupStrategy.FAST_START,
             onClick = { onStrategySelected(SetupStrategy.FAST_START) },
             enabled = true,
-            showTechStack = isAdvancedMode,
-        )
-
-        Spacer(modifier = Modifier.height(dimens.l))
-
-        StrategyCard(
-            title = UiText.Resource(R.string.wizard_strategy_resilience_title),
-            description = UiText.Resource(R.string.wizard_strategy_resilience_desc),
-            icon = KaihiIcons.Outlined.Shield,
-            requirement = UiText.Resource(R.string.wizard_requirement_resilience),
-            badgeText = UiText.Resource(R.string.badge_soon),
-            techStack = persistentListOf(
-                UiText.Raw("naiveproxy"),
-                UiText.Resource(R.string.wizard_tag_domain)
-            ),
-            isSelected = selectedStrategy == SetupStrategy.NAIVEPROXY,
-            onClick = { onStrategySelected(SetupStrategy.NAIVEPROXY) },
-            enabled = false,
             showTechStack = isAdvancedMode,
         )
     }

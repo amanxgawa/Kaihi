@@ -1,6 +1,6 @@
 package app.kaihi.android.feature.dashboard.impl.data
 
-import app.kaihi.android.core.storage.AppStorage
+import app.kaihi.android.core.storage.InMemoryAppStorage
 import app.kaihi.android.core.storage.StorageDomain
 import app.kaihi.android.feature.dashboard.impl.domain.model.ServerListPreferences
 import org.junit.Assert.assertEquals
@@ -10,7 +10,7 @@ class StoredServerListPreferencesRepositoryTest {
 
     @Test
     fun `writes server list preferences with their persisted keys`() {
-        val storage = FakeAppStorage()
+        val storage = InMemoryAppStorage()
         val repository = StoredServerListPreferencesRepository(storage)
 
         repository.select("abc")
@@ -22,7 +22,7 @@ class StoredServerListPreferencesRepositoryTest {
 
     @Test
     fun `reads preferences previously stored under their persisted keys`() {
-        val storage = FakeAppStorage().apply {
+        val storage = InMemoryAppStorage().apply {
             putString(StorageDomain.EXPERIENCE, "selected_server_id", "x")
             putString(StorageDomain.EXPERIENCE, "collapsed_subscription_ids", "a,b")
         }
@@ -32,21 +32,4 @@ class StoredServerListPreferencesRepositoryTest {
         assertEquals(ServerListPreferences("x", setOf("a", "b")), repository.preferences.value)
     }
 
-    private class FakeAppStorage : AppStorage {
-        private val strings = mutableMapOf<Pair<StorageDomain, String>, String>()
-
-        override fun getString(domain: StorageDomain, key: String): String? = strings[domain to key]
-
-        override fun putString(domain: StorageDomain, key: String, value: String) {
-            strings[domain to key] = value
-        }
-
-        override fun getBoolean(domain: StorageDomain, key: String): Boolean = false
-
-        override fun putBoolean(domain: StorageDomain, key: String, value: Boolean) = Unit
-
-        override fun remove(domain: StorageDomain, key: String) {
-            strings.remove(domain to key)
-        }
-    }
 }

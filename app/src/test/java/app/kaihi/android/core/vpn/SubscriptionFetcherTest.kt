@@ -1,28 +1,21 @@
-package app.kaihi.android.core.vpn.internal
+package app.kaihi.android.core.vpn
 
-import app.kaihi.android.core.vpn.SubscriptionFetchFailure
-import app.kaihi.android.core.vpn.SubscriptionFetchResult
-import app.kaihi.android.core.vpn.SubscriptionMetadata
-import app.kaihi.android.core.vpn.VpnPreferences
-import app.kaihi.android.core.vpn.internal.SubscriptionFetcherImplTest.FakeAppModeRepository
+import app.kaihi.android.core.storage.InMemoryAppStorage
 import app.kaihi.android.core.mode.AppMode
 import app.kaihi.android.core.mode.AppModeRepository
 import java.nio.charset.StandardCharsets
 import java.util.Base64
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class SubscriptionFetcherImplTest {
+class SubscriptionFetcherTest {
 
     @Test
     fun `http URL is rejected before transport`() = runTest {
-        val transport = FakeTransport()
+        val transport = FakeHttpTransport()
 
         val result = fetcher(transport).fetch("http://panel.example/SECRETTOKEN")
 
@@ -32,7 +25,7 @@ class SubscriptionFetcherImplTest {
 
     @Test
     fun `http redirect is rejected`() = runTest {
-        val transport = FakeTransport(response(302, headers = mapOf("Location" to "http://other.example")))
+        val transport = FakeHttpTransport(response(302, headers = mapOf("Location" to "http://other.example")))
 
         val result = fetcher(transport).fetch("https://panel.example/sub/SECRETTOKEN")
 
@@ -41,7 +34,7 @@ class SubscriptionFetcherImplTest {
 
     @Test
     fun `more than three redirects is rejected`() = runTest {
-        val transport = FakeTransport(
+        val transport = FakeHttpTransport(
             response(302, headers = mapOf("Location" to "/one")),
             response(302, headers = mapOf("Location" to "/two")),
             response(302, headers = mapOf("Location" to "/three")),
@@ -56,7 +49,7 @@ class SubscriptionFetcherImplTest {
 
     @Test
     fun `relative redirect resolves against the current URL`() = runTest {
-        val transport = FakeTransport(
+        val transport = FakeHttpTransport(
             response(302, headers = mapOf("Location" to "../next")),
             response(200, body = "vless://uuid@node.example:443"),
         )
@@ -69,7 +62,7 @@ class SubscriptionFetcherImplTest {
 
     @Test
     fun `non-200 status is rejected`() = runTest {
-        val result = fetcher(FakeTransport(response(404))).fetch("https://panel.example/sub/SECRETTOKEN")
+        val result = fetcher(FakeHttpTransport(response(404))).fetch("https://panel.example/sub/SECRETTOKEN")
 
         assertFailure(SubscriptionFetchFailure.HTTP_STATUS, result)
     }
@@ -77,7 +70,7 @@ class SubscriptionFetcherImplTest {
     @Test
     fun `body over one MiB is rejected`() = runTest {
         val result = fetcher(
-            FakeTransport(response(200, body = ByteArray(1024 * 1024 + 1) { 'x'.code.toByte() })),
+            FakeHttpTransport(response(200, body = ByteArray(1024 * 1024 + 1) { 'x'.code.toByte() })),
         ).fetch("https://panel.example/sub/SECRETTOKEN")
 
         assertFailure(SubscriptionFetchFailure.TOO_LARGE, result)
@@ -87,19 +80,19 @@ class SubscriptionFetcherImplTest {
     fun `JSON and YAML formats are rejected`() = runTest {
         assertFailure(
             SubscriptionFetchFailure.UNSUPPORTED_FORMAT,
-            fetcher(FakeTransport(response(200, body = "{\"outbounds\":[]}"))).fetch(URL),
+            fetcher(FakeHttpTransport(response(200, body = "{\"outbounds\":[]}"))).fetch(URL),
         )
         assertFailure(
             SubscriptionFetchFailure.UNSUPPORTED_FORMAT,
-            fetcher(FakeTransport(response(200, headers = mapOf("Content-Type" to listOf("application/json")), body = "vless://uuid@node.example:443"))).fetch(URL),
+            fetcher(FakeHttpTransport(response(200, headers = mapOf("Content-Type" to listOf("application/json")), body = "vless://uuid@node.example:443"))).fetch(URL),
         )
         assertFailure(
             SubscriptionFetchFailure.UNSUPPORTED_FORMAT,
-            fetcher(FakeTransport(response(200, body = "proxies:\n  - name: node"))).fetch(URL),
+            fetcher(FakeHttpTransport(response(200, body = "proxies:\n  - name: node"))).fetch(URL),
         )
         assertFailure(
             SubscriptionFetchFailure.UNSUPPORTED_FORMAT,
-            fetcher(FakeTransport(response(200, body = "mixed-port: 7890"))).fetch(URL),
+            fetcher(FakeHttpTransport(response(200, body = "mixed-port: 7890"))).fetch(URL),
         )
     }
 
@@ -107,7 +100,7 @@ class SubscriptionFetcherImplTest {
     fun `base64 body links and metadata merge with response headers winning`() = runTest {
         val plain = "#profile-title: Body\n#announce: Body notice\nvless://uuid@node.example:443"
         val encoded = Base64.getEncoder().encodeToString(plain.toByteArray(StandardCharsets.UTF_8))
-        val transport = FakeTransport(
+        val transport = FakeHttpTransport(
             response(
                 200,
                 headers = mapOf(
@@ -138,7 +131,7 @@ class SubscriptionFetcherImplTest {
     @Test
     fun `body with only metadata is empty`() = runTest {
         val result = fetcher(
-            FakeTransport(response(200, body = "#profile-title: Only metadata")),
+            FakeHttpTransport(response(200, body = "#profile-title: Only metadata")),
         ).fetch(URL)
 
         assertFailure(SubscriptionFetchFailure.EMPTY, result)
@@ -146,17 +139,18 @@ class SubscriptionFetcherImplTest {
 
     @Test
     fun `malformed UTF-8 is unsupported`() = runTest {
-        val result = fetcher(FakeTransport(response(200, body = byteArrayOf(0xC3.toByte(), 0x28)))).fetch(URL)
+        val result = fetcher(FakeHttpTransport(response(200, body = byteArrayOf(0xC3.toByte(), 0x28)))).fetch(URL)
 
         assertFailure(SubscriptionFetchFailure.UNSUPPORTED_FORMAT, result)
     }
 
     @Test
     fun `custom User-Agent is sent only in advanced mode`() = runTest {
-        val preferences = FakeVpnPreferences("PanelClient/1.2")
-        val mode = FakeAppModeRepository(AppMode.NORMAL)
-        val transport = FakeTransport(response(200, body = "vless://uuid@node.example:443"))
-        val fetcher = SubscriptionFetcherImpl(transport, preferences, mode)
+        val storage = InMemoryAppStorage()
+        val preferences = VpnPreferences(storage).apply { setSubscriptionUserAgent("PanelClient/1.2") }
+        val mode = AppModeRepository(storage)
+        val transport = FakeHttpTransport(response(200, body = "vless://uuid@node.example:443"))
+        val fetcher = SubscriptionFetcher(transport, preferences, mode)
 
         fetcher.fetch(URL)
         assertEquals(
@@ -175,57 +169,23 @@ class SubscriptionFetcherImplTest {
     @Test
     fun `result toString never reveals the subscription credential`() = runTest {
         val result = fetcher(
-            FakeTransport(response(200, body = "vless://uuid@node.example:443/SECRETTOKEN?token=SECRETTOKEN")),
+            FakeHttpTransport(response(200, body = "vless://uuid@node.example:443/SECRETTOKEN?token=SECRETTOKEN")),
         ).fetch(URL)
 
         assertFalse(result.toString().contains("SECRETTOKEN"))
     }
 
-    private fun fetcher(transport: FakeTransport): SubscriptionFetcherImpl = SubscriptionFetcherImpl(
-        httpTransport = transport,
-        vpnPreferences = FakeVpnPreferences(null),
-        appModeRepository = FakeAppModeRepository(AppMode.NORMAL),
-    )
+    private fun fetcher(transport: FakeHttpTransport): SubscriptionFetcher {
+        val storage = InMemoryAppStorage()
+        return SubscriptionFetcher(
+            httpTransport = transport,
+            vpnPreferences = VpnPreferences(storage),
+            appModeRepository = AppModeRepository(storage),
+        )
+    }
 
     private fun assertFailure(expected: SubscriptionFetchFailure, result: SubscriptionFetchResult) {
         assertEquals(SubscriptionFetchResult.Failure(expected), result)
-    }
-
-    private class FakeTransport(vararg responses: HttpTransportResponse) : HttpTransport {
-        private val responses = ArrayDeque(responses.toList())
-        val requestedUrls = mutableListOf<String>()
-        val requestHeaders = mutableListOf<Map<String, String>>()
-
-        override suspend fun get(
-            url: String,
-            requestHeaders: Map<String, String>,
-            bodyLimit: Int,
-        ): HttpTransportResponse {
-            requestedUrls += url
-            this.requestHeaders += requestHeaders
-            return responses.removeFirst()
-        }
-    }
-
-    private class FakeVpnPreferences(customUserAgent: String?) : VpnPreferences {
-        private val mutableUserAgent = MutableStateFlow(customUserAgent)
-        override val ipv6Enabled: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
-        override val excludedPackages: StateFlow<Set<String>> = MutableStateFlow(emptySet<String>()).asStateFlow()
-        override val subscriptionUserAgent: StateFlow<String?> = mutableUserAgent.asStateFlow()
-        override fun setIpv6Enabled(enabled: Boolean) = Unit
-        override fun setExcludedPackages(packages: Set<String>) = Unit
-        override fun setSubscriptionUserAgent(value: String?): Boolean {
-            mutableUserAgent.value = value
-            return true
-        }
-    }
-
-    private class FakeAppModeRepository(initialMode: AppMode) : AppModeRepository {
-        private val mutableMode = MutableStateFlow(initialMode)
-        override val mode: StateFlow<AppMode> = mutableMode.asStateFlow()
-        override fun setMode(mode: AppMode) {
-            mutableMode.value = mode
-        }
     }
 
     private companion object {
@@ -235,25 +195,17 @@ class SubscriptionFetcherImplTest {
             statusCode: Int,
             headers: Map<String, List<String>> = emptyMap(),
             body: String = "",
-        ): HttpTransportResponse = response(
-            statusCode = statusCode,
-            headers = headers,
-            body = body.toByteArray(StandardCharsets.UTF_8),
-        )
+        ): HttpTransportResponse = FakeHttpTransport.response(statusCode, headers, body)
 
         fun response(
             statusCode: Int,
             headers: Map<String, List<String>> = emptyMap(),
             body: ByteArray,
-        ): HttpTransportResponse = HttpTransportResponse(statusCode, headers, body)
+        ): HttpTransportResponse = FakeHttpTransport.response(statusCode, headers, body)
 
         fun response(
             statusCode: Int,
             headers: Map<String, String>,
-        ): HttpTransportResponse = HttpTransportResponse(
-            statusCode = statusCode,
-            headers = headers.mapValues { listOf(it.value) },
-            body = ByteArray(0),
-        )
+        ): HttpTransportResponse = FakeHttpTransport.response(statusCode, headers)
     }
 }

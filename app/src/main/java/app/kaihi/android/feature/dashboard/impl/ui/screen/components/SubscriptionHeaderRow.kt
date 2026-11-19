@@ -32,7 +32,7 @@ import app.kaihi.android.R
 import app.kaihi.android.feature.dashboard.impl.ui.model.SubscriptionUi
 import app.kaihi.android.feature.dashboard.impl.ui.model.SubscriptionKind
 import app.kaihi.android.platform.ui.icons.KaihiIcons
-import app.kaihi.android.platform.ui.theme.size.dimens
+import app.kaihi.android.platform.ui.theme.dimens
 import java.util.Date
 
 private const val EXPANDED_CHEVRON_ROTATION = 180f

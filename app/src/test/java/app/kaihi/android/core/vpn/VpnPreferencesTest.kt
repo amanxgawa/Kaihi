@@ -4,7 +4,6 @@ import app.kaihi.android.BuildConfig
 import app.kaihi.android.core.storage.ExperienceKeys
 import app.kaihi.android.core.storage.InMemoryAppStorage
 import app.kaihi.android.core.storage.StorageDomain
-import app.kaihi.android.core.vpn.internal.StoredVpnPreferences
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.take
@@ -16,11 +15,11 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class StoredVpnPreferencesTest {
+class VpnPreferencesTest {
 
     @Test
     fun `IPv6 defaults to disabled when nothing is persisted`() {
-        val preferences = StoredVpnPreferences(InMemoryAppStorage())
+        val preferences = VpnPreferences(InMemoryAppStorage())
 
         assertFalse(preferences.ipv6Enabled.value)
     }
@@ -28,7 +27,7 @@ class StoredVpnPreferencesTest {
     @Test
     fun `enabling IPv6 emits the choice and survives a fresh instance`() = runTest {
         val storage = InMemoryAppStorage()
-        val preferences = StoredVpnPreferences(storage)
+        val preferences = VpnPreferences(storage)
         val emissions = async(start = CoroutineStart.UNDISPATCHED) {
             preferences.ipv6Enabled.take(2).toList()
         }
@@ -38,32 +37,32 @@ class StoredVpnPreferencesTest {
         assertTrue(preferences.ipv6Enabled.value)
         assertEquals(listOf(false, true), emissions.await())
         assertTrue(storage.getBoolean(StorageDomain.EXPERIENCE, "ipv6_enabled"))
-        assertTrue(StoredVpnPreferences(storage).ipv6Enabled.value)
+        assertTrue(VpnPreferences(storage).ipv6Enabled.value)
     }
 
     @Test
     fun `disabling IPv6 again survives a fresh instance`() {
         val storage = InMemoryAppStorage()
-        val preferences = StoredVpnPreferences(storage)
+        val preferences = VpnPreferences(storage)
 
         preferences.setIpv6Enabled(true)
         preferences.setIpv6Enabled(false)
 
         assertFalse(preferences.ipv6Enabled.value)
-        assertFalse(StoredVpnPreferences(storage).ipv6Enabled.value)
+        assertFalse(VpnPreferences(storage).ipv6Enabled.value)
     }
 
     @Test
     fun `excluded packages round trip exact package names and never store Kaihi`() {
         val storage = InMemoryAppStorage()
-        val preferences = StoredVpnPreferences(storage)
+        val preferences = VpnPreferences(storage)
         val packages = setOf("org.example.bank_app", "com.example.bank.app", BuildConfig.APPLICATION_ID)
 
         preferences.setExcludedPackages(packages)
 
         val expected = setOf("org.example.bank_app", "com.example.bank.app")
         assertEquals(expected, preferences.excludedPackages.value)
-        assertEquals(expected, StoredVpnPreferences(storage).excludedPackages.value)
+        assertEquals(expected, VpnPreferences(storage).excludedPackages.value)
         assertEquals(
             "com.example.bank.app,org.example.bank_app",
             storage.getString(StorageDomain.EXPERIENCE, "excluded_packages"),
@@ -73,23 +72,23 @@ class StoredVpnPreferencesTest {
     @Test
     fun `empty excluded packages round trip as empty`() {
         val storage = InMemoryAppStorage()
-        val preferences = StoredVpnPreferences(storage)
+        val preferences = VpnPreferences(storage)
 
         preferences.setExcludedPackages(setOf("com.example.bank.app"))
         preferences.setExcludedPackages(emptySet())
 
         assertEquals(emptySet<String>(), preferences.excludedPackages.value)
-        assertEquals(emptySet<String>(), StoredVpnPreferences(storage).excludedPackages.value)
+        assertEquals(emptySet<String>(), VpnPreferences(storage).excludedPackages.value)
     }
 
     @Test
     fun `subscription User-Agent round trips and reset removes the stored value`() {
         val storage = InMemoryAppStorage()
-        val preferences = StoredVpnPreferences(storage)
+        val preferences = VpnPreferences(storage)
 
         assertTrue(preferences.setSubscriptionUserAgent("PanelClient/1.2"))
         assertEquals("PanelClient/1.2", preferences.subscriptionUserAgent.value)
-        assertEquals("PanelClient/1.2", StoredVpnPreferences(storage).subscriptionUserAgent.value)
+        assertEquals("PanelClient/1.2", VpnPreferences(storage).subscriptionUserAgent.value)
 
         assertTrue(preferences.setSubscriptionUserAgent(null))
         assertNull(preferences.subscriptionUserAgent.value)
@@ -99,7 +98,7 @@ class StoredVpnPreferencesTest {
     @Test
     fun `invalid subscription User-Agent is rejected without changing storage or state`() {
         val storage = InMemoryAppStorage()
-        val preferences = StoredVpnPreferences(storage)
+        val preferences = VpnPreferences(storage)
         preferences.setSubscriptionUserAgent("PanelClient/1.2")
 
         listOf("", " ", "x".repeat(257), "bad\r\nInjected: yes", "не ASCII").forEach { value ->

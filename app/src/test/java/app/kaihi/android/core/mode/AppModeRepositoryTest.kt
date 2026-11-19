@@ -1,17 +1,16 @@
 package app.kaihi.android.core.mode
 
-import app.kaihi.android.core.mode.internal.StoredAppModeRepository
 import app.kaihi.android.core.storage.ExperienceKeys
 import app.kaihi.android.core.storage.InMemoryAppStorage
 import app.kaihi.android.core.storage.StorageDomain
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-class StoredAppModeRepositoryTest {
+class AppModeRepositoryTest {
 
     @Test
     fun `defaults to NORMAL when nothing is persisted`() {
-        val repository = StoredAppModeRepository(InMemoryAppStorage())
+        val repository = AppModeRepository(InMemoryAppStorage())
 
         assertEquals(AppMode.NORMAL, repository.mode.value)
     }
@@ -19,24 +18,24 @@ class StoredAppModeRepositoryTest {
     @Test
     fun `setMode is reflected immediately and survives a fresh repository over the same storage`() {
         val storage = InMemoryAppStorage()
-        val repository = StoredAppModeRepository(storage)
+        val repository = AppModeRepository(storage)
 
         repository.setMode(AppMode.ADVANCED)
         assertEquals(AppMode.ADVANCED, repository.mode.value)
 
-        val reloaded = StoredAppModeRepository(storage)
+        val reloaded = AppModeRepository(storage)
         assertEquals(AppMode.ADVANCED, reloaded.mode.value)
     }
 
     @Test
     fun `switching back to NORMAL persists too, not just the first choice`() {
         val storage = InMemoryAppStorage()
-        val repository = StoredAppModeRepository(storage)
+        val repository = AppModeRepository(storage)
 
         repository.setMode(AppMode.ADVANCED)
         repository.setMode(AppMode.NORMAL)
 
-        assertEquals(AppMode.NORMAL, StoredAppModeRepository(storage).mode.value)
+        assertEquals(AppMode.NORMAL, AppModeRepository(storage).mode.value)
     }
 
     /** Advanced mode unlocks a raw config editor and a server shell, so the fallback direction matters. */
@@ -50,7 +49,7 @@ class StoredAppModeRepositoryTest {
             assertEquals(
                 "'$stored' must not be read as advanced mode",
                 AppMode.NORMAL,
-                StoredAppModeRepository(storage).mode.value,
+                AppModeRepository(storage).mode.value,
             )
         }
     }

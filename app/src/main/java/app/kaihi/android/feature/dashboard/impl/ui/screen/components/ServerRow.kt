@@ -25,7 +25,7 @@ import app.kaihi.android.R
 import app.kaihi.android.feature.dashboard.impl.ui.model.ServerUi
 import app.kaihi.android.platform.ui.icons.KaihiIcons
 import app.kaihi.android.platform.ui.theme.JetBrainsMono
-import app.kaihi.android.platform.ui.theme.size.dimens
+import app.kaihi.android.platform.ui.theme.dimens
 
 @Composable
 internal fun ServerRow(

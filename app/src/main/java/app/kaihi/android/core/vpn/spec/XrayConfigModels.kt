@@ -1,7 +1,6 @@
 package app.kaihi.android.core.vpn.spec
 
 import app.kaihi.android.core.vpn.XrayJson
-import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.JsonElement
@@ -30,10 +29,8 @@ data class XrayConfig(
     val outbounds: List<OutboundObject>? = null,
     val stats: JsonObject? = null,
     val fakedns: List<FakeDnsObject>? = null,
-    val metrics: MetricsObject? = null,
     val observatory: ObservatoryObject? = null,
     val burstObservatory: BurstObservatoryObject? = null,
-    val geodata: GeodataObject? = null,
     val version: VersionObject? = null
 ) {
     fun toJson(): String = XrayJson.default.encodeToString(serializer(), this)
@@ -45,7 +42,6 @@ data class LogObject(
     val error: String? = null,
     val loglevel: String? = null, // "debug" | "info" | "warning" | "error" | "none"
     val dnsLog: Boolean? = null,
-    val maskAddress: String? = null // "quarter" | "half" | "full"
 )
 
 @Serializable
@@ -58,32 +54,8 @@ data class ApiObject(
 @Serializable
 data class DnsObject(
     val hosts: Map<String, JsonElement>? = null, // Value can be a string or a list of strings
-    val servers: List<JsonElement>? = null, // Can be a plain address string or a DnsServerObject
-    val clientIp: String? = null,
-    val queryStrategy: String? = null, // "UseIP" | "UseIPv4" | "UseIPv6" | "UseSystem"
-    val disableCache: Boolean? = null,
-    val serveStale: Boolean? = null,
-    val serveExpiredTTL: Int? = null,
-    val disableFallback: Boolean? = null,
-    val disableFallbackIfMatch: Boolean? = null,
-    val enableParallelQuery: Boolean? = null,
-    val useSystemHosts: Boolean? = null,
+    val servers: List<JsonElement>? = null, // Plain address strings or server objects
     val tag: String? = null
-)
-
-@Serializable
-data class DnsServerObject(
-    val address: String? = null,
-    val port: Int? = null,
-    val domains: List<String>? = null,
-    val expectedIPs: List<String>? = null,
-    val unexpectedIPs: List<String>? = null,
-    val skipFallback: Boolean? = null,
-    val finalQuery: Boolean? = null,
-    val tag: String? = null,
-    val clientIP: String? = null,
-    val queryStrategy: String? = null,
-    val disableCache: Boolean? = null
 )
 
 @Serializable
@@ -105,35 +77,20 @@ data class RuleObject(
     val domain: List<String>? = null,
     val ip: List<String>? = null,
     val port: JsonPrimitive? = null, // Int or range string, e.g. "0-1023"
-    val sourcePort: JsonPrimitive? = null,
     val localPort: JsonPrimitive? = null,
     val network: String? = null, // "tcp" | "udp" | "tcp,udp"
-    val sourceIP: List<String>? = null,
-    val localIP: List<String>? = null,
     val user: List<String>? = null,
-    val vlessRoute: JsonPrimitive? = null,
     val inboundTag: List<String>? = null,
     val protocol: List<String>? = null,
-    val attrs: Map<String, String>? = null,
     val process: List<String>? = null,
     val outboundTag: String? = null,
-    val balancerTag: String? = null,
-    val ruleTag: String? = null,
-    val webhook: WebhookObject? = null
-)
-
-@Serializable
-data class WebhookObject(
-    val url: String? = null,
-    val deduplication: Int? = null,
-    val headers: Map<String, String>? = null
+    val balancerTag: String? = null
 )
 
 @Serializable
 data class BalancerObject(
     val tag: String? = null,
     val selector: List<String>? = null,
-    val fallbackTag: String? = null,
     val strategy: StrategyObject? = null
 )
 
@@ -154,7 +111,6 @@ data class StrategySettingsObject(
 
 @Serializable
 data class CostObject(
-    val regexp: Boolean? = null,
     val match: String? = null,
     val value: Float? = null
 )
@@ -168,13 +124,6 @@ data class PolicyObject(
 @Serializable
 data class LevelPolicyObject(
     val handshake: Int? = null,
-    val connIdle: Int? = null,
-    val uplinkOnly: Int? = null,
-    val downlinkOnly: Int? = null,
-    val statsUserUplink: Boolean? = null,
-    val statsUserDownlink: Boolean? = null,
-    val statsUserOnline: Boolean? = null,
-    val bufferSize: Int? = null
 )
 
 @Serializable
@@ -186,17 +135,9 @@ data class SystemPolicyObject(
 )
 
 @Serializable
-data class MetricsObject(
-    val tag: String? = null,
-    val listen: String? = null
-)
-
-@Serializable
 data class ObservatoryObject(
     val subjectSelector: List<String>? = null,
     val probeUrl: String? = null,
-    val probeInterval: String? = null,
-    val enableConcurrency: Boolean? = null
 )
 
 @Serializable
@@ -212,20 +153,6 @@ data class PingConfigObject(
     val interval: String? = null,
     val sampling: Int? = null,
     val timeout: String? = null,
-    val httpMethod: String? = null
-)
-
-@Serializable
-data class GeodataObject(
-    val cron: String? = null,
-    val outbound: String? = null,
-    val assets: List<AssetObject>? = null
-)
-
-@Serializable
-data class AssetObject(
-    val url: String? = null,
-    val file: String? = null
 )
 
 @Serializable
@@ -249,28 +176,15 @@ data class InboundObject(
 data class SniffingObject(
     val enabled: Boolean? = null,
     val destOverride: List<String>? = null,
-    val metadataOnly: Boolean? = null,
-    val domainsExcluded: List<String>? = null,
-    val ipsExcluded: List<String>? = null,
-    val routeOnly: Boolean? = null
 )
 
 @Serializable
 data class OutboundObject(
-    val sendThrough: String? = null,
     val protocol: String? = null,
     val settings: JsonObject? = null, // Protocol-specific outbound settings; see typed *OutboundSettings helpers below
     val tag: String? = null,
     val streamSettings: StreamSettingsObject? = null,
-    val proxySettings: ProxySettingsObject? = null,
     val mux: MuxObject? = null,
-    val targetStrategy: String? = null
-)
-
-@Serializable
-data class ProxySettingsObject(
-    val tag: String? = null,
-    val transportLayer: Boolean? = null
 )
 
 @Serializable
@@ -286,11 +200,6 @@ data class StreamSettingsObject(
     val method: String? = null,
     val rawSettings: RawObject? = null,
     val xhttpSettings: JsonObject? = null,
-    val kcpSettings: KcpObject? = null,
-    val grpcSettings: GrpcObject? = null,
-    val wsSettings: WebSocketObject? = null,
-    val httpupgradeSettings: HttpUpgradeObject? = null,
-    val hysteriaSettings: HysteriaObject? = null,
     val security: String? = null, // "none" | "reality" | "tls"
     val realitySettings: RealityObject? = null,
     val tlsSettings: TlsObject? = null,
@@ -305,123 +214,31 @@ data class RawObject(
 )
 
 @Serializable
-data class KcpObject(
-    val mtu: Int? = null,
-    val tti: Int? = null,
-    val uplinkCapacity: Int? = null,
-    val downlinkCapacity: Int? = null,
-    val congestion: Boolean? = null,
-    val readBufferSize: Int? = null,
-    val writeBufferSize: Int? = null
-)
-
-@Serializable
-data class GrpcObject(
-    val authority: String? = null,
-    val serviceName: String? = null,
-    val multiMode: Boolean? = null,
-    val user_agent: String? = null,
-    val idle_timeout: Int? = null,
-    val health_check_timeout: Int? = null,
-    val permit_without_stream: Boolean? = null,
-    val initial_windows_size: Int? = null
-)
-
-@Serializable
-data class WebSocketObject(
-    val acceptProxyProtocol: Boolean? = null,
-    val path: String? = null,
-    val host: String? = null,
-    val headers: Map<String, String>? = null,
-    val heartbeatPeriod: Int? = null
-)
-
-@Serializable
-data class HttpUpgradeObject(
-    val acceptProxyProtocol: Boolean? = null,
-    val path: String? = null,
-    val host: String? = null,
-    val headers: Map<String, String>? = null
-)
-
-@Serializable
-data class HysteriaObject(
-    val version: Int? = null,
-    val auth: String? = null,
-    val udpIdleTimeout: Int? = null,
-    val masquerade: MasqObject? = null
-)
-
-@Serializable
-data class MasqObject(
-    val type: String? = null,
-    val dir: String? = null,
-    val url: String? = null,
-    val rewriteHost: Boolean? = null,
-    val insecure: Boolean? = null,
-    val content: String? = null,
-    val headers: Map<String, String>? = null,
-    val statusCode: Int? = null
-)
-
-@Serializable
 data class RealityObject(
     val show: Boolean? = null,
     val target: String? = null,
     val xver: Int? = null,
     val serverNames: List<String>? = null,
     val privateKey: String? = null,
-    val minClientVer: String? = null,
-    val maxClientVer: String? = null,
-    val maxTimeDiff: Int? = null,
     val shortIds: List<String>? = null,
-    val mldsa65Seed: String? = null,
-    val limitFallbackUpload: LimitFallbackObject? = null,
-    val limitFallbackDownload: LimitFallbackObject? = null,
     val serverName: String? = null,
     val fingerprint: String? = null,
     val password: String? = null,
     val shortId: String? = null,
-    val mldsa65Verify: String? = null,
-    val spiderX: String? = null
-)
-
-@Serializable
-data class LimitFallbackObject(
-    val afterBytes: Int? = null,
-    val bytesPerSec: Int? = null,
-    val burstBytesPerSec: Int? = null
 )
 
 @Serializable
 data class TlsObject(
     val serverName: String? = null,
-    val verifyPeerCertByName: String? = null,
-    val rejectUnknownSni: Boolean? = null,
     val allowInsecure: Boolean? = null,
     val alpn: List<String>? = null,
-    val minVersion: String? = null,
-    val maxVersion: String? = null,
-    val cipherSuites: String? = null,
     val certificates: List<CertificateObject>? = null,
-    val disableSystemRoot: Boolean? = null,
-    val enableSessionResumption: Boolean? = null,
     val fingerprint: String? = null,
-    val pinnedPeerCertSha256: String? = null,
-    val curvePreferences: List<String>? = null,
-    val masterKeyLog: String? = null,
-    val echServerKeys: String? = null,
-    val echConfigList: String? = null,
-    val echSockopt: SockoptObject? = null
 )
 
 @Serializable
 data class CertificateObject(
-    val ocspStapling: Int? = null,
-    val oneTimeLoading: Boolean? = null,
     val usage: String? = null,
-    val buildChain: Boolean? = null,
-    val certificateFile: String? = null,
     val keyFile: String? = null,
     val certificate: List<String>? = null,
     val key: List<String>? = null
@@ -431,7 +248,6 @@ data class CertificateObject(
 data class FinalMaskObject(
     val tcp: List<MaskObject>? = null,
     val udp: List<MaskObject>? = null,
-    val quicParams: QuicParamsObject? = null
 )
 
 @Serializable
@@ -441,68 +257,11 @@ data class MaskObject(
 )
 
 @Serializable
-data class QuicParamsObject(
-    val congestion: String? = null,
-    val bbrProfile: String? = null,
-    val debug: Boolean? = null,
-    val brutalUp: String? = null,
-    val brutalDown: String? = null,
-    val udpHop: UdpHopObject? = null,
-    val initStreamReceiveWindow: Int? = null,
-    val maxStreamReceiveWindow: Int? = null,
-    val initConnectionReceiveWindow: Int? = null,
-    val maxConnectionReceiveWindow: Int? = null,
-    val maxIdleTimeout: Int? = null,
-    val keepAlivePeriod: Int? = null,
-    val disablePathMTUDiscovery: Boolean? = null,
-    val maxIncomingStreams: Int? = null
-)
-
-@Serializable
-data class UdpHopObject(
-    val ports: String? = null,
-    val interval: Int? = null
-)
-
-@Serializable
 data class SockoptObject(
     val mark: Int? = null,
-    val tcpMaxSeg: Int? = null,
-    val tcpFastOpen: JsonPrimitive? = null, // Boolean or Int
     val tproxy: String? = null,
     val domainStrategy: String? = null,
-    val happyEyeballs: HappyEyeballsObject? = null,
-    val dialerProxy: String? = null,
     val acceptProxyProtocol: Boolean? = null,
-    val trustedXForwardedFor: List<String>? = null,
-    val tcpKeepAliveInterval: Int? = null,
-    val tcpKeepAliveIdle: Int? = null,
-    val tcpUserTimeout: Int? = null,
-    val tcpcongestion: String? = null,
-    @SerialName("interface") val interfaceName: String? = null,
-    val V6Only: Boolean? = null,
-    val tcpWindowClamp: Int? = null,
-    val tcpMptcp: Boolean? = null,
-    val addressPortStrategy: String? = null,
-    val customSockopt: List<CustomSockoptObject>? = null
-)
-
-@Serializable
-data class CustomSockoptObject(
-    val system: String? = null,
-    val network: String? = null,
-    val type: String? = null,
-    val level: String? = null,
-    val opt: String? = null,
-    val value: String? = null
-)
-
-@Serializable
-data class HappyEyeballsObject(
-    val tryDelayMs: Int? = null,
-    val prioritizeIPv6: Boolean? = null,
-    val interleave: Int? = null,
-    val maxConcurrentTry: Int? = null
 )
 
 // InboundObject.settings / OutboundObject.settings stay generic JsonObject because their shape
@@ -513,7 +272,6 @@ data class HappyEyeballsObject(
 data class VlessClient(
     val id: String,
     val flow: String? = null,
-    val email: String? = null,
     val level: Int? = null
 )
 

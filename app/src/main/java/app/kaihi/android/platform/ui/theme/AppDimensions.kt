@@ -1,4 +1,4 @@
-package app.kaihi.android.platform.ui.theme.size
+package app.kaihi.android.platform.ui.theme
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable

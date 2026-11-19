@@ -28,6 +28,3 @@ internal object ServerContract {
         data object NavigateBack : Effect
     }
 }
-
-internal val ServerContract.State.isBusy: Boolean
-    get() = engineState == XrayEngineState.STARTING || engineState == XrayEngineState.STOPPING

@@ -9,4 +9,8 @@ internal data class XrayServerCredentials(
     val realityServerName: String,
     val countryCode: String? = null,
     val protection: XrayServerProtection? = null,
-)
+) {
+    override fun toString(): String =
+        "XrayServerCredentials(uuid=***, publicKey=***, shortId=***, " +
+            "realityServerName=$realityServerName, countryCode=$countryCode, protection=$protection)"
+}

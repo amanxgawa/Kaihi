@@ -34,7 +34,7 @@ import app.kaihi.android.feature.settings.impl.ui.screen.components.SettingsSubs
 import app.kaihi.android.feature.settings.impl.ui.screen.components.SubscriptionUserAgentDialog
 import app.kaihi.android.core.mode.AppMode
 import app.kaihi.android.platform.ui.icons.KaihiIcons
-import app.kaihi.android.platform.ui.theme.size.dimens
+import app.kaihi.android.platform.ui.theme.dimens
 import app.kaihi.android.platform.ui.util.CollectAsEffect
 
 @Composable

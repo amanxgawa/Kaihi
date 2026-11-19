@@ -1,7 +1,5 @@
 package app.kaihi.android.feature.dashboard.impl.ui.mvi
 
-import android.content.Context
-import android.net.VpnService
 import app.kaihi.android.R
 import app.kaihi.android.core.vpn.XrayEngineState
 import app.kaihi.android.core.vpn.XrayVpnProfile
@@ -10,7 +8,6 @@ import app.kaihi.android.feature.dashboard.impl.domain.ServerLibraryCoordinator
 import app.kaihi.android.feature.dashboard.impl.domain.VpnSession
 import app.kaihi.android.platform.ui.mvi.ViewModelDelegate
 import app.kaihi.android.platform.ui.util.UiText
-import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
@@ -20,7 +17,6 @@ import kotlinx.coroutines.withTimeoutOrNull
 import timber.log.Timber
 
 internal class ConnectionDelegate @Inject constructor(
-    @ApplicationContext private val appContext: Context,
     private val session: VpnSession,
     private val coordinator: ServerLibraryCoordinator,
     private val pendingSettingsMonitor: PendingSettingsMonitor,
@@ -79,15 +75,14 @@ internal class ConnectionDelegate @Inject constructor(
      *  VPN subsystem doesn't tolerate back-to-back. [DashboardContract.State.engineState] flips to
      *  STARTING/STOPPING synchronously here, before the IPC round trip, so a queued repeat tap no-ops on `isBusy`. */
     suspend fun toggle() {
-        if (currentState.isBusy) return
+        if (currentState.engineState.isBusy) return
 
         if (currentState.engineState == XrayEngineState.RUNNING) {
             stop()
             return
         }
-        val permissionIntent = VpnService.prepare(appContext)
-        if (permissionIntent != null) {
-            sendEffect(DashboardContract.Effect.RequestVpnPermission(permissionIntent))
+        if (session.needsVpnPermission()) {
+            sendEffect(DashboardContract.Effect.RequestVpnPermission)
         } else {
             beginStarting()
         }
@@ -110,7 +105,7 @@ internal class ConnectionDelegate @Inject constructor(
     }
 
     suspend fun applyPendingSettings() {
-        if (currentState.isBusy || currentState.engineState != XrayEngineState.RUNNING) return
+        if (currentState.engineState.isBusy || currentState.engineState != XrayEngineState.RUNNING) return
         val serverId = currentState.reconnectToApplyServerId ?: return
         reduce { copy(engineState = XrayEngineState.STARTING, errorMessage = null) }
         pendingSettingsMonitor.restart(serverId).onFailure { error ->
@@ -145,7 +140,7 @@ internal class ConnectionDelegate @Inject constructor(
     }
 
     private suspend fun beginStarting() {
-        if (currentState.isBusy) return
+        if (currentState.engineState.isBusy) return
         reduce { copy(engineState = XrayEngineState.STARTING, errorMessage = null) }
         val server = coordinator.selectedServer()
         if (server == null) {
@@ -176,7 +171,7 @@ internal class ConnectionDelegate @Inject constructor(
 
     /**
      * The `:vpn` process has already stopped itself and is about to be killed and respawned (see
-     * `KaihiVpnService.onHealthDegraded`), so this only waits for [XrayEngineState.IDLE]
+     * the VPN service's health callback), so this only waits for [XrayEngineState.IDLE]
      * before starting a new session.
      */
     private suspend fun handleHealthDegraded() {

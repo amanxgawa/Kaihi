@@ -1,6 +1,6 @@
-package app.kaihi.android.core.vpn.internal
+package app.kaihi.android.core.vpn
 
-internal interface HttpTransport {
+interface HttpTransport {
     suspend fun get(
         url: String,
         requestHeaders: Map<String, String>,
@@ -8,7 +8,7 @@ internal interface HttpTransport {
     ): HttpTransportResponse
 }
 
-internal data class HttpTransportResponse(
+data class HttpTransportResponse(
     val statusCode: Int,
     val headers: Map<String, List<String>>,
     val body: ByteArray,

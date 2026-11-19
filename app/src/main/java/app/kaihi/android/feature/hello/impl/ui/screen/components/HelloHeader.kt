@@ -12,7 +12,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import app.kaihi.android.R
-import app.kaihi.android.platform.ui.theme.size.dimens
+import app.kaihi.android.platform.ui.theme.dimens
 import app.kaihi.android.platform.ui.util.UiText
 import app.kaihi.android.platform.ui.util.asString
 

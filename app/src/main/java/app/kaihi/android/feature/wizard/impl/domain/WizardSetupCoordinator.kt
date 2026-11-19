@@ -4,11 +4,11 @@ import app.kaihi.android.core.mode.AppMode
 import app.kaihi.android.core.mode.AppModeRepository
 import app.kaihi.android.core.mode.OnboardingState
 import app.kaihi.android.core.ssh.SshManager
-import app.kaihi.android.core.ssh.ext.execute
+import app.kaihi.android.core.ssh.execute
 import app.kaihi.android.core.ssh.model.SshAuth
 import app.kaihi.android.core.ssh.model.SshConfig
 import app.kaihi.android.core.vpn.XrayControl
-import app.kaihi.android.core.vpn.XraySessionLauncher
+import app.kaihi.android.core.vpn.TunnelSettingsSource
 import app.kaihi.android.core.vpn.XraySubscription
 import app.kaihi.android.core.vpn.XraySubscriptionStore
 import app.kaihi.android.core.vpn.XraySshAccess
@@ -19,10 +19,10 @@ import app.kaihi.android.core.vpn.generateNickname
 import app.kaihi.android.core.vpn.newXrayId
 import app.kaihi.android.core.vpn.spec.XraySecurity
 import app.kaihi.android.core.vpn.withDeployedServer
+import app.kaihi.android.core.vpn.start
 import app.kaihi.android.feature.wizard.impl.domain.model.DeploymentEvent
 import app.kaihi.android.feature.wizard.impl.domain.model.WizardProfileDraft
 import app.kaihi.android.feature.wizard.impl.domain.command.DetectServerArchCommand
-import app.kaihi.android.feature.wizard.impl.domain.usecase.DeployXrayServerUseCase
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
@@ -34,7 +34,7 @@ internal class WizardSetupCoordinator @Inject constructor(
     private val subscriptionStore: XraySubscriptionStore,
     private val deployXrayServerUseCase: DeployXrayServerUseCase,
     private val xrayControl: XrayControl,
-    private val sessionLauncher: XraySessionLauncher,
+    private val tunnelSettingsSource: TunnelSettingsSource,
     private val onboardingState: OnboardingState,
     private val appModeRepository: AppModeRepository,
 ) {
@@ -46,7 +46,8 @@ internal class WizardSetupCoordinator @Inject constructor(
     suspend fun finishSetup(draft: WizardProfileDraft, targetSubscriptionId: String?): Result<XrayVpnProfile> =
         saveProfile(draft, targetSubscriptionId).onSuccess { onboardingState.markCompleted() }
 
-    suspend fun startVpn(profile: XrayVpnProfile): Result<Unit> = sessionLauncher.start(profile)
+    suspend fun startVpn(profile: XrayVpnProfile): Result<Unit> =
+        xrayControl.start(profile, tunnelSettingsSource.current())
 
     suspend fun validateConnection(sshConfig: SshConfig, auth: SshAuth): Result<String> =
         sshManager.withConnection(sshConfig, auth) { connection ->

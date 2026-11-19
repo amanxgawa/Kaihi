@@ -1,14 +1,11 @@
 package app.kaihi.android.core.vpn
 
-import app.kaihi.android.core.vpn.internal.RepositoryTunnelSettingsSource
+import app.kaihi.android.core.storage.InMemoryAppStorage
 import app.kaihi.android.core.mode.AppMode
 import app.kaihi.android.core.mode.AppModeRepository
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.async
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runCurrent
@@ -21,9 +18,10 @@ class TunnelSettingsSourceTest {
     @Test
     @OptIn(ExperimentalCoroutinesApi::class)
     fun `source combines mode IPv6 and excluded apps reactively`() = runTest {
-        val modeRepository = FakeAppModeRepository(AppMode.NORMAL)
-        val vpnPreferences = FakeVpnPreferences(initialIpv6Enabled = true)
-        val source = RepositoryTunnelSettingsSource(vpnPreferences, modeRepository)
+        val storage = InMemoryAppStorage()
+        val modeRepository = AppModeRepository(storage)
+        val vpnPreferences = VpnPreferences(storage).apply { setIpv6Enabled(true) }
+        val source = TunnelSettingsSource(vpnPreferences, modeRepository)
         val emissions = async(start = CoroutineStart.UNDISPATCHED) {
             source.settings.take(4).toList()
         }
@@ -59,34 +57,4 @@ class TunnelSettingsSourceTest {
         )
     }
 
-    private class FakeAppModeRepository(initialMode: AppMode) : AppModeRepository {
-        private val mutableMode = MutableStateFlow(initialMode)
-        override val mode: StateFlow<AppMode> = mutableMode.asStateFlow()
-
-        override fun setMode(mode: AppMode) {
-            mutableMode.value = mode
-        }
-    }
-
-    private class FakeVpnPreferences(initialIpv6Enabled: Boolean) : VpnPreferences {
-        private val mutableIpv6Enabled = MutableStateFlow(initialIpv6Enabled)
-        private val mutableExcludedPackages = MutableStateFlow(emptySet<String>())
-        private val mutableSubscriptionUserAgent = MutableStateFlow<String?>(null)
-        override val ipv6Enabled: StateFlow<Boolean> = mutableIpv6Enabled.asStateFlow()
-        override val excludedPackages: StateFlow<Set<String>> = mutableExcludedPackages.asStateFlow()
-        override val subscriptionUserAgent: StateFlow<String?> = mutableSubscriptionUserAgent.asStateFlow()
-
-        override fun setIpv6Enabled(enabled: Boolean) {
-            mutableIpv6Enabled.value = enabled
-        }
-
-        override fun setExcludedPackages(packages: Set<String>) {
-            mutableExcludedPackages.value = packages
-        }
-
-        override fun setSubscriptionUserAgent(value: String?): Boolean {
-            mutableSubscriptionUserAgent.value = value
-            return true
-        }
-    }
 }

@@ -32,17 +32,18 @@ internal fun WizardContract.State.toProfileDraft(): WizardProfileDraft = WizardP
     sshPort = sshPort.toInt(),
     sshUsername = username.trim(),
     sshExpectedFingerprint = sshFingerprint.trim().ifBlank { null },
-    uuid = uuid.trim(),
-    realityServerName = realityServerName.trim(),
-    realityPublicKey = realityPublicKey.trim(),
-    realityShortId = realityShortId.trim(),
-    countryCode = serverCountryCode,
-    serverProtection = serverProtection,
+    uuid = deployedCredentials?.uuid?.trim().orEmpty(),
+    realityServerName = deployedCredentials?.realityServerName?.trim().orEmpty(),
+    realityPublicKey = deployedCredentials?.publicKey?.trim().orEmpty(),
+    realityShortId = deployedCredentials?.shortId?.trim().orEmpty(),
+    countryCode = deployedCredentials?.countryCode,
+    serverProtection = deployedCredentials?.protection,
 )
 
 internal fun WizardContract.State.protectionOutcomeText(): UiText? {
-    val guard = serverProtection?.bruteForceGuard
-    val updates = serverProtection?.securityUpdates
+    val protection = deployedCredentials?.protection
+    val guard = protection?.bruteForceGuard
+    val updates = protection?.securityUpdates
     val resource = when {
         guard == XrayProtectionState.ENABLED && updates == XrayProtectionState.ENABLED ->
             R.string.wizard_protection_outcome_both_enabled
@@ -59,3 +60,6 @@ internal fun WizardContract.State.protectionOutcomeText(): UiText? {
     }
     return resource?.let(UiText::Resource)
 }
+
+private val WizardContract.State.deployedCredentials
+    get() = (deployment.phase as? DeploymentPhase.Succeeded)?.credentials

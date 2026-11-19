@@ -3,7 +3,6 @@ package app.kaihi.android.feature.dashboard.impl.ui.mvi
 import app.kaihi.android.core.vpn.XrayVpnProfile
 import app.kaihi.android.core.vpn.XraySubscriptionSource
 import app.kaihi.android.core.vpn.XraySubscription
-import app.kaihi.android.core.vpn.XraySubscriptionUserInfo
 import app.kaihi.android.core.vpn.spec.XraySecurity
 import app.kaihi.android.core.vpn.spec.XrayTransport
 import app.kaihi.android.feature.dashboard.impl.domain.model.ServerLibrary
@@ -66,13 +65,6 @@ internal fun XraySubscription.toEditorUi(): SubscriptionEditorUi {
         supportUrl = remote.supportUrl,
         webPageUrl = remote.webPageUrl,
     )
-}
-
-private fun XraySubscriptionUserInfo.usedBytes(): Long? {
-    if (uploadBytes == null && downloadBytes == null) return null
-    val upload = uploadBytes ?: 0L
-    val download = downloadBytes ?: 0L
-    return if (Long.MAX_VALUE - upload < download) Long.MAX_VALUE else upload + download
 }
 
 internal fun XrayVpnProfile.toDetailsUi(): ServerDetailsUi {

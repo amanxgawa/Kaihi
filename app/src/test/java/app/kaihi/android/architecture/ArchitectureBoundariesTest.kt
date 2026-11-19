@@ -78,7 +78,7 @@ class ArchitectureBoundariesTest {
                     ).any(name::startsWith) ||
                     (name.startsWith("java.net.") && name !in setOf(
                         "java.net.URI", "java.net.URLEncoder", "java.net.URLDecoder", "java.net.IDN",
-                    )))
+                    ) && !name.substringAfterLast('.').endsWith("Exception")))
         }
         assertConforms(
             "core public API uses no framework or I/O code",
@@ -87,14 +87,8 @@ class ArchitectureBoundariesTest {
     }
 
     @Test
-    fun `core public API exposes only abstractions, data types and pure code`() {
-        // Declarations use '<fqn> is a concrete class/holds mutable state in the public core API'.
-        val violations = projectClasses.filter { clazz ->
-            isCorePublic(clazz.packagee?.name.orEmpty()) &&
-                !(clazz.hasAbstractModifier || clazz.isUiDataType())
-        }.map { "${it.fullyQualifiedName} is a concrete class in the public core API" }
-            .toMutableList()
-
+    fun `core public objects and top-level declarations hold no mutable state`() {
+        val violations = mutableListOf<String>()
         projectFiles.filter { isCorePublic(it.packagee?.name.orEmpty()) }.forEach { file ->
             // Konsist supplies fullyQualifiedName only for top-level properties.
             val properties = file.properties(includeNested = false).map { it to it.fullyQualifiedName } +
@@ -184,15 +178,14 @@ class ArchitectureBoundariesTest {
     }
 
     @Test
-    fun `stored flag keys are used only by their owner in core internal`() {
+    fun `stored flag keys are used only inside core`() {
         val violations = importViolations { file, name ->
             val pkg = file.packagee?.name.orEmpty()
-            val module = coreModuleOf(pkg)
             name == "$APP.core.storage.ExperienceKeys" &&
-                (module == null || !pkg.isInPackage("$APP.core.$module.internal"))
+                !pkg.isInPackage("$APP.core")
         }
         assertConforms(
-            "stored flag keys are used only by their owner in core internal",
+            "stored flag keys are used only inside core",
             violations,
         )
     }

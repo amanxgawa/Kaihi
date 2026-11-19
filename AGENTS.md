@@ -53,20 +53,24 @@ command-line way to run the app: use Android Studio's `app` configuration on a d
 ## Conventions
 
 Reference feature to copy: `feature/settings` (Key, Contract, ViewModel, Destination, navigation
-module, Screen). Reference test: `StoredAppModeRepositoryTest`.
+module, Screen). Reference test: `AppModeRepositoryTest`.
 
 - The architecture is specified in `CONTRIBUTING.md#architecture` and enforced by
   `app/src/test/.../architecture/ArchitectureBoundariesTest`; read the section before adding a
   package or a cross-layer import, and run the test after moving or adding files. In short:
-  core modules depend only leftward along `security ← storage ← mode ← ssh ← vpn`, and their
-  public API is interfaces, data types and pure code with no Android or I/O imports. `domain` is
-  pure Kotlin. `ui` may use `core` data, enum and sealed types but calls `core` behaviour only
-  through its feature's `domain`. `platform` imports nothing else in the app, and `ExperienceKeys`
-  is used only in `core.*.internal`.
+  core modules depend only leftward along `security ← storage ← mode ← ssh ← vpn`. An interface
+  exists only where its implementation crosses a boundary (framework, disk, network, sshj, native
+  code, another process) and lives in `.internal`; everything else is a plain class, tested on a
+  fake of the boundary. Public `core` has no Android or I/O imports. `domain` is pure Kotlin. `ui`
+  may use `core` data, enum and sealed types but calls `core` behaviour only through its
+  feature's `domain`. `platform` imports nothing else in the app, and `ExperienceKeys` is used
+  only inside `core`.
 - Screens are MVI: a `*Contract` object with `State`, `Intent`, `Effect`; a `@HiltViewModel`
   extending `MviViewModel`; state changes through `reduce { }`, one-shot events through
   `sendEffect`. Composables read `viewModel.state.collectAsStateWithLifecycle()` and
-  `viewModel.effect.CollectAsEffect { }`. Split a large ViewModel into `ViewModelDelegate`s.
+  `viewModel.effect.CollectAsEffect { }`. A screen with no state and at most one action uses a
+  plain `ViewModel` instead (see `AdvancedModeIntroViewModel`). Split a ViewModel into
+  `ViewModelDelegate`s only when it grows large.
 - A new screen needs a `@Serializable` `*Key : NavKey` at the feature root, a `Destination<Key>` in
   `impl/ui/navigation`, and a Hilt `@Binds @IntoMap @NavDestination(Key::class)` module. Without the
   binding, navigation crashes at runtime.

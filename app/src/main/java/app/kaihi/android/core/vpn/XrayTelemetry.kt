@@ -14,12 +14,9 @@ data class XrayTrafficStats(
     val downlinkBytesPerSecond: Long,
     val uplinkTotalBytes: Long,
     val downlinkTotalBytes: Long,
-    val activeConnectionsIn: Int,
-    val activeConnectionsOut: Int
 )
 
 data class XrayLogMessage(
-    val level: Int,
     val message: String,
     val timestampMillis: Long = System.currentTimeMillis(),
     /**
@@ -29,10 +26,3 @@ data class XrayLogMessage(
      */
     val sequence: Long = 0,
 )
-
-object XrayLogLevel {
-    const val DEBUG = 0
-    const val INFO = 1
-    const val WARNING = 2
-    const val ERROR = 3
-}

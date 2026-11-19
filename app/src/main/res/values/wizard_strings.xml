@@ -10,16 +10,11 @@
     <string name="wizard_strategy_fast_start_title">Fast start</string>
     <string name="wizard_strategy_fast_start_desc">You bring the server. Everything else is set up for you.</string>
 
-    <string name="wizard_strategy_resilience_title">Maximum resilience</string>
-    <string name="wizard_strategy_resilience_desc">Heavier disguise for stricter networks. Needs a domain name pointed at your server.</string>
-
     <!-- Tags -->
-    <string name="wizard_tag_domain">domain</string>
     <string name="wizard_tag_recommended">Recommended</string>
 
     <!-- What each option needs from you, in place of an invented time and difficulty. -->
     <string name="wizard_requirement_fast_start">A server you have root SSH access to</string>
-    <string name="wizard_requirement_resilience">A server and a domain name</string>
 
     <!-- Server Data Entry Page -->
     <string name="wizard_server_data_description">Enter your server\'s address and how to connect to it.</string>
@@ -70,7 +65,6 @@
     <!-- Errors -->
     <string name="wizard_error_vpn_permission_required">Kaihi needs VPN permission to start the connection.</string>
     <string name="wizard_error_incomplete_ssh_details">Fill in your server connection details first.</string>
-    <string name="wizard_error_strategy_unsupported">This setup method isn\'t available yet. Go back and pick another one.</string>
     <string name="wizard_error_architecture_unknown">The server\'s architecture is unknown. Go back and check the connection again.</string>
     <string name="wizard_error_unknown">Unknown error</string>
     <string name="wizard_error_save_failed">Couldn\'t save the server details.</string>

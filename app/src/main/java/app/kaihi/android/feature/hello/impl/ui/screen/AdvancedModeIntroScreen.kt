@@ -37,7 +37,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import app.kaihi.android.R
 import app.kaihi.android.feature.hello.impl.ui.mvi.AdvancedModeIntroViewModel
 import app.kaihi.android.platform.ui.icons.KaihiIcons
-import app.kaihi.android.platform.ui.theme.size.dimens
+import app.kaihi.android.platform.ui.theme.dimens
 
 @Composable
 internal fun AdvancedModeIntroScreen(

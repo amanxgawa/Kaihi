@@ -38,7 +38,7 @@ import app.kaihi.android.feature.importing.impl.ui.mvi.ImportContract
 import app.kaihi.android.feature.importing.impl.ui.mvi.ImportViewModel
 import app.kaihi.android.feature.importing.impl.ui.screen.components.ImportPreviewContent
 import app.kaihi.android.platform.ui.icons.KaihiIcons
-import app.kaihi.android.platform.ui.theme.size.dimens
+import app.kaihi.android.platform.ui.theme.dimens
 import app.kaihi.android.platform.ui.util.CollectAsEffect
 import app.kaihi.android.platform.ui.util.asString
 

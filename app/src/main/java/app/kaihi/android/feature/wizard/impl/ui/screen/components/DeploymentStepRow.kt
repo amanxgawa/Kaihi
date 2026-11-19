@@ -21,7 +21,7 @@ import app.kaihi.android.feature.wizard.impl.domain.model.DeploymentStep
 import app.kaihi.android.feature.wizard.impl.ui.mvi.DeploymentStepUi
 import app.kaihi.android.feature.wizard.impl.ui.mvi.StepStatus
 import app.kaihi.android.platform.ui.icons.KaihiIcons
-import app.kaihi.android.platform.ui.theme.size.dimens
+import app.kaihi.android.platform.ui.theme.dimens
 
 @Composable
 internal fun DeploymentStepRow(step: DeploymentStepUi, modifier: Modifier = Modifier) {

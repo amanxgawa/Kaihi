@@ -24,7 +24,7 @@ import androidx.compose.ui.res.stringResource
 import app.kaihi.android.R
 import app.kaihi.android.core.vpn.spec.XrayFingerprint
 import app.kaihi.android.core.vpn.spec.XrayFingerprintSetting
-import app.kaihi.android.platform.ui.theme.size.dimens
+import app.kaihi.android.platform.ui.theme.dimens
 
 private const val MIN_MUX_CONCURRENCY = 1
 private const val MAX_MUX_CONCURRENCY = 128

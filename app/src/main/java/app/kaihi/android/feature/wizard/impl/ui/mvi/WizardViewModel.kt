@@ -120,14 +120,6 @@ internal class WizardViewModel @AssistedInject constructor(
 }
 
 private fun initialWizardState(mode: AppMode): State = State(
-    pages = when (mode) {
-        AppMode.NORMAL -> listOf(
-            WizardPage.SERVER_DATA,
-            WizardPage.CONFIRMATION,
-            WizardPage.DEPLOYMENT,
-        )
-
-        AppMode.ADVANCED -> WizardPage.entries.toList()
-    },
+    pages = WizardContract.pagesFor(mode),
     appMode = mode,
 )

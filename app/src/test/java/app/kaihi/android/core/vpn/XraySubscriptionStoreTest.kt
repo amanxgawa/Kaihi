@@ -1,9 +1,7 @@
 package app.kaihi.android.core.vpn
 
-import app.kaihi.android.core.storage.AppStorage
-import app.kaihi.android.core.storage.SecureStorageUnreadableException
+import app.kaihi.android.core.storage.InMemoryAppStorage
 import app.kaihi.android.core.storage.StorageDomain
-import app.kaihi.android.core.vpn.internal.StoredXraySubscriptionStore
 import app.kaihi.android.core.vpn.spec.XraySecurity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -13,7 +11,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class StoredXraySubscriptionStoreTest {
+class XraySubscriptionStoreTest {
 
     private val legacyProfile = XrayVpnProfile(
         id = "ignored",
@@ -31,8 +29,8 @@ class StoredXraySubscriptionStoreTest {
         addedAtMillis = 1_700_000_000_000L,
     )
 
-    private fun TestScope.store(storage: AppStorage) =
-        StoredXraySubscriptionStore(storage, StandardTestDispatcher(testScheduler))
+    private fun TestScope.store(storage: InMemoryAppStorage) =
+        XraySubscriptionStore(storage, StandardTestDispatcher(testScheduler))
 
     @Test
     fun `starts empty when nothing is stored`() = runTest {
@@ -76,35 +74,6 @@ class StoredXraySubscriptionStoreTest {
         store.update { it + added }
 
         assertEquals(listOf(added), store.subscriptions.first())
-    }
-
-    private class InMemoryAppStorage(
-        /** Keys whose ciphertext is present but no longer decryptable, as after a Keystore key is invalidated. */
-        private val undecryptable: Set<String> = emptySet(),
-    ) : AppStorage {
-        private val values = mutableMapOf<Pair<StorageDomain, String>, String>()
-
-        val removed = mutableListOf<String>()
-
-        override fun getString(domain: StorageDomain, key: String): String? {
-            if (key in undecryptable) throw SecureStorageUnreadableException(key, IllegalStateException("key gone"))
-            return values[domain to key]
-        }
-
-        override fun putString(domain: StorageDomain, key: String, value: String) {
-            values[domain to key] = value
-        }
-
-        override fun getBoolean(domain: StorageDomain, key: String): Boolean = getString(domain, key) == "true"
-
-        override fun putBoolean(domain: StorageDomain, key: String, value: Boolean) {
-            putString(domain, key, value.toString())
-        }
-
-        override fun remove(domain: StorageDomain, key: String) {
-            values.remove(domain to key)
-            removed += key
-        }
     }
 
     private companion object {

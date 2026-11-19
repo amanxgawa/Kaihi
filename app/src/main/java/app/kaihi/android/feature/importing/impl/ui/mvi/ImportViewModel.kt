@@ -143,7 +143,7 @@ internal class ImportViewModel @Inject constructor(
                         succeeded = true
                         preparedPreview = null
                         sendEffect(
-                            ImportContract.Effect.ImportSucceeded(outcome.counts, outcome.firstAddedServerId),
+                            ImportContract.Effect.ImportSucceeded(outcome.firstAddedServerId),
                         )
                     }
                     is ImportOutcome.AlreadyAdded -> showInputError(

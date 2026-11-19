@@ -50,7 +50,7 @@ internal class KaihiVpnService : VpnService() {
     internal lateinit var hevSocks5Tunnel: HevSocks5Tunnel
 
     @Inject
-    internal lateinit var tunnelProbe: TunnelProbe
+    internal lateinit var tunnelProbe: SocksTunnelProbe
 
     @Inject
     @IoDispatcher
@@ -75,7 +75,7 @@ internal class KaihiVpnService : VpnService() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Timber.i("onStartCommand: %s", intent?.action)
         when (intent?.action) {
-            ACTION_START, ACTION_RELOAD -> {
+            ACTION_START -> {
                 // First and unconditional: these arrive via startForegroundService, and any path
                 // out of this branch that skips startForeground ends in
                 // ForegroundServiceDidNotStartInTimeException. An undecodable config is one such
@@ -337,7 +337,6 @@ internal class KaihiVpnService : VpnService() {
 
     companion object {
         const val ACTION_START = "app.kaihi.xray.START"
-        const val ACTION_RELOAD = "app.kaihi.xray.RELOAD"
         const val ACTION_STOP = "app.kaihi.xray.STOP"
         private const val NOTIFICATION_ID = 1001
         private const val NOTIFICATION_CHANNEL_ID = "kaihi_vpn"
@@ -349,9 +348,6 @@ internal class KaihiVpnService : VpnService() {
 
         fun startIntent(context: Context, config: XrayRuntimeConfig): Intent =
             configIntent(context, ACTION_START, config)
-
-        fun reloadIntent(context: Context, config: XrayRuntimeConfig): Intent =
-            configIntent(context, ACTION_RELOAD, config)
 
         fun stopIntent(context: Context): Intent = Intent(context, KaihiVpnService::class.java)
             .setAction(ACTION_STOP)

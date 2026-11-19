@@ -1,6 +1,5 @@
 package app.kaihi.android.feature.importing.impl.ui.mvi
 
-import app.kaihi.android.feature.importing.impl.domain.ImportCounts
 import app.kaihi.android.feature.importing.impl.ui.model.AlreadyAddedUi
 import app.kaihi.android.feature.importing.impl.ui.model.ImportPreviewUi
 import app.kaihi.android.platform.ui.util.UiText
@@ -36,7 +35,7 @@ internal object ImportContract {
 
     sealed interface Effect {
         data object NavigateBack : Effect
-        data class ImportSucceeded(val counts: ImportCounts, val firstAddedServerId: String) : Effect
+        data class ImportSucceeded(val firstAddedServerId: String) : Effect
         data class ShowExisting(val serverId: String?) : Effect
     }
 }

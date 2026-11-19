@@ -1,14 +1,9 @@
-package app.kaihi.android.core.ssh.ext
+package app.kaihi.android.core.ssh
 
-import app.kaihi.android.core.ssh.SshConnection
 import app.kaihi.android.core.ssh.command.SshCommand
-import app.kaihi.android.core.ssh.command.SshStreamingCommand
 import app.kaihi.android.core.ssh.model.CommandEvent
 import app.kaihi.android.core.ssh.model.CommandResult
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.mapNotNull
-import timber.log.Timber
 
 /**
  * Runs [command] over the streaming exec channel, so [onOutputLine] receives every stdout/stderr
@@ -49,27 +44,3 @@ suspend fun <T> SshConnection.execute(
         Result.failure(error)
     }
 }
-
-fun <T> SshConnection.executeStreaming(
-    command: SshStreamingCommand<T>
-): Flow<T> =
-    executeStreaming(command.command, command.args)
-        .mapNotNull { event ->
-            when (event) {
-                is CommandEvent.Output -> {
-                    command.parseLine(event.line)
-                }
-
-                is CommandEvent.Error -> {
-                    Timber.w("SSH Streaming stderr: %s", event.message)
-                    null
-                }
-
-                is CommandEvent.Exit -> {
-                    if (event.code != 0) {
-                        Timber.e("SSH Streaming process exited with code %d", event.code)
-                    }
-                    null
-                }
-            }
-        }

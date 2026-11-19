@@ -8,8 +8,6 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
-import app.kaihi.android.platform.ui.theme.size.AppDimensions
-import app.kaihi.android.platform.ui.theme.size.LocalDimensions
 
 private val KaihiColors = darkColorScheme(
     primary = Vermilion,
@@ -52,11 +50,8 @@ private val KaihiColors = darkColorScheme(
 @Immutable
 data class KaihiStatusColors(
     val off: Color = Mist,
-    val connecting: Color = Vermilion,
-    val connected: Color = Jade,
     val warning: Color = Amber,
     val error: Color = Rose,
-    val track: Color = Dusk,
 )
 
 private val LocalKaihiStatus = staticCompositionLocalOf { KaihiStatusColors() }

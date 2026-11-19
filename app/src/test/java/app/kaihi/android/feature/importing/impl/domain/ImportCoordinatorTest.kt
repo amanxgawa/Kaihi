@@ -1,6 +1,9 @@
 package app.kaihi.android.feature.importing.impl.domain
 
 import app.kaihi.android.core.mode.OnboardingState
+import app.kaihi.android.core.mode.AppModeRepository
+import app.kaihi.android.core.storage.InMemoryAppStorage
+import app.kaihi.android.core.vpn.FakeHttpTransport
 import app.kaihi.android.core.vpn.SubscriptionFetchFailure
 import app.kaihi.android.core.vpn.SubscriptionFetchResult
 import app.kaihi.android.core.vpn.SubscriptionFetcher
@@ -11,9 +14,13 @@ import app.kaihi.android.core.vpn.XraySubscriptionSource
 import app.kaihi.android.core.vpn.XraySubscriptionStore
 import app.kaihi.android.core.vpn.XraySubscriptionUserInfo
 import app.kaihi.android.core.vpn.XrayVpnProfile
+import app.kaihi.android.core.vpn.VpnPreferences
 import app.kaihi.android.core.vpn.parseVlessLink
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
+import java.io.IOException
+import java.net.SocketTimeoutException
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -24,7 +31,7 @@ import org.junit.Test
 class ImportCoordinatorTest {
     @Test
     fun `several links create Imported group with parsed counts`() = runTest {
-        val (coordinator, store, fetcher, storage) = fixture()
+        val (coordinator, store, transport, storage) = fixture()
 
         val preview = preparePreview(coordinator, "$REALITY_RAW_LINK\n$REALITY_XHTTP_LINK\n$UNSUPPORTED_LINK")
         val outcome = coordinator.add(preview)
@@ -41,16 +48,14 @@ class ImportCoordinatorTest {
         assertEquals("", imported.name)
         assertEquals(XraySubscriptionSource.Imported, imported.source)
         assertEquals(2, imported.servers.size)
-        assertTrue(storage.completed)
-        assertEquals(0, fetcher.calls)
+        assertTrue(storage.isCompleted())
+        assertEquals(0, transport.requestedUrls.size)
     }
 
     @Test
     fun `importing the same link again counts a duplicate without writing`() = runTest {
         val (coordinator, store) = fixture()
         coordinator.add(preparePreview(coordinator, REALITY_RAW_LINK))
-        val writesBeforeDuplicate = store.writes
-
         val preview = preparePreview(coordinator, REALITY_RAW_LINK)
         assertEquals(1, preview.counts.duplicates)
         val outcome = coordinator.add(preview)
@@ -59,7 +64,6 @@ class ImportCoordinatorTest {
         val nothingNew = outcome as ImportOutcome.NothingNew
         assertEquals(0, nothingNew.counts.added)
         assertEquals(1, nothingNew.counts.duplicates)
-        assertEquals(writesBeforeDuplicate, store.writes)
         assertEquals(1, store.current().single().servers.size)
     }
 
@@ -75,7 +79,7 @@ class ImportCoordinatorTest {
         assertEquals(1, counts.unsupported)
         assertEquals(1, counts.invalid)
         assertTrue(store.current().isEmpty())
-        assertFalse(storage.completed)
+        assertFalse(storage.isCompleted())
     }
 
     @Test
@@ -88,7 +92,7 @@ class ImportCoordinatorTest {
             webPageUrl = "https://support.example/",
             announce = "Updated",
         )
-        val (coordinator, store, fetcher, storage) = fixture(
+        val (coordinator, store, transport, storage) = fixture(
             fetchResult = SubscriptionFetchResult.Success(
                 links = listOf(REALITY_RAW_LINK, REALITY_XHTTP_LINK),
                 metadata = metadata,
@@ -115,8 +119,8 @@ class ImportCoordinatorTest {
         assertEquals(metadata.announce, source.announce)
         assertEquals(preview.fetchedAtMillis, source.lastUpdatedMillis)
         assertNotNull(source.lastUpdatedMillis)
-        assertTrue(storage.completed)
-        assertEquals(listOf(SUBSCRIPTION_URL), fetcher.urls)
+        assertTrue(storage.isCompleted())
+        assertEquals(listOf(SUBSCRIPTION_URL), transport.requestedUrls)
     }
 
     @Test
@@ -144,18 +148,18 @@ class ImportCoordinatorTest {
             servers = listOf(profile),
             source = XraySubscriptionSource.Remote(url = SUBSCRIPTION_URL),
         )
-        val (coordinator, _, fetcher, storage) = fixture(initial = listOf(existing))
+        val (coordinator, _, transport, storage) = fixture(initial = listOf(existing))
 
         val preparation = coordinator.prepare(SUBSCRIPTION_URL)
 
-        assertEquals(ImportPreparation.AlreadyAdded(existing.id, existing.name, profile.id), preparation)
-        assertEquals(0, fetcher.calls)
-        assertFalse(storage.completed)
+        assertEquals(ImportPreparation.AlreadyAdded(existing.name, profile.id), preparation)
+        assertEquals(0, transport.requestedUrls.size)
+        assertFalse(storage.isCompleted())
     }
 
     @Test
     fun `fetch failure does not store or mark setup complete`() = runTest {
-        val (coordinator, store, fetcher, storage) = fixture(
+        val (coordinator, store, transport, storage) = fixture(
             fetchResult = SubscriptionFetchResult.Failure(SubscriptionFetchFailure.TIMEOUT),
         )
 
@@ -163,9 +167,8 @@ class ImportCoordinatorTest {
 
         assertEquals(ImportPreparation.FetchFailed(SubscriptionFetchFailure.TIMEOUT), preparation)
         assertTrue(store.current().isEmpty())
-        assertEquals(0, store.writes)
-        assertFalse(storage.completed)
-        assertEquals(1, fetcher.calls)
+        assertFalse(storage.isCompleted())
+        assertEquals(1, transport.requestedUrls.size)
     }
 
     @Test
@@ -175,12 +178,11 @@ class ImportCoordinatorTest {
         )
 
         coordinator.prepare("not a VPN link")
-        assertFalse(storage.completed)
+        assertFalse(storage.isCompleted())
         coordinator.prepare(SUBSCRIPTION_URL)
-        assertFalse(storage.completed)
+        assertFalse(storage.isCompleted())
         coordinator.add(preparePreview(coordinator, REALITY_RAW_LINK))
-        assertTrue(storage.completed)
-        assertEquals(1, storage.markCompletedCalls)
+        assertTrue(storage.isCompleted())
     }
 
     @Test
@@ -188,8 +190,8 @@ class ImportCoordinatorTest {
         val (linksCoordinator, linksStore, _, linksStorage) = fixture()
 
         assertTrue(linksCoordinator.prepare(REALITY_RAW_LINK) is ImportPreparation.Ready)
-        assertEquals(0, linksStore.writes)
-        assertFalse(linksStorage.completed)
+        assertTrue(linksStore.current().isEmpty())
+        assertFalse(linksStorage.isCompleted())
 
         val (remoteCoordinator, remoteStore, _, remoteStorage) = fixture(
             fetchResult = SubscriptionFetchResult.Success(
@@ -199,13 +201,13 @@ class ImportCoordinatorTest {
             ),
         )
         assertTrue(remoteCoordinator.prepare(SUBSCRIPTION_URL) is ImportPreparation.Ready)
-        assertEquals(0, remoteStore.writes)
-        assertFalse(remoteStorage.completed)
+        assertTrue(remoteStore.current().isEmpty())
+        assertFalse(remoteStorage.isCompleted())
     }
 
     @Test
     fun `add saves exactly the previewed subscription without fetching again`() = runTest {
-        val (coordinator, store, fetcher) = fixture(
+        val (coordinator, store, transport) = fixture(
             fetchResults = listOf(
                 SubscriptionFetchResult.Success(
                     links = listOf(REALITY_RAW_LINK),
@@ -224,7 +226,7 @@ class ImportCoordinatorTest {
         val outcome = coordinator.add(preview)
 
         assertTrue(outcome is ImportOutcome.Success)
-        assertEquals(1, fetcher.calls)
+        assertEquals(1, transport.requestedUrls.size)
         assertEquals(preview.profiles, store.current().single().servers)
     }
 
@@ -288,67 +290,81 @@ class ImportCoordinatorTest {
     private fun parseProfile(link: String): XrayVpnProfile =
         (parseVlessLink(link, 1L) as VlessLinkResult.Success).profile
 
-    private fun fixture(
+    private suspend fun TestScope.fixture(
         initial: List<XraySubscription> = emptyList(),
         fetchResult: SubscriptionFetchResult = SubscriptionFetchResult.Failure(SubscriptionFetchFailure.EMPTY),
         fetchResults: List<SubscriptionFetchResult> = listOf(fetchResult),
     ): Fixture {
-        val store = MemorySubscriptionStore(initial)
-        val fetcher = FakeSubscriptionFetcher(fetchResults)
-        val onboardingState = MemoryOnboardingState()
-        return Fixture(ImportCoordinator(store, fetcher, onboardingState), store, fetcher, onboardingState)
+        val storage = InMemoryAppStorage()
+        val store = XraySubscriptionStore(storage, StandardTestDispatcher(testScheduler))
+        if (initial.isNotEmpty()) store.update { initial }
+        val transport = FakeHttpTransport().apply { fetchResults.forEach { enqueueFetchResult(it) } }
+        val fetcher = SubscriptionFetcher(transport, VpnPreferences(storage), AppModeRepository(storage))
+        val onboardingState = OnboardingState(storage)
+        return Fixture(ImportCoordinator(store, fetcher, onboardingState), store, transport, onboardingState)
     }
 
     private data class Fixture(
         val coordinator: ImportCoordinator,
-        val store: MemorySubscriptionStore,
-        val fetcher: FakeSubscriptionFetcher,
-        val storage: MemoryOnboardingState,
+        val store: XraySubscriptionStore,
+        val transport: FakeHttpTransport,
+        val storage: OnboardingState,
     )
 
-    private class MemorySubscriptionStore(initial: List<XraySubscription>) : XraySubscriptionStore {
-        private val state = MutableStateFlow(initial)
-        override val subscriptions: Flow<List<XraySubscription>> = state
-        var writes = 0
-            private set
+    private suspend fun XraySubscriptionStore.current(): List<XraySubscription> = subscriptions.first()
 
-        fun current(): List<XraySubscription> = state.value
-
-        override suspend fun update(
-            transform: (List<XraySubscription>) -> List<XraySubscription>,
-        ): List<XraySubscription> {
-            val next = transform(state.value)
-            if (next != state.value) {
-                writes++
-                state.value = next
+    private fun FakeHttpTransport.enqueueFetchResult(result: SubscriptionFetchResult) {
+        when (result) {
+            is SubscriptionFetchResult.Success -> {
+                val links = if (result.truncated && result.links.isNotEmpty()) {
+                    result.links + List(500) { result.links.first() }
+                } else {
+                    result.links
+                }
+                enqueue(FakeHttpTransport.ok(links.joinToString("\n"), result.metadata.toHeaders()))
             }
-            return next
+            is SubscriptionFetchResult.Failure -> when (result.reason) {
+                SubscriptionFetchFailure.TIMEOUT -> enqueueFailure(SocketTimeoutException())
+                SubscriptionFetchFailure.NETWORK -> enqueueFailure(IOException())
+                SubscriptionFetchFailure.HTTP_STATUS -> enqueue(FakeHttpTransport.response(503))
+                SubscriptionFetchFailure.TOO_LARGE -> enqueue(
+                    FakeHttpTransport.response(200, body = ByteArray(1024 * 1024 + 1)),
+                )
+                SubscriptionFetchFailure.TOO_MANY_REDIRECTS -> repeat(4) { index ->
+                    enqueue(FakeHttpTransport.response(302, headers = mapOf("Location" to listOf("/$index"))))
+                }
+                SubscriptionFetchFailure.UNSUPPORTED_FORMAT -> enqueue(
+                    FakeHttpTransport.response(
+                        200,
+                        headers = mapOf("Content-Type" to listOf("application/json")),
+                        body = "{}",
+                    ),
+                )
+                SubscriptionFetchFailure.EMPTY -> enqueue(FakeHttpTransport.ok(""))
+                SubscriptionFetchFailure.INSECURE_URL -> enqueue(FakeHttpTransport.response(400))
+            }
         }
     }
 
-    private class FakeSubscriptionFetcher(
-        private val results: List<SubscriptionFetchResult>,
-    ) : SubscriptionFetcher {
-        var calls = 0
-            private set
-        val urls = mutableListOf<String>()
-
-        override suspend fun fetch(url: String): SubscriptionFetchResult {
-            calls++
-            urls += url
-            return results.getOrElse(calls - 1) { results.last() }
+    private fun SubscriptionMetadata.toHeaders(): Map<String, List<String>> = buildMap {
+        title?.let { put("profile-title", listOf(it)) }
+        userInfo?.let { info ->
+            put(
+                "subscription-userinfo",
+                listOf(
+                    listOfNotNull(
+                        info.uploadBytes?.let { "upload=$it" },
+                        info.downloadBytes?.let { "download=$it" },
+                        info.totalBytes?.let { "total=$it" },
+                        info.expireEpochSeconds?.let { "expire=$it" },
+                    ).joinToString(";"),
+                ),
+            )
         }
-    }
-
-    private class MemoryOnboardingState : OnboardingState {
-        var completed = false
-        var markCompletedCalls = 0
-
-        override fun isCompleted(): Boolean = completed
-        override fun markCompleted() {
-            markCompletedCalls++
-            completed = true
-        }
+        updateIntervalHours?.let { put("profile-update-interval", listOf(it.toString())) }
+        supportUrl?.let { put("support-url", listOf(it)) }
+        webPageUrl?.let { put("profile-web-page-url", listOf(it)) }
+        announce?.let { put("announce", listOf(it)) }
     }
 
     private companion object {

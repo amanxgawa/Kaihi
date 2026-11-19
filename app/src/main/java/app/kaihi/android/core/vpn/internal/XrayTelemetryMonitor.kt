@@ -2,10 +2,7 @@ package app.kaihi.android.core.vpn.internal
 
 import app.kaihi.android.core.vpn.XrayEngineState
 import app.kaihi.android.core.vpn.XrayFailure
-import app.kaihi.android.core.vpn.spec.XrayFingerprint
-import app.kaihi.android.core.vpn.XrayLogLevel
 import app.kaihi.android.core.vpn.XrayLogMessage
-import app.kaihi.android.core.vpn.XrayMonitoring
 import app.kaihi.android.core.vpn.XrayStatsSource
 import app.kaihi.android.core.vpn.XrayTrafficStats
 import app.kaihi.android.platform.di.IoDispatcher
@@ -46,7 +43,7 @@ internal class XrayTelemetryMonitor @Inject constructor(
     private val statsSource: XrayStatsSource,
     @IoDispatcher ioDispatcher: CoroutineDispatcher,
     private val elapsedRealtimeSource: ElapsedRealtimeSource,
-) : XrayMonitoring, CoreCallbackHandler {
+) : CoreCallbackHandler {
     // SupervisorJob keeps the stats poller and the logcat reader from killing each other, but it
     // also leaves neither anywhere to propagate to. Without this handler an unexpected exception
     // reaches the JVM's uncaught path instead of these logs.
@@ -70,28 +67,19 @@ internal class XrayTelemetryMonitor @Inject constructor(
         onBufferOverflow = BufferOverflow.DROP_OLDEST,
     )
 
-    override val state: StateFlow<XrayEngineState> = _state.asStateFlow()
-    override val stats: Flow<XrayTrafficStats> = _stats.asSharedFlow()
-    override val logs: Flow<XrayLogMessage> = _logs.asSharedFlow()
-    override val healthDegraded: Flow<Unit> = _healthDegraded.asSharedFlow()
-
-    private val _sessionServerId = MutableStateFlow<String?>(null)
-    override val sessionServerId: StateFlow<String?> = _sessionServerId.asStateFlow()
-
-    private val _sessionSettingsKey = MutableStateFlow<String?>(null)
-    override val sessionSettingsKey: StateFlow<String?> = _sessionSettingsKey.asStateFlow()
-
-    private val _sessionFingerprint = MutableStateFlow<XrayFingerprint?>(null)
-    override val sessionFingerprint: StateFlow<XrayFingerprint?> = _sessionFingerprint.asStateFlow()
+    val state: StateFlow<XrayEngineState> = _state.asStateFlow()
+    val stats: Flow<XrayTrafficStats> = _stats.asSharedFlow()
+    val logs: Flow<XrayLogMessage> = _logs.asSharedFlow()
+    val healthDegraded: Flow<Unit> = _healthDegraded.asSharedFlow()
 
     private val _sessionIdentity = MutableStateFlow<SessionIdentity?>(null)
     internal val sessionIdentity: StateFlow<SessionIdentity?> = _sessionIdentity.asStateFlow()
 
     private val _runningSinceRealtime = MutableStateFlow<Long?>(null)
-    override val runningSinceRealtime: StateFlow<Long?> = _runningSinceRealtime.asStateFlow()
+    val runningSinceRealtime: StateFlow<Long?> = _runningSinceRealtime.asStateFlow()
 
     private val _failure = MutableStateFlow<XrayFailure?>(null)
-    override val failure: StateFlow<XrayFailure?> = _failure.asStateFlow()
+    val failure: StateFlow<XrayFailure?> = _failure.asStateFlow()
 
     private val lifecycle = Mutex()
     private var statsJob: Job? = null
@@ -121,9 +109,6 @@ internal class XrayTelemetryMonitor @Inject constructor(
         _stats.resetReplayCache()
         pollIntervalMillis = intervalMillis.coerceAtLeast(MIN_STATS_INTERVAL_MS)
         // Published before RUNNING, so a client reacting to RUNNING already knows which server it is on.
-        _sessionServerId.value = serverId
-        _sessionSettingsKey.value = settingsKey
-        _sessionFingerprint.value = fingerprint.toFingerprint()
         _sessionIdentity.value = SessionIdentity(serverId, settingsKey, fingerprint)
         // elapsedRealtime(), not epoch time: monotonic and shared across processes, so a UI process
         // recreated under a live tunnel can compare against it instead of guessing a start time.
@@ -154,9 +139,6 @@ internal class XrayTelemetryMonitor @Inject constructor(
 
         endingStats?.cancelAndJoin()
         endingLogcat?.stop()
-        _sessionServerId.value = null
-        _sessionSettingsKey.value = null
-        _sessionFingerprint.value = null
         _sessionIdentity.value = null
         _runningSinceRealtime.value = null
         _state.value = XrayEngineState.STOPPED
@@ -171,15 +153,11 @@ internal class XrayTelemetryMonitor @Inject constructor(
             is NoWorkingFingerprintException -> XrayFailure.NO_WORKING_FINGERPRINT
             else -> XrayFailure.OTHER
         }
-        _sessionServerId.value = null
-        _sessionSettingsKey.value = null
-        _sessionFingerprint.value = null
         _sessionIdentity.value = null
         _runningSinceRealtime.value = null
         _state.value = XrayEngineState.ERROR
         _logs.tryEmit(
             XrayLogMessage(
-                level = XrayLogLevel.ERROR,
                 message = error.message ?: "Unable to start Xray",
                 sequence = logSequence.getAndIncrement(),
             )
@@ -224,31 +202,14 @@ internal class XrayTelemetryMonitor @Inject constructor(
             downlinkBytesPerSecond = (downlinkDelta / elapsedSeconds).toLong().coerceAtLeast(0),
             uplinkTotalBytes = uplinkTotalBytes,
             downlinkTotalBytes = downlinkTotalBytes,
-            activeConnectionsIn = 0,
-            activeConnectionsOut = 0,
         )
     }
 
-    private fun String.toLogMessage(): XrayLogMessage {
-        val level = LOG_LEVEL_TAGS.entries
-            .firstOrNull { (tag, _) -> contains(tag, ignoreCase = true) }
-            ?.value
-            ?: XrayLogLevel.INFO
-        return XrayLogMessage(level, this, sequence = logSequence.getAndIncrement())
-    }
-
-    private fun String?.toFingerprint(): XrayFingerprint? =
-        this?.let { wireValue -> XrayFingerprint.entries.firstOrNull { it.wireValue == wireValue } }
+    private fun String.toLogMessage(): XrayLogMessage =
+        XrayLogMessage(this, sequence = logSequence.getAndIncrement())
 
     private companion object {
         const val LOG_BUFFER_CAPACITY = 64
         const val MIN_STATS_INTERVAL_MS = 250L
-
-        val LOG_LEVEL_TAGS = mapOf(
-            "[Debug]" to XrayLogLevel.DEBUG,
-            "[Info]" to XrayLogLevel.INFO,
-            "[Warning]" to XrayLogLevel.WARNING,
-            "[Error]" to XrayLogLevel.ERROR,
-        )
     }
 }

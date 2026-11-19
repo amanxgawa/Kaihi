@@ -1,7 +1,5 @@
-package app.kaihi.android.core.ssh.ext
+package app.kaihi.android.core.ssh
 
-import app.kaihi.android.core.ssh.LpfHandle
-import app.kaihi.android.core.ssh.SshConnection
 import app.kaihi.android.core.ssh.command.SshCommand
 import app.kaihi.android.core.ssh.model.CommandEvent
 import app.kaihi.android.core.ssh.model.CommandResult
@@ -160,9 +158,6 @@ private class FakeSshConnection(private vararg val events: CommandEvent) : SshCo
         throw UnsupportedOperationException("the helper under test uses executeStreaming")
 
     override suspend fun upload(remotePath: String, content: ByteArray, permissions: Int?): Result<Unit> =
-        throw UnsupportedOperationException()
-
-    override suspend fun startLpf(remotePort: Int): Result<LpfHandle> =
         throw UnsupportedOperationException()
 
     override suspend fun disconnect() = Unit

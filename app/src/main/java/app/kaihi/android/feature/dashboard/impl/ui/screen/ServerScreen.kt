@@ -40,7 +40,7 @@ import app.kaihi.android.feature.dashboard.impl.ui.mvi.isBusy
 import app.kaihi.android.feature.dashboard.impl.ui.screen.components.ReconnectToApplyBanner
 import app.kaihi.android.feature.dashboard.impl.ui.screen.components.ServerAdvancedSection
 import app.kaihi.android.platform.ui.icons.KaihiIcons
-import app.kaihi.android.platform.ui.theme.size.dimens
+import app.kaihi.android.platform.ui.theme.dimens
 import app.kaihi.android.platform.ui.util.CollectAsEffect
 import app.kaihi.android.platform.ui.util.asString
 
@@ -115,7 +115,7 @@ internal fun ServerScreen(
                                 onReconnect = {
                                     viewModel.processIntent(ServerContract.Intent.ReconnectToApplyRequested)
                                 },
-                                enabled = !state.isBusy,
+                                enabled = !state.engineState.isBusy,
                                 modifier = Modifier.padding(bottom = dimens.l),
                             )
                         }

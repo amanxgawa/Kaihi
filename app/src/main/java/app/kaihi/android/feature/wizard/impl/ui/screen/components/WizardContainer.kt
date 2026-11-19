@@ -57,7 +57,7 @@ import app.kaihi.android.feature.wizard.impl.ui.model.WizardScopeImpl
 import app.kaihi.android.feature.wizard.impl.ui.model.WizardState
 import app.kaihi.android.feature.wizard.impl.ui.model.WizardStep
 import app.kaihi.android.platform.ui.icons.KaihiIcons
-import app.kaihi.android.platform.ui.theme.size.dimens
+import app.kaihi.android.platform.ui.theme.dimens
 import app.kaihi.android.platform.ui.util.UiText
 import app.kaihi.android.platform.ui.util.asString
 import kotlinx.collections.immutable.ImmutableList
@@ -82,10 +82,6 @@ internal fun WizardContainer(
     onNextClick: () -> Unit,
     isLoading: Boolean = false,
     isNextEnabled: Boolean = true,
-    disabledReasonText: UiText = UiText.Empty,
-    nextButtonText: UiText = UiText.Resource(R.string.next),
-    finishButtonText: UiText = UiText.Resource(R.string.finish),
-    backButtonText: UiText = UiText.Resource(R.string.back),
     isTopBarVisible: Boolean = true,
     isBottomBarVisible: Boolean = true,
     topBar: @Composable () -> Unit = {
@@ -151,9 +147,9 @@ internal fun WizardContainer(
                 state = state,
                 isLoading = isLoading,
                 isNextEnabled = isNextEnabled,
-                disabledReasonText = disabledReasonText,
-                nextButtonText = if (state.isLastPage) finishButtonText else nextButtonText,
-                backButtonText = backButtonText,
+                disabledReasonText = UiText.Empty,
+                nextButtonText = UiText.Resource(if (state.isLastPage) R.string.finish else R.string.next),
+                backButtonText = UiText.Resource(R.string.back),
                 onBackClick = {
                     keyboardController?.hide()
                     state.previous()

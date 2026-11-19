@@ -16,7 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import app.kaihi.android.R
-import app.kaihi.android.platform.ui.theme.size.dimens
+import app.kaihi.android.platform.ui.theme.dimens
 
 // At the bottom and styled apart from every other row: this switch is the only thing on the page
 // that can turn Advanced mode on. Turning it off stays a plain ungated flip, since only unlocking

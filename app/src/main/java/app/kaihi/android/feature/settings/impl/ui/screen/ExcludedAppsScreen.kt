@@ -48,7 +48,7 @@ import app.kaihi.android.feature.settings.impl.domain.InstalledApp
 import app.kaihi.android.feature.settings.impl.ui.mvi.ExcludedAppsContract
 import app.kaihi.android.feature.settings.impl.ui.mvi.ExcludedAppsViewModel
 import app.kaihi.android.platform.ui.icons.KaihiIcons
-import app.kaihi.android.platform.ui.theme.size.dimens
+import app.kaihi.android.platform.ui.theme.dimens
 import app.kaihi.android.platform.ui.util.CollectAsEffect
 import app.kaihi.android.platform.ui.util.asString
 import kotlinx.coroutines.Dispatchers

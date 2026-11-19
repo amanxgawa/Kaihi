@@ -1,11 +1,9 @@
 package app.kaihi.android.platform.ui.theme
 
 import androidx.compose.material3.Typography
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
 import app.kaihi.android.R
 
 val Sora = FontFamily(
@@ -38,5 +36,3 @@ val KaihiTypography = Typography(
     labelMedium = base.labelMedium.copy(fontFamily = Sora),
     labelSmall = base.labelSmall.copy(fontFamily = Sora),
 )
-
-val MonoText = TextStyle(fontFamily = JetBrainsMono, fontSize = 13.sp)

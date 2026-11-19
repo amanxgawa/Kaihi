@@ -1,6 +1,6 @@
 package app.kaihi.android.core.ssh.internal.model
 
-import app.kaihi.android.core.ssh.internal.util.SecurityUtils
+import app.kaihi.android.core.ssh.internal.SecurityUtils
 import app.kaihi.android.core.ssh.model.SshAuth
 import app.kaihi.android.core.ssh.model.SshConfig
 import java.util.Locale
