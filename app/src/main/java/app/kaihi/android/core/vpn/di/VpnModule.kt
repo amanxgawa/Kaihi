@@ -7,8 +7,10 @@ import app.kaihi.android.core.vpn.TunnelSettingsSource
 import app.kaihi.android.core.vpn.XrayControl
 import app.kaihi.android.core.vpn.XrayMonitoring
 import app.kaihi.android.core.vpn.XrayServiceProvider
+import app.kaihi.android.core.vpn.XraySessionLauncher
 import app.kaihi.android.core.vpn.XrayStatsSource
 import app.kaihi.android.core.vpn.XraySubscriptionStore
+import app.kaihi.android.core.vpn.internal.DefaultXraySessionLauncher
 import app.kaihi.android.core.vpn.internal.ElapsedRealtimeSource
 import app.kaihi.android.core.vpn.internal.HttpTransport
 import app.kaihi.android.core.vpn.internal.HttpUrlConnectionTransport
@@ -45,6 +47,9 @@ internal abstract class VpnModule {
 
     @Binds
     abstract fun bindXrayControl(impl: XrayProcessControl): XrayControl
+
+    @Binds
+    abstract fun bindXraySessionLauncher(impl: DefaultXraySessionLauncher): XraySessionLauncher
 
     @Binds
     abstract fun bindXrayMonitoring(impl: RemoteXrayMonitoring): XrayMonitoring

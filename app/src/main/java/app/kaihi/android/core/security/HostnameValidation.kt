@@ -1,4 +1,4 @@
-package app.kaihi.android.core.ssh
+package app.kaihi.android.core.security
 
 fun isSafeHostname(value: String): Boolean =
     value.isNotBlank() && value.length <= MAX_HOSTNAME_LENGTH && HOSTNAME_REGEX.matches(value)

@@ -1,7 +1,7 @@
 package app.kaihi.android.feature.wizard
 
 import app.kaihi.android.core.ssh.model.CommandResult
-import app.kaihi.android.feature.wizard.impl.domain.ssh.VerifySniCandidateCommand
+import app.kaihi.android.feature.wizard.impl.domain.command.VerifySniCandidateCommand
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue

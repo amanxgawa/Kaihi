@@ -3,8 +3,8 @@ package app.kaihi.android.core.vpn.internal
 import app.kaihi.android.core.vpn.TunnelSettings
 import app.kaihi.android.core.vpn.TunnelSettingsSource
 import app.kaihi.android.core.vpn.VpnPreferences
-import app.kaihi.android.platform.mode.AppMode
-import app.kaihi.android.platform.mode.AppModeRepository
+import app.kaihi.android.core.mode.AppMode
+import app.kaihi.android.core.mode.AppModeRepository
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow

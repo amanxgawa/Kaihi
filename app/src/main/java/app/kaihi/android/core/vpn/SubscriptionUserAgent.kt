@@ -1,7 +1,7 @@
 package app.kaihi.android.core.vpn
 
 import app.kaihi.android.BuildConfig
-import app.kaihi.android.platform.mode.AppMode
+import app.kaihi.android.core.mode.AppMode
 
 /** Returns whether a custom subscription User-Agent can be sent as an HTTP header. */
 fun isValidSubscriptionUserAgent(value: String): Boolean =

@@ -1,6 +1,6 @@
 package app.kaihi.android.core.vpn
 
-import app.kaihi.android.platform.mode.AppMode
+import app.kaihi.android.core.mode.AppMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

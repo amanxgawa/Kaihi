@@ -1,5 +1,6 @@
-package app.kaihi.android.core.ssh
+package app.kaihi.android.core.security
 
+import app.kaihi.android.core.ssh.ShellHost
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows

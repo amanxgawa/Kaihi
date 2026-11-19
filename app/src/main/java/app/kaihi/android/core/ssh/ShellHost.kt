@@ -1,5 +1,7 @@
 package app.kaihi.android.core.ssh
 
+import app.kaihi.android.core.security.isSafeHostname
+
 /**
  * A hostname validated for interpolation into a remote script. Guards at the type level rather
  * than by convention at each call site.

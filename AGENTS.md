@@ -24,11 +24,13 @@ All paths below are under `app/src/main/java/app/kaihi/android/` unless stated.
 - `core/vpn/`: Xray config factories (`configfactory/`), config models (`spec/`), profile store, and
   the VPN service in the separate `:vpn` process with its IPC to the UI (`internal/`).
 - `core/storage/`: `AppStorage`; each `StorageDomain` says whether it is Keystore-encrypted.
-- `core/security/`: `Secret`.
-- `feature/{hello,wizard,dashboard,settings}/`: the root holds only `*Key` navigation keys; the
-  code is under `impl/domain` and `impl/ui`.
-- `platform/`: cross-cutting code. `di` (dispatchers), `navigation`, `mode` (normal/advanced),
-  `ui` (MVI base classes, theme, icons, shared components).
+- `core/mode/`: app mode (normal/advanced) and the onboarding flag.
+- `core/security/`: `Secret`, hostname validation.
+- `feature/{hello,importing,wizard,dashboard,settings}/`: the root holds only `*Key` navigation
+  keys; the code is under `impl/domain`, `impl/ui` and, when the feature does its own I/O,
+  `impl/data` with bindings in `impl/di`.
+- `platform/`: infrastructure that imports nothing else in the app. `di` (dispatchers),
+  `navigation`, `ui` (MVI base classes, theme, icons, shared components).
 - `buildSrc/`: tasks that download and verify the pinned third-party binaries.
 - `app/src/test/`: JVM unit tests mirroring the main packages.
 - `CONTRIBUTING.md`, `SECURITY.md`: the full rules; read them before touching `core.ssh`,
@@ -38,7 +40,7 @@ All paths below are under `app/src/main/java/app/kaihi/android/` unless stated.
 
 - `./gradlew compileDebugKotlin`: fast loop while iterating.
 - `./gradlew testDebugUnitTest`: all unit tests.
-- `./gradlew testDebugUnitTest --tests 'app.kaihi.android.core.ssh.HostnameValidationTest'`: one
+- `./gradlew testDebugUnitTest --tests 'app.kaihi.android.core.security.HostnameValidationTest'`: one
   test class; `--tests '<class>.<method>'` selects a single test.
 - `./gradlew lintDebug`: Android Lint. No formatter or detekt is configured.
 - `./gradlew assembleDebug`: needed only when native code or the manifest changed.
@@ -53,11 +55,14 @@ command-line way to run the app: use Android Studio's `app` configuration on a d
 Reference feature to copy: `feature/settings` (Key, Contract, ViewModel, Destination, navigation
 module, Screen). Reference test: `StoredAppModeRepositoryTest`.
 
-- Layering is enforced by `app/src/test/.../architecture/ArchitectureBoundariesTest`, so run it
-  after moving or adding files. `core.<module>` exposes interfaces and data types, keeps
-  implementations in `.internal` and Hilt bindings in `.di`. `domain` imports no Compose,
-  `platform.ui` or `platform.navigation`. `ui` never imports a `core.*.internal` package. `core`
-  never imports `feature`.
+- The architecture is specified in `CONTRIBUTING.md#architecture` and enforced by
+  `app/src/test/.../architecture/ArchitectureBoundariesTest`; read the section before adding a
+  package or a cross-layer import, and run the test after moving or adding files. In short:
+  core modules depend only leftward along `security ← storage ← mode ← ssh ← vpn`, and their
+  public API is interfaces, data types and pure code with no Android or I/O imports. `domain` is
+  pure Kotlin. `ui` may use `core` data, enum and sealed types but calls `core` behaviour only
+  through its feature's `domain`. `platform` imports nothing else in the app, and `ExperienceKeys`
+  is used only in `core.*.internal`.
 - Screens are MVI: a `*Contract` object with `State`, `Intent`, `Effect`; a `@HiltViewModel`
   extending `MviViewModel`; state changes through `reduce { }`, one-shot events through
   `sendEffect`. Composables read `viewModel.state.collectAsStateWithLifecycle()` and

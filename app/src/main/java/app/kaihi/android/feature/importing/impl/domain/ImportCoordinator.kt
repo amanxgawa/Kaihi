@@ -1,8 +1,6 @@
 package app.kaihi.android.feature.importing.impl.domain
 
-import app.kaihi.android.core.storage.AppStorage
-import app.kaihi.android.core.storage.ExperienceKeys
-import app.kaihi.android.core.storage.StorageDomain
+import app.kaihi.android.core.mode.OnboardingState
 import app.kaihi.android.core.vpn.ImportInput
 import app.kaihi.android.core.vpn.SubscriptionFetchFailure
 import app.kaihi.android.core.vpn.SubscriptionFetchResult
@@ -73,7 +71,7 @@ internal sealed interface ImportOutcome {
 internal class ImportCoordinator @Inject constructor(
     private val subscriptionStore: XraySubscriptionStore,
     private val subscriptionFetcher: SubscriptionFetcher,
-    private val appStorage: AppStorage,
+    private val onboardingState: OnboardingState,
 ) {
     suspend fun prepare(text: String): ImportPreparation {
         val nowMillis = System.currentTimeMillis()
@@ -247,7 +245,7 @@ internal class ImportCoordinator @Inject constructor(
     }
 
     private fun markWizardCompleted() {
-        appStorage.putBoolean(StorageDomain.EXPERIENCE, ExperienceKeys.WIZARD_COMPLETED, true)
+        onboardingState.markCompleted()
     }
 
     private fun List<XraySubscription>.firstRemoteWithUrl(url: String): XraySubscription? =

@@ -19,7 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import app.kaihi.android.R
 import app.kaihi.android.feature.wizard.impl.ui.mvi.WizardContract.ServerAuthMethod
 import app.kaihi.android.feature.wizard.impl.ui.mvi.WizardContract.SetupStrategy
-import app.kaihi.android.platform.mode.AppMode
+import app.kaihi.android.core.mode.AppMode
 import app.kaihi.android.feature.wizard.impl.ui.screen.components.WizardPage
 import app.kaihi.android.platform.ui.theme.JetBrainsMono
 import app.kaihi.android.platform.ui.theme.size.dimens

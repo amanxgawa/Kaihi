@@ -13,7 +13,6 @@ import android.os.ParcelFileDescriptor
 import android.os.Process
 import android.os.SystemClock
 import androidx.core.app.NotificationCompat
-import app.kaihi.android.MainActivity
 import app.kaihi.android.R
 import app.kaihi.android.core.vpn.XrayJson
 import app.kaihi.android.core.vpn.XrayRuntimeConfig
@@ -307,26 +306,24 @@ internal class KaihiVpnService : VpnService() {
     }
 
     private fun createNotification(): Notification {
-        val contentIntent = PendingIntent.getActivity(
-            this,
-            CONTENT_REQUEST_CODE,
-            Intent(this, MainActivity::class.java),
-            PendingIntent.FLAG_IMMUTABLE,
-        )
+        // Resolve the launcher because core may not depend on an activity in the app root.
+        val contentIntent = packageManager.getLaunchIntentForPackage(packageName)?.let { launch ->
+            PendingIntent.getActivity(this, CONTENT_REQUEST_CODE, launch, PendingIntent.FLAG_IMMUTABLE)
+        }
         val disconnectIntent = PendingIntent.getService(
             this,
             DISCONNECT_REQUEST_CODE,
             stopIntent(this),
             PendingIntent.FLAG_IMMUTABLE,
         )
-        return NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
+        val builder = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_kaihi_glyph)
             .setContentTitle(getString(R.string.notification_vpn_title))
             .setContentText(getString(R.string.notification_vpn_content))
-            .setContentIntent(contentIntent)
             .addAction(R.drawable.ic_kaihi_glyph, getString(R.string.notification_vpn_disconnect), disconnectIntent)
             .setOngoing(true)
-            .build()
+        contentIntent?.let(builder::setContentIntent)
+        return builder.build()
     }
 
     private fun ensureNotificationChannel() {

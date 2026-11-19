@@ -1,8 +1,8 @@
-package app.kaihi.android.feature.wizard.impl.domain.ssh
+package app.kaihi.android.feature.wizard.impl.domain.command
 
 import app.kaihi.android.core.ssh.ShellHost
 import app.kaihi.android.core.ssh.command.BashScriptCommand
-import app.kaihi.android.core.ssh.isSafeHostname
+import app.kaihi.android.core.security.isSafeHostname
 import app.kaihi.android.core.ssh.model.CommandResult
 
 internal class ScanSniCommand(architecture: String) : BashScriptCommand<List<String>> {

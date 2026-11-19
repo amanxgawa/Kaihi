@@ -12,7 +12,7 @@ class ServerFootprintSourceGuardTest {
     fun `server footprint sources do not contain Kaihi names`() {
         val sourceFiles = Konsist.scopeFromProject().files.filter { file ->
             val path = file.path.replace('\\', '/')
-            path.contains("/main/java/app/kaihi/android/feature/wizard/impl/domain/ssh/") ||
+            path.contains("/main/java/app/kaihi/android/feature/wizard/impl/domain/command/") ||
                 path.contains("/main/java/app/kaihi/android/feature/wizard/impl/domain/deployment/") ||
                 path.endsWith("/main/java/app/kaihi/android/feature/wizard/impl/domain/usecase/DeployXrayServerUseCase.kt") ||
                 path.endsWith("/main/java/app/kaihi/android/core/vpn/configfactory/XrayServerConfigFactory.kt")

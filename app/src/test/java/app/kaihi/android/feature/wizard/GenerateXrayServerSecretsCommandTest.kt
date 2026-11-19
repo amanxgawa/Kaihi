@@ -1,8 +1,8 @@
 package app.kaihi.android.feature.wizard
 
 import app.kaihi.android.core.ssh.model.CommandResult
-import app.kaihi.android.feature.wizard.impl.domain.ssh.GenerateXrayServerSecretsCommand
-import app.kaihi.android.feature.wizard.impl.domain.ssh.InstallXrayRuntimeCommand
+import app.kaihi.android.feature.wizard.impl.domain.command.GenerateXrayServerSecretsCommand
+import app.kaihi.android.feature.wizard.impl.domain.command.InstallXrayRuntimeCommand
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertThrows

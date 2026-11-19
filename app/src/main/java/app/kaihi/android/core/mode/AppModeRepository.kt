@@ -1,4 +1,4 @@
-package app.kaihi.android.platform.mode
+package app.kaihi.android.core.mode
 
 import kotlinx.coroutines.flow.StateFlow
 

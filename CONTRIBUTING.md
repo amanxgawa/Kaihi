@@ -116,20 +116,77 @@ branch is re-checked after it catches up.
 
 ## Architecture
 
-The layering is enforced by [`ArchitectureBoundariesTest`](app/src/test/java/app/kaihi/android/architecture/ArchitectureBoundariesTest.kt),
-not by convention: the app is a single Gradle module, so `internal` blocks nothing on its own and
-Konsist stands in for the module boundaries the packages are written as if they had.
+Kaihi follows Clean Architecture inside a single Gradle module. Packages stand in for modules, so
+`internal` blocks nothing here, and
+[`ArchitectureBoundariesTest`](app/src/test/java/app/kaihi/android/architecture/ArchitectureBoundariesTest.kt)
+enforces every rule in this section. A change to a rule changes this section and the test together.
 
-- `core.<module>` exposes only abstractions outside its own `.internal`/`.di`. Concrete behaviour
-  lives in `.internal`.
-- `feature.<name>` exposes only `*Key` navigation keys at its root; everything else is in `.impl`.
-- Every `*Key` needs a registered `Destination<Key>`, or navigation fails at runtime instead of at
+### Layers
+
+| Package | Ring | Holds |
+| --- | --- | --- |
+| `core.<module>` (outside `.internal`, `.di`) | Entities and ports | Data, enum, sealed and value types, exceptions, interfaces, pure stateless code (parsers, config factories, extension functions) |
+| `feature.<name>.impl.domain` | Use cases | Coordinators, use cases, feature models, interfaces the feature owns, `SshCommand`s |
+| `feature.<name>.impl.ui`, `feature.<name>.impl.data`, `core.<module>.internal` | Adapters | ViewModels and screens; implementations of the interfaces above |
+| `core.<module>.di`, `feature.<name>.impl.di`, `feature.<name>.impl.ui.navigation.di`, the app root | Wiring | Hilt modules, `MainActivity`, `KaihiApp` |
+| `platform.<module>` | Infrastructure | Dispatcher qualifiers, navigation, the UI kit |
+
+Dependencies point inward: an adapter depends on the ports it implements or calls, a use case on
+entities and ports, and nothing inward knows about an adapter. `platform` sits beside the rings:
+any layer may use it, and it uses nothing in the app.
+
+### Core module order
+
+```
+security ← storage ← mode ← ssh ← vpn
+```
+
+A core module may import only itself and modules to its left. A new core module is added to this
+line and to `CORE_MODULE_ORDER` in the test in the same change.
+
+### Allowed imports
+
+| Code in | May import from the app | Must not import |
+| --- | --- | --- |
+| `platform.<module>` | Its own and other `platform` modules, `R`, `BuildConfig` | Anything in `core`, `feature` or the app root |
+| `core.<module>` public | Its own module, core modules to its left, `platform.di` | `platform.ui`, `platform.navigation`, `feature`, the app root; framework or I/O code: `android.*`, `androidx.*` (except `androidx.annotation`), sshj, Bouncy Castle, libv2ray, `java.io.File*`, `javax.net`, `java.net.*` except `URI`, `URLEncoder`, `URLDecoder`, `IDN` |
+| `core.<module>.internal` | As the public API, plus any library and the Android framework | `feature`, the app root (except `R`, `BuildConfig`) |
+| `core.<module>.di` | Its own module, including `.internal` | |
+| `feature.<name>.impl.domain` | Its own `domain`, public `core`, `platform.di` | `android.*`, `androidx.*` (except `androidx.annotation`), `platform.ui`, `platform.navigation`, its own `ui` or `data`, other features, the raw key-value store (`AppStorage`, `StorageDomain`, `ExperienceKeys`) |
+| `feature.<name>.impl.data` | Its own `domain`, public `core`, `platform`, the Android framework | Its own `ui`, other features |
+| `feature.<name>.impl.ui` | Its own `domain`, `platform`; from public `core`: data, enum, value, annotation and sealed types, `data object`s, exceptions, top-level functions and values; another feature's root `*Key`, only from `impl.ui.navigation` | `core` interfaces (other than sealed ones), `object`s, abstract and plain classes; its own `data` |
+| The app root | Public `core`, `platform`, feature root `*Key`s | `.internal`, `.impl` |
+
+Rules that apply everywhere:
+
+- Nothing reaches into another module's `core.<module>.internal` or `feature.<name>.impl`.
+- `feature.<name>` holds only `*Key` navigation keys at its root, and every `*Key` has a
+  `Destination<Key>` under that feature's `.impl`, or navigation fails at runtime instead of at
   build time.
-- `core` is effectively the data layer: a feature's `domain` uses it, and UI models stay out of it.
-  `core.security.Secret` is a data-layer type; UI state holds `platform.ui.util.UiSecret` instead,
-  and the conversion happens in the state mappers.
-- `domain` imports no Compose, `platform.ui` or `platform.navigation`. `core` never imports
-  `feature`.
+- Only the app root itself imports from the app root, other than `R` and `BuildConfig`.
+- `ExperienceKeys` is used only in `core.<module>.internal`: each stored flag has one owner,
+  which exposes it through an interface.
+- Public `core` objects and top-level declarations hold no `var`.
+
+`core.security.Secret` is a data-layer type. UI state holds `platform.ui.util.UiSecret` instead,
+and the conversion happens in the state mappers.
+
+### Deliberate exceptions to strict Clean Architecture
+
+1. **Shared ports.** Strictly, each use case owns the interfaces it calls. Here, features share
+   `SshConnection`, `XrayControl` and similar interfaces from `core`, so they aren't copied into
+   every feature.
+2. **UI reads core types.** Strictly, presentation sees only use-case output models. Here, `ui`
+   may render `core` data, enum and sealed types such as `XrayEngineState`, so we don't write a
+   mapper for every enum. It may not call `core` behaviour: interfaces and objects stay out of `ui`.
+3. **Commands live in the domain.** A wizard `SshCommand` is a pure value, a bash script plus an
+   output parser, that runs only through the `SshConnection` interface. A provisioning interface
+   with a data-layer implementation would add a forwarding method per command, in the code that
+   runs as root, and isolate nothing.
+4. **Xray JSON in core.** `core.vpn.configfactory` builds Xray's wire format in the public API. It
+   is pure, and the routing and blackhole policy it encodes is business logic.
+
+A change that goes beyond one of these exceptions is a violation, not a new exception.
 
 Never hardcode a dispatcher, inject a `CoroutineDispatcher`. Flows must handle cancellation
 without swallowing `CancellationException`.

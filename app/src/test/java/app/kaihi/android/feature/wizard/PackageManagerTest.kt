@@ -2,7 +2,7 @@ package app.kaihi.android.feature.wizard
 
 import app.kaihi.android.core.ssh.model.CommandResult
 import app.kaihi.android.feature.wizard.impl.domain.model.PackageManager
-import app.kaihi.android.feature.wizard.impl.domain.ssh.DetectPackageManagerCommand
+import app.kaihi.android.feature.wizard.impl.domain.command.DetectPackageManagerCommand
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows

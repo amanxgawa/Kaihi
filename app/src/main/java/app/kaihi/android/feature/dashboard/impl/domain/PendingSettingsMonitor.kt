@@ -2,7 +2,7 @@ package app.kaihi.android.feature.dashboard.impl.domain
 
 import app.kaihi.android.core.vpn.TunnelSettingsSource
 import app.kaihi.android.core.vpn.XrayServiceProvider
-import app.kaihi.android.core.vpn.configfactory.XrayClientConfigFactory
+import app.kaihi.android.core.vpn.XraySessionLauncher
 import app.kaihi.android.core.vpn.findServer
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.first
 internal class PendingSettingsMonitor @Inject constructor(
     private val serviceProvider: XrayServiceProvider,
     private val tunnelSettingsSource: TunnelSettingsSource,
+    private val sessionLauncher: XraySessionLauncher,
     private val coordinator: ServerLibraryCoordinator,
 ) {
 
@@ -35,8 +36,7 @@ internal class PendingSettingsMonitor @Inject constructor(
     suspend fun restart(serverId: String): Result<Unit> {
         val server = coordinator.library.first().subscriptions.findServer(serverId)
             ?: return Result.failure(UnknownServerException(serverId))
-        val config = XrayClientConfigFactory.createRuntimeConfig(server, tunnelSettingsSource.current())
-        return serviceProvider.control.start(config)
+        return sessionLauncher.start(server)
     }
 
     private class UnknownServerException(serverId: String) : IllegalStateException(

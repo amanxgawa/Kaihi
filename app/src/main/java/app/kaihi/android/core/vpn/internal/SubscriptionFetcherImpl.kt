@@ -8,7 +8,7 @@ import app.kaihi.android.core.vpn.effectiveSubscriptionUserAgent
 import app.kaihi.android.core.vpn.isAbsoluteWebUrl
 import app.kaihi.android.core.vpn.parseSubscriptionBody
 import app.kaihi.android.core.vpn.parseSubscriptionHeaders
-import app.kaihi.android.platform.mode.AppModeRepository
+import app.kaihi.android.core.mode.AppModeRepository
 import java.io.IOException
 import java.net.SocketTimeoutException
 import java.net.URI

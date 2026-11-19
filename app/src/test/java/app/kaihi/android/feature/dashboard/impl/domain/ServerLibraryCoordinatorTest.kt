@@ -2,6 +2,7 @@ package app.kaihi.android.feature.dashboard.impl.domain
 
 import app.kaihi.android.core.storage.AppStorage
 import app.kaihi.android.core.storage.StorageDomain
+import app.kaihi.android.feature.dashboard.impl.data.StoredServerListPreferencesRepository
 import app.kaihi.android.core.vpn.XraySubscription
 import app.kaihi.android.core.vpn.XraySubscriptionStore
 import app.kaihi.android.core.vpn.XrayVpnProfile
@@ -66,7 +67,7 @@ class ServerLibraryCoordinatorTest {
         val store = MemoryStore(
             listOf(XraySubscription("subscription", "Test", listOf(profile))),
         )
-        return ServerLibraryCoordinator(store, ServerListPreferencesRepository(NoopStorage)) to store
+        return ServerLibraryCoordinator(store, StoredServerListPreferencesRepository(NoopStorage)) to store
     }
 
     private fun MemoryStore.profile(): XrayVpnProfile =

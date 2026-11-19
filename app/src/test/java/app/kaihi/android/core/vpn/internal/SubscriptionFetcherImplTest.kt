@@ -5,8 +5,8 @@ import app.kaihi.android.core.vpn.SubscriptionFetchResult
 import app.kaihi.android.core.vpn.SubscriptionMetadata
 import app.kaihi.android.core.vpn.VpnPreferences
 import app.kaihi.android.core.vpn.internal.SubscriptionFetcherImplTest.FakeAppModeRepository
-import app.kaihi.android.platform.mode.AppMode
-import app.kaihi.android.platform.mode.AppModeRepository
+import app.kaihi.android.core.mode.AppMode
+import app.kaihi.android.core.mode.AppModeRepository
 import java.nio.charset.StandardCharsets
 import java.util.Base64
 import kotlinx.coroutines.flow.MutableStateFlow

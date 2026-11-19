@@ -2,20 +2,13 @@ package app.kaihi.android.feature.wizard.impl.ui.mvi
 
 import androidx.compose.runtime.Stable
 import app.kaihi.android.R
-import app.kaihi.android.core.storage.AppStorage
-import app.kaihi.android.core.storage.ExperienceKeys
-import app.kaihi.android.core.storage.StorageDomain
-import app.kaihi.android.core.vpn.TunnelSettingsSource
-import app.kaihi.android.core.vpn.XrayControl
+import app.kaihi.android.core.mode.AppMode
 import app.kaihi.android.core.vpn.XrayVpnProfile
-import app.kaihi.android.core.vpn.configfactory.XrayClientConfigFactory
 import app.kaihi.android.feature.wizard.impl.domain.WizardSetupCoordinator
 import app.kaihi.android.feature.wizard.impl.ui.mvi.WizardContract.Effect
 import app.kaihi.android.feature.wizard.impl.ui.mvi.WizardContract.Intent
 import app.kaihi.android.feature.wizard.impl.ui.mvi.WizardContract.State
 import app.kaihi.android.feature.wizard.impl.ui.mvi.WizardContract.WizardPage
-import app.kaihi.android.platform.mode.AppMode
-import app.kaihi.android.platform.mode.AppModeRepository
 import app.kaihi.android.platform.ui.mvi.MviViewModel
 import app.kaihi.android.platform.ui.util.UiText
 import dagger.assisted.Assisted
@@ -31,18 +24,14 @@ import timber.log.Timber
 internal class WizardViewModel @AssistedInject constructor(
     @Assisted private val targetSubscriptionId: String?,
     private val coordinator: WizardSetupCoordinator,
-    private val xrayControl: XrayControl,
-    private val tunnelSettingsSource: TunnelSettingsSource,
-    private val appStorage: AppStorage,
-    private val appModeRepository: AppModeRepository,
     private val connectionCheckDelegate: ConnectionCheckDelegate,
     private val deploymentDelegate: DeploymentDelegate,
 ) : MviViewModel<State, Intent, Effect>(
-    initialState = initialWizardState(appModeRepository.mode.value)
+    initialState = initialWizardState(coordinator.appMode.value)
 ) {
     init {
         attachDelegates(connectionCheckDelegate, deploymentDelegate)
-        appModeRepository.mode
+        coordinator.appMode
             .onEach { mode -> reduce { copy(appMode = mode) } }
             .launchIn(scope)
     }
@@ -92,10 +81,9 @@ internal class WizardViewModel @AssistedInject constructor(
     }
 
     private suspend fun finishSetup() {
-        coordinator.saveProfile(state.value.toProfileDraft(), targetSubscriptionId)
+        coordinator.finishSetup(state.value.toProfileDraft(), targetSubscriptionId)
             .onSuccess { profile ->
-                appStorage.putBoolean(StorageDomain.EXPERIENCE, ExperienceKeys.WIZARD_COMPLETED, true)
-                if (xrayControl.needsVpnPermission()) sendEffect(Effect.RequestVpnPermission)
+                if (coordinator.needsVpnPermission()) sendEffect(Effect.RequestVpnPermission)
                 else startVpn(profile)
             }
             .onFailure { error ->
@@ -112,10 +100,7 @@ internal class WizardViewModel @AssistedInject constructor(
                 return
             }
         reduce { copy(isLoading = true, errorMessage = null) }
-        processStartResult(
-            profile,
-            xrayControl.start(XrayClientConfigFactory.createRuntimeConfig(profile, tunnelSettingsSource.current())),
-        )
+        processStartResult(profile, coordinator.startVpn(profile))
     }
 
     private fun processStartResult(profile: XrayVpnProfile, result: Result<Unit>) {

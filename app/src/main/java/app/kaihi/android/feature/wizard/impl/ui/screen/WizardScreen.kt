@@ -33,7 +33,7 @@ import app.kaihi.android.feature.wizard.impl.ui.screen.pages.ConfirmationPage
 import app.kaihi.android.feature.wizard.impl.ui.screen.pages.DeploymentProgressPage
 import app.kaihi.android.feature.wizard.impl.ui.screen.pages.ServerDataEntryPage
 import app.kaihi.android.feature.wizard.impl.ui.screen.pages.StrategyChoicePage
-import app.kaihi.android.platform.mode.AppMode
+import app.kaihi.android.core.mode.AppMode
 import app.kaihi.android.platform.navigation.LocalAppNavigator
 import app.kaihi.android.platform.ui.components.ConfirmDialog
 import app.kaihi.android.platform.ui.components.LoadingDialog

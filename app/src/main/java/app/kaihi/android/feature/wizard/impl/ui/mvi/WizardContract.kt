@@ -2,7 +2,7 @@ package app.kaihi.android.feature.wizard.impl.ui.mvi
 
 import androidx.compose.runtime.Immutable
 import app.kaihi.android.core.vpn.XrayServerProtection
-import app.kaihi.android.platform.mode.AppMode
+import app.kaihi.android.core.mode.AppMode
 import app.kaihi.android.platform.ui.util.UiSecret
 import app.kaihi.android.platform.ui.util.UiText
 

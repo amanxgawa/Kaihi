@@ -1,4 +1,4 @@
-package app.kaihi.android.feature.wizard.impl.domain.ssh
+package app.kaihi.android.feature.wizard.impl.domain.command
 
 import app.kaihi.android.core.ssh.command.BashScriptCommand
 import app.kaihi.android.core.ssh.model.CommandResult

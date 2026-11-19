@@ -1,4 +1,4 @@
-package app.kaihi.android.platform.mode
+package app.kaihi.android.core.mode
 
 enum class AppMode {
     NORMAL,

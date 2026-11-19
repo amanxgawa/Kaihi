@@ -1,8 +1,8 @@
 package app.kaihi.android.core.vpn
 
 import app.kaihi.android.core.vpn.internal.RepositoryTunnelSettingsSource
-import app.kaihi.android.platform.mode.AppMode
-import app.kaihi.android.platform.mode.AppModeRepository
+import app.kaihi.android.core.mode.AppMode
+import app.kaihi.android.core.mode.AppModeRepository
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.async
 import kotlinx.coroutines.ExperimentalCoroutinesApi

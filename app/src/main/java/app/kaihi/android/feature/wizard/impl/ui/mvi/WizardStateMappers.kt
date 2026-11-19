@@ -7,7 +7,7 @@ import app.kaihi.android.core.vpn.XrayProtectionState
 import app.kaihi.android.core.vpn.XrayServerProtection
 import app.kaihi.android.R
 import app.kaihi.android.feature.wizard.impl.domain.model.WizardProfileDraft
-import app.kaihi.android.platform.mode.AppMode
+import app.kaihi.android.core.mode.AppMode
 import app.kaihi.android.platform.ui.util.UiSecret
 import app.kaihi.android.platform.ui.util.UiText
 

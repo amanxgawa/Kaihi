@@ -7,225 +7,359 @@ import java.io.File
 import org.junit.Assert.fail
 import org.junit.Test
 
+private val CORE_MODULE_ORDER = listOf("security", "storage", "mode", "ssh", "vpn")
+private const val APP = "app.kaihi.android"
+
 /**
- * The whole app lives in one Gradle module, so `internal` only blocks access from outside the
- * module, of which there is none: it enforces nothing today. These tests stand in for the module
- * boundaries these packages are already written as if they had.
- *
- * `core` and `platform` are a deliberate split. `core.<module>` (vpn, ssh, security, storage) is
- * the data layer, touched only by a feature's `domain`. `platform.<module>` (ui, navigation, mode,
- * di) is cross-cutting infrastructure with no data-layer content of its own: `platform.ui` and
- * `platform.navigation` are inherently Compose-shaped and could not live in `domain` even in
- * principle, so any layer may use `platform.*` directly.
- *
- *  1. core.<module> exposes only abstractions (interfaces, abstract/sealed classes, plain data
- *     types) outside its own .internal/.di; concrete behavior lives in .internal.
- *  2. feature.<name> exposes only *Key navigation keys at its root, everything else lives in
- *     .impl.
- *  3. every root *Key has a Destination<Key> registered somewhere under that feature's .impl, or
- *     MainActivity's lookup fails at runtime instead of at build time.
- *  4. feature.<name>.impl and core.<module>.internal are never reached from outside their own
- *     module (core.<module>.di is the one sanctioned exception, since binding an interface to its
- *     impl requires naming the impl).
- *  5. clean architecture inside a feature: domain never depends on UI structures (Compose,
- *     platform.ui, platform.navigation), ui never reaches past domain straight into
- *     core.*.internal, and core never depends on feature at all.
+ * Rules are specified in CONTRIBUTING.md#architecture.
+ * Each test enforces one row or bullet from that specification.
  */
 class ArchitectureBoundariesTest {
 
-    private val projectFiles: List<KoFileDeclaration> =
-        Konsist.scopeFromProject().files.filter { it.path.contains("/main/java/") }
-
-    private val projectClasses: List<KoClassDeclaration> = projectFiles.flatMap { it.classes() }
-
-    private val corePackageRegex = Regex("""^app\.kaihi\.android\.core\.([a-zA-Z0-9]+)(\.(.+))?$""")
-    private val featurePackageRegex = Regex("""^app\.kaihi\.android\.feature\.([a-zA-Z0-9]+)(\.(.+))?$""")
+    @Test
+    fun `platform depends on nothing else in the app`() {
+        val violations = importViolations { file, name ->
+            isPlatform(file.packagee?.name.orEmpty()) &&
+                (name.isInPackage("$APP.core") || name.isInPackage("$APP.feature") ||
+                    isAppRootImport(name))
+        }
+        assertConforms("platform depends on nothing else in the app", violations)
+    }
 
     @Test
-    fun `core packages expose only abstractions outside internal and di`() {
+    fun `core modules import only modules earlier in the order`() {
+        // Import violations use '<file location> imports <name>'; unknown modules add guidance.
+        val violations = mutableListOf<String>()
+        projectFiles.forEach { file ->
+            val module = coreModuleOf(file.packagee?.name.orEmpty()) ?: return@forEach
+            if (module !in CORE_MODULE_ORDER) {
+                violations += "${file.describeLocation()} declares unknown core module $module; " +
+                    "add it to the order in CONTRIBUTING and the test"
+            }
+            file.imports.forEach importLoop@{ import ->
+                val importedModule = coreModuleOf(import.name) ?: return@importLoop
+                if (importedModule !in CORE_MODULE_ORDER) {
+                    violations += "${file.describeLocation()} imports ${import.name}; " +
+                        "add core module $importedModule to the order in CONTRIBUTING and the test"
+                } else if (module in CORE_MODULE_ORDER &&
+                    CORE_MODULE_ORDER.indexOf(importedModule) > CORE_MODULE_ORDER.indexOf(module)
+                ) {
+                    violations += "${file.describeLocation()} imports ${import.name}"
+                }
+            }
+        }
+        assertConforms(
+            "core modules import only modules earlier in the order",
+            violations,
+        )
+    }
+
+    @Test
+    fun `core never imports feature, the app root, or platform beyond dispatchers`() {
+        val violations = importViolations { file, name ->
+            coreModuleOf(file.packagee?.name.orEmpty()) != null &&
+                (name.isInPackage("$APP.feature") || isAppRootImport(name) ||
+                    (isPlatform(name) && !name.isInPackage("$APP.platform.di")))
+        }
+        assertConforms(
+            "core never imports feature, the app root, or platform beyond dispatchers",
+            violations,
+        )
+    }
+
+    @Test
+    fun `core public API uses no framework or IO code`() {
+        val violations = importViolations { file, name ->
+            isCorePublic(file.packagee?.name.orEmpty()) &&
+                (isFrameworkImport(name) ||
+                    listOf(
+                        "net.schmizz.", "com.hierynomus.", "org.bouncycastle.",
+                        "libv2ray.", "go.", "javax.net.", "java.io.File",
+                    ).any(name::startsWith) ||
+                    (name.startsWith("java.net.") && name !in setOf(
+                        "java.net.URI", "java.net.URLEncoder", "java.net.URLDecoder", "java.net.IDN",
+                    )))
+        }
+        assertConforms(
+            "core public API uses no framework or I/O code",
+            violations,
+        )
+    }
+
+    @Test
+    fun `core public API exposes only abstractions, data types and pure code`() {
+        // Declarations use '<fqn> is a concrete class/holds mutable state in the public core API'.
         val violations = projectClasses.filter { clazz ->
-            val pkg = clazz.packagee?.name ?: return@filter false
-            val match = corePackageRegex.find(pkg) ?: return@filter false
-            val rest = match.groupValues[3]
-            val isInternalOrDi = rest == "internal" || rest.startsWith("internal.") ||
-                rest == "di" || rest.startsWith("di.")
-            if (isInternalOrDi) return@filter false
+            isCorePublic(clazz.packagee?.name.orEmpty()) &&
+                !(clazz.hasAbstractModifier || clazz.isUiDataType())
+        }.map { "${it.fullyQualifiedName} is a concrete class in the public core API" }
+            .toMutableList()
 
-            val isExceptionType = clazz.name.endsWith("Exception") || clazz.name.endsWith("Error")
-
-            !(clazz.hasAbstractModifier || clazz.hasDataModifier || clazz.hasEnumModifier ||
-                clazz.hasValueModifier || clazz.hasSealedModifier || clazz.hasAnnotationModifier ||
-                isExceptionType)
+        projectFiles.filter { isCorePublic(it.packagee?.name.orEmpty()) }.forEach { file ->
+            // Konsist supplies fullyQualifiedName only for top-level properties.
+            val properties = file.properties(includeNested = false).map { it to it.fullyQualifiedName } +
+                file.objects(includeNested = true).flatMap { obj ->
+                    obj.properties(includeNested = false).map { it to "${obj.fullyQualifiedName}.${it.name}" }
+                }
+            properties.filter { (property, _) -> property.hasVarModifier }.forEach { (_, name) ->
+                violations += "$name holds mutable state in the public core API"
+            }
         }
+        assertConforms(
+            "core public API exposes only abstractions, data types and pure code",
+            violations,
+        )
+    }
 
-        if (violations.isNotEmpty()) {
-            fail(
-                "core.<module> exposes only abstractions and plain data types outside " +
-                    ".internal/.di - a concrete behavioral class belongs in .internal:\n" +
-                    violations.describeClasses()
-            )
+    @Test
+    fun `feature domain is pure Kotlin and uses no adapters`() {
+        val violations = importViolations { file, name ->
+            val (feature, layer) = featureLayerOf(file.packagee?.name.orEmpty())
+                ?: return@importViolations false
+            layer == "domain" &&
+                (isFrameworkImport(name) || name.isInPackage("$APP.platform.ui") ||
+                    name.isInPackage("$APP.platform.navigation") ||
+                    name.isInPackage("$APP.feature.$feature.impl.ui") ||
+                    name.isInPackage("$APP.feature.$feature.impl.data") ||
+                    isOtherFeatureImport(name, feature) ||
+                    name in setOf(
+                        "$APP.core.storage.AppStorage", "$APP.core.storage.StorageDomain",
+                        "$APP.core.storage.ExperienceKeys",
+                    ))
         }
+        assertConforms(
+            "feature domain is pure Kotlin and uses no adapters", violations,
+        )
+    }
+
+    @Test
+    fun `feature data does not depend on ui or other features`() {
+        val violations = importViolations { file, name ->
+            val (feature, layer) = featureLayerOf(file.packagee?.name.orEmpty())
+                ?: return@importViolations false
+            layer == "data" && (name.isInPackage("$APP.feature.$feature.impl.ui") ||
+                isOtherFeatureImport(name, feature))
+        }
+        assertConforms(
+            "feature data does not depend on ui or other features", violations,
+        )
+    }
+
+    @Test
+    fun `feature ui reads core types but never calls core behaviour`() {
+        val violations = importViolations { file, name ->
+            val (feature, layer) = featureLayerOf(file.packagee?.name.orEmpty())
+                ?: return@importViolations false
+            layer == "ui" &&
+                (name.isInPackage("$APP.feature.$feature.impl.data") ||
+                    (name.startsWith("$APP.core.") && resolveCoreKind(name) != CoreKind.ALLOWED))
+        }
+        assertConforms(
+            "feature ui reads core types but never calls core behaviour", violations,
+        )
+    }
+
+    @Test
+    fun `features reach other features only through root keys in navigation`() {
+        val violations = importViolations { file, name ->
+            val pkg = file.packagee?.name.orEmpty()
+            val (feature, _) = featureLayerOf(pkg) ?: return@importViolations false
+            if (!isOtherFeatureImport(name, feature)) return@importViolations false
+            val declaration = name.removePrefix("$APP.feature.").substringAfter('.')
+            !pkg.isInPackage("$APP.feature.$feature.impl.ui.navigation") ||
+                declaration.contains('.') || !declaration.endsWith("Key")
+        }
+        assertConforms(
+            "features reach other features only through root keys in navigation",
+            violations,
+        )
+    }
+
+    @Test
+    fun `only the app root imports the app root`() {
+        val violations = importViolations { file, name ->
+            !isAppRoot(file.packagee?.name.orEmpty()) && isAppRootImport(name)
+        }
+        assertConforms("only the app root imports the app root", violations)
+    }
+
+    @Test
+    fun `stored flag keys are used only by their owner in core internal`() {
+        val violations = importViolations { file, name ->
+            val pkg = file.packagee?.name.orEmpty()
+            val module = coreModuleOf(pkg)
+            name == "$APP.core.storage.ExperienceKeys" &&
+                (module == null || !pkg.isInPackage("$APP.core.$module.internal"))
+        }
+        assertConforms(
+            "stored flag keys are used only by their owner in core internal",
+            violations,
+        )
     }
 
     @Test
     fun `feature root packages expose only navigation keys`() {
+        // File violations use '<file location> is not a root navigation key'.
         val violations = rootFeatureFiles().filterNot { it.fileName().endsWith("Key.kt") }
-
-        if (violations.isNotEmpty()) {
-            fail(
-                "feature.<name> root may only contain *Key navigation keys - everything else " +
-                    "belongs in feature.<name>.impl:\n" + violations.describeFiles()
-            )
-        }
+            .map { "${it.describeLocation()} is not a root navigation key" }
+        assertConforms(
+            "feature root packages expose only navigation keys", violations,
+        )
     }
 
     @Test
     fun `every feature navigation key has a registered Destination`() {
+        // File violations use '<file location> has no Destination<Key> under its feature impl'.
         val rootKeyFiles = rootFeatureFiles().filter { it.fileName().endsWith("Key.kt") }
-
         val violations = rootKeyFiles.filterNot { keyFile ->
             val featurePkg = keyFile.packagee?.name ?: return@filterNot false
             val keyName = keyFile.fileName().removeSuffix(".kt")
             projectClasses.any { clazz ->
-                val pkg = clazz.packagee?.name.orEmpty()
-                (pkg == "$featurePkg.impl" || pkg.startsWith("$featurePkg.impl.")) &&
+                clazz.packagee?.name.orEmpty().isInPackage("$featurePkg.impl") &&
                     clazz.text.contains("Destination<$keyName>")
             }
-        }
-
-        if (violations.isNotEmpty()) {
-            fail(
-                "every *Key at a feature's root needs a Destination<Key> implementation " +
-                    "under that feature's .impl, or MainActivity's lookup fails at runtime " +
-                    "instead of build time:\n" + violations.describeFiles()
-            )
-        }
+        }.map { "${it.describeLocation()} has no Destination<${it.fileName().removeSuffix(".kt")}> under its feature impl" }
+        assertConforms(
+            "every feature navigation key has a registered Destination", violations,
+        )
     }
 
     @Test
     fun `feature impl and core internal are never reached from outside their own module`() {
-        val internalLeak = Regex("""^app\.kaihi\.android\.core\.([a-zA-Z0-9]+)\.internal(\.|$)""")
-        val implLeak = Regex("""^app\.kaihi\.android\.feature\.([a-zA-Z0-9]+)\.impl(\.|$)""")
-        val violations = mutableListOf<String>()
-
-        projectFiles.forEach { file ->
-            val filePkg = file.packagee?.name ?: return@forEach
-            file.imports.forEach { import ->
-                val importName = import.name
-
-                internalLeak.find(importName)?.let { match ->
-                    val module = match.groupValues[1]
-                    val allowed = listOf("core.$module.internal", "core.$module.di")
-                        .map { "app.kaihi.android.$it" }
-                    if (allowed.none { filePkg == it || filePkg.startsWith("$it.") }) {
-                        violations += "${file.describeLocation()} imports $importName"
-                    }
-                }
-
-                implLeak.find(importName)?.let { match ->
-                    val feature = match.groupValues[1]
-                    val allowed = "app.kaihi.android.feature.$feature.impl"
-                    if (filePkg != allowed && !filePkg.startsWith("$allowed.")) {
-                        violations += "${file.describeLocation()} imports $importName"
-                    }
-                }
-            }
+        val violations = importViolations { file, name ->
+            val pkg = file.packagee?.name.orEmpty()
+            val coreModule = coreModuleOf(name)
+            val feature = name.takeIf { it.startsWith("$APP.feature.") }
+                ?.removePrefix("$APP.feature.")?.substringBefore('.')
+            (coreModule != null && name.isInPackage("$APP.core.$coreModule.internal") &&
+                !pkg.isInPackage("$APP.core.$coreModule.internal") &&
+                !pkg.isInPackage("$APP.core.$coreModule.di")) ||
+                (feature != null && name.isInPackage("$APP.feature.$feature.impl") &&
+                    !pkg.isInPackage("$APP.feature.$feature.impl"))
         }
-
-        if (violations.isNotEmpty()) {
-            fail(
-                "reached into a module's .internal/.impl from outside it - depend on the " +
-                    "public interface/*Key instead (core.<module>.di may see .internal, " +
-                    "it's the one place that has to name the impl to bind it):\n" +
-                    violations.joinToString("\n") { " - $it" }
-            )
-        }
-    }
-
-    @Test
-    fun `feature domain layers do not depend on UI structures`() {
-        val domainPackage = Regex("""^app\.kaihi\.android\.feature\.[a-zA-Z0-9]+\.impl\.domain(\.|$)""")
-        val bannedImportPrefixes = listOf(
-            "androidx.compose.",
-            "app.kaihi.android.platform.ui.",
-            "app.kaihi.android.platform.navigation.",
+        assertConforms(
+            "feature impl and core internal are never reached from outside their own module",
+            violations,
         )
-        val violations = mutableListOf<String>()
-
-        projectFiles.filter { domainPackage.containsMatchIn(it.packagee?.name.orEmpty()) }
-            .forEach { file ->
-                file.imports.forEach { import ->
-                    if (bannedImportPrefixes.any { import.name.startsWith(it) }) {
-                        violations += "${file.describeLocation()} imports ${import.name}"
-                    }
-                }
-            }
-
-        if (violations.isNotEmpty()) {
-            fail(
-                "domain must not depend on UI structures (Compose, platform.ui, platform.navigation) - that dependency " +
-                    "belongs in the ui layer:\n" + violations.joinToString("\n") { " - $it" }
-            )
-        }
     }
 
-    @Test
-    fun `feature ui layers do not reach past domain straight into core internal`() {
-        val uiPackage = Regex("""^app\.kaihi\.android\.feature\.[a-zA-Z0-9]+\.impl\.ui(\.|$)""")
-        val coreInternal = Regex("""^app\.kaihi\.android\.core\.[a-zA-Z0-9]+\.internal(\.|$)""")
-        val violations = mutableListOf<String>()
-
-        projectFiles.filter { uiPackage.containsMatchIn(it.packagee?.name.orEmpty()) }
-            .forEach { file ->
-                file.imports.forEach { import ->
-                    if (coreInternal.containsMatchIn(import.name)) {
-                        violations += "${file.describeLocation()} imports ${import.name}"
-                    }
-                }
-            }
-
-        if (violations.isNotEmpty()) {
-            fail(
-                "ui must only reach core through domain, never straight into " +
-                    "core.<module>.internal:\n" + violations.joinToString("\n") { " - $it" }
-            )
-        }
+    // All import rules use '<file package>.<file name> imports <fully qualified import name>'.
+    private fun importViolations(
+        isViolation: (KoFileDeclaration, String) -> Boolean,
+    ): List<String> = projectFiles.flatMap { file ->
+        file.imports.filter { isViolation(file, it.name) }
+            .map { "${file.describeLocation()} imports ${it.name}" }
     }
 
-    @Test
-    fun `core packages never depend on feature packages`() {
-        val violations = mutableListOf<String>()
+    private fun assertConforms(rule: String, violations: List<String>) {
+        if (violations.isEmpty()) return
 
-        projectFiles.filter { it.packagee?.name.orEmpty().let { pkg -> pkg == "app.kaihi.android.core" || pkg.startsWith("app.kaihi.android.core.") } }
-            .forEach { file ->
-                file.imports.forEach { import ->
-                    if (import.name.startsWith("app.kaihi.android.feature.")) {
-                        violations += "${file.describeLocation()} imports ${import.name}"
-                    }
-                }
-            }
+        fail(buildString {
+            appendLine(rule)
+            appendLine(violations.sorted().joinToString("\n") { " - $it" })
+        })
+    }
 
-        if (violations.isNotEmpty()) {
-            fail(
-                "core must never depend on feature - the dependency direction is feature -> " +
-                    "core, never the other way:\n" + violations.joinToString("\n") { " - $it" }
-            )
+    private fun featureLayerOf(pkg: String): Pair<String, String>? {
+        if (!pkg.startsWith("$APP.feature.")) return null
+        val parts = pkg.removePrefix("$APP.feature.").split('.')
+        val feature = parts.first().takeIf { it.isNotEmpty() } ?: return null
+        val layer = when {
+            parts.size == 1 -> "root"
+            parts.getOrNull(1) == "impl" -> parts.getOrNull(2) ?: return null
+            else -> return null
         }
+        return (feature to layer).takeIf { layer in setOf("domain", "data", "ui", "di", "root") }
+    }
+
+    private fun isAppRoot(pkg: String): Boolean = pkg == APP
+
+    private fun isPlatform(pkg: String): Boolean = pkg.isInPackage("$APP.platform")
+
+    private fun isAppRootImport(name: String): Boolean = name.startsWith("$APP.") &&
+        name.removePrefix("$APP.").substringBefore('.') !in setOf("core", "feature", "platform") &&
+        !name.isInPackage("$APP.R") && name != "$APP.BuildConfig"
+
+    private fun isFrameworkImport(name: String): Boolean = name.startsWith("android.") ||
+        (name.startsWith("androidx.") && !name.startsWith("androidx.annotation."))
+
+    private fun isOtherFeatureImport(name: String, ownFeature: String): Boolean =
+        name.startsWith("$APP.feature.") &&
+            name.removePrefix("$APP.feature.").substringBefore('.') != ownFeature
+
+    private fun resolveCoreKind(name: String): CoreKind? {
+        var prefix = name
+        while (prefix.startsWith("$APP.core.")) {
+            coreDeclarations[prefix]?.let { return it }
+            prefix = prefix.substringBeforeLast('.')
+        }
+        return null
     }
 
     private fun rootFeatureFiles(): List<KoFileDeclaration> = projectFiles.filter { file ->
-        val pkg = file.packagee?.name ?: return@filter false
-        val match = featurePackageRegex.find(pkg) ?: return@filter false
-        match.groupValues[3].isEmpty()
+        featureLayerOf(file.packagee?.name.orEmpty())?.second == "root"
     }
 
     private fun KoFileDeclaration.fileName(): String = File(path).name
 
     private fun KoFileDeclaration.describeLocation(): String = "${packagee?.name}.${fileName()}"
 
-    private fun List<KoClassDeclaration>.describeClasses(): String =
-        joinToString("\n") { " - ${it.packagee?.name}.${it.name}" }
+    private enum class CoreKind { ALLOWED, BANNED }
 
-    private fun List<KoFileDeclaration>.describeFiles(): String =
-        joinToString("\n") { " - ${it.describeLocation()}" }
+    private companion object {
+        fun coreModuleOf(pkg: String): String? =
+            pkg.takeIf { it.startsWith("$APP.core.") }
+                ?.removePrefix("$APP.core.")?.substringBefore('.')?.takeIf { it.isNotEmpty() }
+
+        fun isCorePublic(pkg: String): Boolean {
+            val module = coreModuleOf(pkg) ?: return false
+            return !pkg.isInPackage("$APP.core.$module.internal") &&
+                !pkg.isInPackage("$APP.core.$module.di")
+        }
+
+        fun String.isInPackage(pkg: String): Boolean = this == pkg || startsWith("$pkg.")
+
+        fun KoClassDeclaration.isUiDataType(): Boolean =
+            hasDataModifier || hasEnumModifier || hasValueModifier || hasAnnotationModifier ||
+                hasSealedModifier || name.endsWith("Exception") || name.endsWith("Error")
+
+        val projectFiles: List<KoFileDeclaration> =
+            Konsist.scopeFromProject().files.filter { it.path.contains("/main/java/") }
+
+        val projectClasses: List<KoClassDeclaration> = projectFiles.flatMap { it.classes() }
+
+        // Built once for the suite; nested declarations override their enclosing type on lookup.
+        val coreDeclarations: Map<String, CoreKind> by lazy {
+            buildMap {
+                projectFiles.filter { isCorePublic(it.packagee?.name.orEmpty()) }
+                    .forEach { file ->
+                        file.classes(includeNested = true).forEach { declaration ->
+                            declaration.fullyQualifiedName?.let { name ->
+                                put(name, if (declaration.isUiDataType()) {
+                                    CoreKind.ALLOWED
+                                } else {
+                                    CoreKind.BANNED
+                                })
+                            }
+                        }
+                        file.interfaces(includeNested = true).forEach { declaration ->
+                            declaration.fullyQualifiedName?.let { name ->
+                                put(name, if (declaration.hasSealedModifier) CoreKind.ALLOWED else CoreKind.BANNED)
+                            }
+                        }
+                        file.objects(includeNested = true).forEach { declaration ->
+                            declaration.fullyQualifiedName?.let { name ->
+                                put(name, if (declaration.hasDataModifier) CoreKind.ALLOWED else CoreKind.BANNED)
+                            }
+                        }
+                        file.functions(includeNested = false, includeLocal = false).forEach { declaration ->
+                            declaration.fullyQualifiedName?.let { put(it, CoreKind.ALLOWED) }
+                        }
+                        file.properties(includeNested = false).forEach { declaration ->
+                            declaration.fullyQualifiedName?.let { put(it, CoreKind.ALLOWED) }
+                        }
+                    }
+            }
+        }
+    }
 }

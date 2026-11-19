@@ -7,7 +7,10 @@ import app.kaihi.android.core.vpn.XrayLogMessage
 import app.kaihi.android.core.vpn.XrayMonitoring
 import app.kaihi.android.core.vpn.XrayRuntimeConfig
 import app.kaihi.android.core.vpn.XrayServiceProvider
+import app.kaihi.android.core.vpn.XraySessionLauncher
 import app.kaihi.android.core.vpn.XrayTrafficStats
+import app.kaihi.android.core.vpn.XrayVpnProfile
+import app.kaihi.android.feature.dashboard.impl.domain.VpnSession
 import app.kaihi.android.core.vpn.spec.XrayFingerprint
 import app.kaihi.android.feature.dashboard.impl.ui.mvi.XrayLogsViewModel
 import kotlinx.coroutines.Dispatchers
@@ -41,7 +44,7 @@ class XrayLogsViewModelTest {
 
     @Test
     fun `renders the lines it was given`() = runTest(dispatcher) {
-        val viewModel = XrayLogsViewModel(FakeServiceProvider(logs), dispatcher)
+        val viewModel = XrayLogsViewModel(session(logs), dispatcher)
         advanceUntilIdle()
 
         logs.emit(message("tunnel up"))
@@ -57,7 +60,7 @@ class XrayLogsViewModelTest {
      */
     @Test
     fun `keeps only the most recent lines`() = runTest(dispatcher) {
-        val viewModel = XrayLogsViewModel(FakeServiceProvider(logs), dispatcher)
+        val viewModel = XrayLogsViewModel(session(logs), dispatcher)
         advanceUntilIdle()
 
         repeat(MAX_LINES + 250) { index -> logs.emit(message("line $index")) }
@@ -73,6 +76,13 @@ class XrayLogsViewModelTest {
     }
 
     private fun message(text: String) = XrayLogMessage(level = 1, message = text, timestampMillis = 0L)
+
+    private fun session(logs: Flow<XrayLogMessage>) = VpnSession(
+        FakeServiceProvider(logs),
+        object : XraySessionLauncher {
+            override suspend fun start(profile: XrayVpnProfile) = Result.success(Unit)
+        },
+    )
 
     private companion object {
         /** Stated here rather than read off the view model, so changing the bound has to be deliberate. */

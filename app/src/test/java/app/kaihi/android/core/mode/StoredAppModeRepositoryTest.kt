@@ -1,9 +1,9 @@
-package app.kaihi.android.platform.mode
+package app.kaihi.android.core.mode
 
+import app.kaihi.android.core.mode.internal.StoredAppModeRepository
 import app.kaihi.android.core.storage.ExperienceKeys
 import app.kaihi.android.core.storage.InMemoryAppStorage
 import app.kaihi.android.core.storage.StorageDomain
-import app.kaihi.android.platform.mode.internal.StoredAppModeRepository
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

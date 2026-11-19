@@ -1,10 +1,10 @@
-package app.kaihi.android.platform.mode.internal
+package app.kaihi.android.core.mode.internal
 
+import app.kaihi.android.core.mode.AppMode
+import app.kaihi.android.core.mode.AppModeRepository
 import app.kaihi.android.core.storage.AppStorage
 import app.kaihi.android.core.storage.ExperienceKeys
 import app.kaihi.android.core.storage.StorageDomain
-import app.kaihi.android.platform.mode.AppMode
-import app.kaihi.android.platform.mode.AppModeRepository
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.MutableStateFlow

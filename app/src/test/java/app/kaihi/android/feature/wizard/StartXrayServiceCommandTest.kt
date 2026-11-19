@@ -3,7 +3,7 @@ package app.kaihi.android.feature.wizard
 import app.kaihi.android.core.ssh.model.CommandResult
 import app.kaihi.android.feature.wizard.impl.domain.model.PackageManager
 import app.kaihi.android.feature.wizard.impl.domain.model.XrayStartOutcome
-import app.kaihi.android.feature.wizard.impl.domain.ssh.StartXrayServiceCommand
+import app.kaihi.android.feature.wizard.impl.domain.command.StartXrayServiceCommand
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

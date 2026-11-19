@@ -32,7 +32,7 @@ import app.kaihi.android.feature.settings.impl.ui.screen.components.SettingsGene
 import app.kaihi.android.feature.settings.impl.ui.screen.components.SettingsNetworkSection
 import app.kaihi.android.feature.settings.impl.ui.screen.components.SettingsSubscriptionsSection
 import app.kaihi.android.feature.settings.impl.ui.screen.components.SubscriptionUserAgentDialog
-import app.kaihi.android.platform.mode.AppMode
+import app.kaihi.android.core.mode.AppMode
 import app.kaihi.android.platform.ui.icons.KaihiIcons
 import app.kaihi.android.platform.ui.theme.size.dimens
 import app.kaihi.android.platform.ui.util.CollectAsEffect

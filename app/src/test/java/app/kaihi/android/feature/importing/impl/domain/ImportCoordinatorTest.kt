@@ -1,8 +1,6 @@
 package app.kaihi.android.feature.importing.impl.domain
 
-import app.kaihi.android.core.storage.AppStorage
-import app.kaihi.android.core.storage.ExperienceKeys
-import app.kaihi.android.core.storage.StorageDomain
+import app.kaihi.android.core.mode.OnboardingState
 import app.kaihi.android.core.vpn.SubscriptionFetchFailure
 import app.kaihi.android.core.vpn.SubscriptionFetchResult
 import app.kaihi.android.core.vpn.SubscriptionFetcher
@@ -182,7 +180,7 @@ class ImportCoordinatorTest {
         assertFalse(storage.completed)
         coordinator.add(preparePreview(coordinator, REALITY_RAW_LINK))
         assertTrue(storage.completed)
-        assertEquals(StorageDomain.EXPERIENCE to ExperienceKeys.WIZARD_COMPLETED, storage.lastBooleanKey)
+        assertEquals(1, storage.markCompletedCalls)
     }
 
     @Test
@@ -297,15 +295,15 @@ class ImportCoordinatorTest {
     ): Fixture {
         val store = MemorySubscriptionStore(initial)
         val fetcher = FakeSubscriptionFetcher(fetchResults)
-        val storage = MemoryAppStorage()
-        return Fixture(ImportCoordinator(store, fetcher, storage), store, fetcher, storage)
+        val onboardingState = MemoryOnboardingState()
+        return Fixture(ImportCoordinator(store, fetcher, onboardingState), store, fetcher, onboardingState)
     }
 
     private data class Fixture(
         val coordinator: ImportCoordinator,
         val store: MemorySubscriptionStore,
         val fetcher: FakeSubscriptionFetcher,
-        val storage: MemoryAppStorage,
+        val storage: MemoryOnboardingState,
     )
 
     private class MemorySubscriptionStore(initial: List<XraySubscription>) : XraySubscriptionStore {
@@ -342,18 +340,15 @@ class ImportCoordinatorTest {
         }
     }
 
-    private class MemoryAppStorage : AppStorage {
+    private class MemoryOnboardingState : OnboardingState {
         var completed = false
-        var lastBooleanKey: Pair<StorageDomain, String>? = null
+        var markCompletedCalls = 0
 
-        override fun getString(domain: StorageDomain, key: String): String? = null
-        override fun putString(domain: StorageDomain, key: String, value: String) = Unit
-        override fun getBoolean(domain: StorageDomain, key: String): Boolean = completed
-        override fun putBoolean(domain: StorageDomain, key: String, value: Boolean) {
-            lastBooleanKey = domain to key
-            completed = value
+        override fun isCompleted(): Boolean = completed
+        override fun markCompleted() {
+            markCompletedCalls++
+            completed = true
         }
-        override fun remove(domain: StorageDomain, key: String) = Unit
     }
 
     private companion object {

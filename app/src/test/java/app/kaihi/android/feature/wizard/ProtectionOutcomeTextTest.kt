@@ -5,7 +5,7 @@ import app.kaihi.android.core.vpn.XrayProtectionState
 import app.kaihi.android.core.vpn.XrayServerProtection
 import app.kaihi.android.feature.wizard.impl.ui.mvi.WizardContract
 import app.kaihi.android.feature.wizard.impl.ui.mvi.protectionOutcomeText
-import app.kaihi.android.platform.mode.AppMode
+import app.kaihi.android.core.mode.AppMode
 import app.kaihi.android.platform.ui.util.UiText
 import org.junit.Assert.assertEquals
 import org.junit.Test
