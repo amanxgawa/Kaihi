@@ -1,7 +1,6 @@
 package app.kaihi.android.feature.dashboard.impl.ui.screen.components
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -17,7 +16,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import app.kaihi.android.feature.dashboard.impl.ui.model.SubscriptionUi
 import app.kaihi.android.feature.dashboard.impl.ui.model.SubscriptionKind
 import app.kaihi.android.R
@@ -25,8 +23,6 @@ import app.kaihi.android.platform.ui.components.SubscriptionUsageCard
 import app.kaihi.android.platform.ui.theme.dimens
 import app.kaihi.android.platform.ui.theme.kaihiEffectsSpec
 import app.kaihi.android.platform.ui.theme.kaihiSpatialSpec
-
-private val revealShape = RoundedCornerShape(bottomStart = SegmentOuterCorner, bottomEnd = SegmentOuterCorner)
 
 @Composable
 internal fun SubscriptionGroup(
@@ -71,7 +67,6 @@ internal fun SubscriptionGroup(
 
         AnimatedVisibility(
             visible = subscription.isExpanded,
-            modifier = Modifier.clip(revealShape),
             enter = expandVertically(animationSpec = kaihiSpatialSpec(), expandFrom = Alignment.Top) +
                 fadeIn(animationSpec = kaihiEffectsSpec()),
             exit = shrinkVertically(animationSpec = kaihiSpatialSpec(), shrinkTowards = Alignment.Top) +
@@ -80,10 +75,7 @@ internal fun SubscriptionGroup(
             val hasAddRow = subscription.kind != SubscriptionKind.REMOTE
             val segmentCount = subscription.servers.size + 1 + if (hasAddRow) 1 else 0
             Column(
-                modifier = Modifier
-                    .clip(revealShape)
-                    .animateContentSize(animationSpec = kaihiSpatialSpec())
-                    .padding(top = dimens.xs),
+                modifier = Modifier.padding(top = dimens.xs),
                 verticalArrangement = Arrangement.spacedBy(dimens.xs),
             ) {
                 subscription.servers.forEachIndexed { index, server ->
