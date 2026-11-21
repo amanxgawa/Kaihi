@@ -20,17 +20,17 @@
     <string name="dashboard_empty_hint">No servers yet. Deploy Xray to your own VPS and it shows up here.</string>
 
     <string name="dashboard_subscription_own_servers">Your servers · %1$d</string>
+    <plurals name="dashboard_subscription_server_count">
+        <item quantity="one">%1$d server</item>
+        <item quantity="other">%1$d servers</item>
+    </plurals>
     <string name="dashboard_subscription_add_server">Add server</string>
     <string name="dashboard_subscription_share_cd">Share %1$s</string>
     <string name="dashboard_subscription_edit_cd">Edit %1$s</string>
     <string name="dashboard_subscription_refresh_cd">Refresh %1$s</string>
-    <string name="dashboard_subscription_usage_separator"> · </string>
     <string name="dashboard_subscription_usage_with_total">%1$s / %2$s</string>
     <string name="dashboard_subscription_usage_used">%1$s used</string>
     <string name="dashboard_subscription_usage_total">Total %1$s</string>
-    <string name="dashboard_subscription_usage_until">until %1$s</string>
-    <string name="dashboard_subscription_expired">Expired</string>
-    <string name="dashboard_subscription_refresh_failed">Refresh failed</string>
     <string name="dashboard_subscription_refresh_empty">No supported VLESS servers were found in this subscription.</string>
     <string name="dashboard_subscription_edit_title">Edit subscription</string>
     <string name="dashboard_subscription_details_title">Details</string>

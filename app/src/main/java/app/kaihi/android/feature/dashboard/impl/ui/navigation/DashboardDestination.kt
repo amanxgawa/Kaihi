@@ -31,7 +31,9 @@ class DashboardDestination @Inject constructor() : Destination<DashboardKey> {
             selectServerId = key.selectServerId.takeUnless { isSelectionHandedOver },
             onSettingsClick = { navigator.navigate(SettingsKey) },
             onNavigateToWizard = { subscriptionId -> navigator.navigate(WizardKey(subscriptionId)) },
-            onNavigateToImport = { text -> navigator.navigate(ImportKey(text)) },
+            onAddServer = { offerServerSetup ->
+                navigator.navigate(ImportKey(offerServerSetup = offerServerSetup))
+            },
             onNavigateToServer = { serverId -> navigator.navigate(ServerKey(serverId)) },
         )
     }

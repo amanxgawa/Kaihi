@@ -33,6 +33,7 @@ import app.kaihi.android.feature.hello.HelloKey
 import app.kaihi.android.feature.importing.ImportKey
 import app.kaihi.android.platform.di.IoDispatcher
 import app.kaihi.android.platform.navigation.AppNavigator
+import app.kaihi.android.platform.navigation.BottomSheetSceneStrategy
 import app.kaihi.android.platform.navigation.Destination
 import app.kaihi.android.platform.navigation.LocalAppNavigator
 import app.kaihi.android.platform.ui.theme.KaihiTheme
@@ -120,6 +121,7 @@ class MainActivity : ComponentActivity() {
                         NavDisplay(
                             backStack = backStack,
                             onBack = navigator::back,
+                            sceneStrategies = listOf(BottomSheetSceneStrategy()),
                             // NavDisplay would otherwise leave every ViewModel on the Activity's store,
                             // so reopening the wizard would resume the previous deployment.
                             entryDecorators = listOf(
@@ -146,7 +148,7 @@ class MainActivity : ComponentActivity() {
                             @Suppress("UNCHECKED_CAST")
                             val destination = rawDestination as Destination<NavKey>
 
-                            NavEntry(key) {
+                            NavEntry(key, metadata = destination.metadata) {
                                 destination.Content(key = key)
                             }
                         }

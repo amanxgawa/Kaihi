@@ -26,6 +26,7 @@ import app.kaihi.android.feature.dashboard.impl.ui.model.ServerUi
 import app.kaihi.android.platform.ui.icons.KaihiIcons
 import app.kaihi.android.platform.ui.theme.JetBrainsMono
 import app.kaihi.android.platform.ui.theme.dimens
+import app.kaihi.android.platform.ui.theme.kaihiEffectsSpec
 
 @Composable
 internal fun ServerRow(
@@ -40,17 +41,17 @@ internal fun ServerRow(
 
     val containerColor by animateColorAsState(
         targetValue = if (server.isSelected) colors.primaryContainer else colors.surfaceContainerLow,
-        animationSpec = dashboardEffectsSpec(),
+        animationSpec = kaihiEffectsSpec(),
         label = "serverRowContainer",
     )
     val contentColor by animateColorAsState(
         targetValue = if (server.isSelected) colors.onPrimaryContainer else colors.onSurface,
-        animationSpec = dashboardEffectsSpec(),
+        animationSpec = kaihiEffectsSpec(),
         label = "serverRowContent",
     )
     val flagContainerColor by animateColorAsState(
         targetValue = if (server.isSelected) colors.surface else colors.surfaceContainerHighest,
-        animationSpec = dashboardEffectsSpec(),
+        animationSpec = kaihiEffectsSpec(),
         label = "serverRowFlagContainer",
     )
 

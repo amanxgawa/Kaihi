@@ -1,7 +1,5 @@
 package app.kaihi.android.feature.dashboard.impl.ui.screen.components
 
-import android.text.format.DateFormat
-import android.text.format.Formatter
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -26,14 +24,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.style.TextOverflow
 import app.kaihi.android.R
 import app.kaihi.android.feature.dashboard.impl.ui.model.SubscriptionUi
 import app.kaihi.android.feature.dashboard.impl.ui.model.SubscriptionKind
 import app.kaihi.android.platform.ui.icons.KaihiIcons
 import app.kaihi.android.platform.ui.theme.dimens
-import java.util.Date
+import app.kaihi.android.platform.ui.theme.kaihiEffectsSpec
+import app.kaihi.android.platform.ui.theme.kaihiSpatialSpec
 
 private const val EXPANDED_CHEVRON_ROTATION = 180f
 
@@ -48,27 +47,26 @@ internal fun SubscriptionHeaderRow(
 ) {
     val dimens = MaterialTheme.dimens
     val colors = MaterialTheme.colorScheme
-    val context = LocalContext.current
     val isHighlighted = !subscription.isExpanded && subscription.containsSelectedServer
 
     val containerColor by animateColorAsState(
         targetValue = if (isHighlighted) colors.primaryContainer else colors.surfaceContainerLow,
-        animationSpec = dashboardEffectsSpec(),
+        animationSpec = kaihiEffectsSpec(),
         label = "subscriptionHeaderContainer",
     )
     val contentColor by animateColorAsState(
         targetValue = if (isHighlighted) colors.onPrimaryContainer else colors.onSurface,
-        animationSpec = dashboardEffectsSpec(),
+        animationSpec = kaihiEffectsSpec(),
         label = "subscriptionHeaderContent",
     )
     val bottomCorner by animateDpAsState(
-        targetValue = if (subscription.isExpanded) SegmentInnerCorner else SegmentOuterCorner,
-        animationSpec = dashboardSpatialSpec(),
+        targetValue = if (subscription.isExpanded || subscription.usage != null) SegmentInnerCorner else SegmentOuterCorner,
+        animationSpec = kaihiSpatialSpec(),
         label = "subscriptionHeaderBottomCorner",
     )
     val chevronRotation by animateFloatAsState(
         targetValue = if (subscription.isExpanded) EXPANDED_CHEVRON_ROTATION else 0f,
-        animationSpec = dashboardSpatialSpec(),
+        animationSpec = kaihiSpatialSpec(),
         label = "subscriptionHeaderChevron",
     )
 
@@ -112,7 +110,17 @@ internal fun SubscriptionHeaderRow(
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
-                        text = stringResource(R.string.dashboard_subscription_own_servers, subscription.servers.size),
+                        text = when (subscription.kind) {
+                            SubscriptionKind.DEPLOYED -> stringResource(
+                                R.string.dashboard_subscription_own_servers,
+                                subscription.servers.size,
+                            )
+                            SubscriptionKind.IMPORTED, SubscriptionKind.REMOTE -> pluralStringResource(
+                                R.plurals.dashboard_subscription_server_count,
+                                subscription.servers.size,
+                                subscription.servers.size,
+                            )
+                        },
                         style = MaterialTheme.typography.bodyMedium,
                         color = colors.onSurfaceVariant,
                         maxLines = 1,
@@ -151,57 +159,6 @@ internal fun SubscriptionHeaderRow(
                                 contentDescription = stringResource(R.string.dashboard_subscription_edit_cd, subscription.name),
                             )
                         }
-                    }
-                }
-            }
-        }
-
-        subscription.remote?.let { remote ->
-            val used = remote.usedBytes?.let { Formatter.formatShortFileSize(context, it) }
-            val total = remote.totalBytes?.let { Formatter.formatShortFileSize(context, it) }
-            val traffic = when {
-                used != null && total != null -> stringResource(R.string.dashboard_subscription_usage_with_total, used, total)
-                used != null -> stringResource(R.string.dashboard_subscription_usage_used, used)
-                else -> null
-            }
-            val expiryMillis = remote.expireEpochSeconds?.let { it * 1000L }
-            val expired = expiryMillis != null && expiryMillis <= System.currentTimeMillis()
-            val expiry = when {
-                expiryMillis == null -> null
-                expired -> stringResource(R.string.dashboard_subscription_expired)
-                else -> stringResource(
-                    R.string.dashboard_subscription_usage_until,
-                    DateFormat.getDateFormat(context).format(Date(expiryMillis)),
-                )
-            }
-            if (traffic != null || expiry != null || subscription.refreshFailed) {
-                Column(
-                    modifier = Modifier.padding(start = dimens.l, top = dimens.xs),
-                    verticalArrangement = Arrangement.spacedBy(dimens.xs),
-                ) {
-                    if (traffic != null && expiry != null && !expired) {
-                        Text(
-                            text = traffic + stringResource(R.string.dashboard_subscription_usage_separator) + expiry,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = colors.onSurfaceVariant,
-                        )
-                    } else {
-                        traffic?.let {
-                            Text(text = it, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
-                        }
-                        if (expired) {
-                            Text(text = stringResource(R.string.dashboard_subscription_expired),
-                                style = MaterialTheme.typography.bodySmall, color = colors.error)
-                        } else if (expiry != null) {
-                            Text(text = expiry, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
-                        }
-                    }
-                    if (subscription.refreshFailed) {
-                        Text(
-                            text = stringResource(R.string.dashboard_subscription_refresh_failed),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = colors.onSurfaceVariant,
-                        )
                     }
                 }
             }

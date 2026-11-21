@@ -1,6 +1,13 @@
 <resources>
+    <string name="add_sheet_title">Add a server</string>
+    <string name="add_sheet_paste_title">Paste from clipboard</string>
+    <string name="add_sheet_paste_description">Use a link you copied</string>
+    <string name="add_sheet_paste_empty">Nothing to paste. Copy the link first.</string>
+    <string name="add_sheet_manual_title">Enter manually</string>
+    <string name="add_sheet_manual_description">Type or paste a link</string>
+    <string name="add_sheet_setup_title">Set up a new server</string>
+    <string name="add_sheet_setup_description">Kaihi installs everything on a server you rent</string>
     <string name="import_title">Add a server</string>
-    <string name="import_back">Back</string>
     <string name="import_helper">Paste the link someone sent you. It starts with vless:// or https://.</string>
     <string name="import_input_label">Link</string>
     <string name="import_action">Continue</string>
@@ -24,11 +31,6 @@
     <string name="import_preview_title_subscription">Add this subscription?</string>
     <string name="import_preview_already_title">You already have %1$s</string>
     <string name="import_preview_from">from %1$s</string>
-    <string name="import_preview_traffic">%1$s of %2$s used</string>
-    <string name="import_preview_traffic_used_up">No traffic left</string>
-    <string name="import_preview_works_until">Works until %1$s</string>
-    <string name="import_preview_expires_soon">Expires %1$s</string>
-    <string name="import_preview_expired">Expired %1$s. Its servers may not work.</string>
     <string name="import_preview_servers_heading">Servers · %1$d</string>
     <string name="import_preview_unknown_location">Unknown location</string>
     <string name="import_preview_truncated">This subscription is very large. Kaihi read only the first part.</string>

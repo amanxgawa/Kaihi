@@ -17,8 +17,7 @@ class HelloDestination @Inject constructor() : Destination<HelloKey> {
 
         HelloScreen(
             onSetUpServerClick = { navigator.navigate(WizardKey()) },
-            onPaste = { text -> navigator.navigate(ImportKey(text)) },
-            onEnterManually = { navigator.navigate(ImportKey()) },
+            onAddServerClick = { navigator.navigate(ImportKey()) },
         )
     }
 }

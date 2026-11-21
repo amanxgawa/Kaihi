@@ -1,0 +1,15 @@
+<resources>
+    <string name="subscription_usage_traffic_of">%1$s из %2$s</string>
+    <string name="subscription_usage_traffic_left">Осталось %1$s</string>
+    <string name="subscription_usage_traffic_used_up">Трафик закончился</string>
+    <string name="subscription_usage_traffic_used">Использовано %1$s</string>
+    <string name="subscription_usage_active_until">Активна до %1$s · %2$s</string>
+    <string name="subscription_usage_expired">Истекла %1$s</string>
+    <string name="subscription_usage_refresh_failed">Не удалось обновить. Показаны последние известные данные.</string>
+    <plurals name="subscription_usage_days_left">
+        <item quantity="one">остался %1$d день</item>
+        <item quantity="few">осталось %1$d дня</item>
+        <item quantity="many">осталось %1$d дней</item>
+        <item quantity="other">осталось %1$d дня</item>
+    </plurals>
+</resources>

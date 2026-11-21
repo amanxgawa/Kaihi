@@ -1,0 +1,13 @@
+<resources>
+    <string name="subscription_usage_traffic_of">%1$s of %2$s</string>
+    <string name="subscription_usage_traffic_left">%1$s left</string>
+    <string name="subscription_usage_traffic_used_up">No traffic left</string>
+    <string name="subscription_usage_traffic_used">%1$s used</string>
+    <string name="subscription_usage_active_until">Active until %1$s · %2$s</string>
+    <string name="subscription_usage_expired">Expired on %1$s</string>
+    <string name="subscription_usage_refresh_failed">Couldn\'t refresh. Showing the last known data.</string>
+    <plurals name="subscription_usage_days_left">
+        <item quantity="one">%1$d day left</item>
+        <item quantity="other">%1$d days left</item>
+    </plurals>
+</resources>

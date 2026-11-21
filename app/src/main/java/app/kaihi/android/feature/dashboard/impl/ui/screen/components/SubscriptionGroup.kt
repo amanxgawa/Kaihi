@@ -6,12 +6,14 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -19,7 +21,10 @@ import androidx.compose.ui.draw.clip
 import app.kaihi.android.feature.dashboard.impl.ui.model.SubscriptionUi
 import app.kaihi.android.feature.dashboard.impl.ui.model.SubscriptionKind
 import app.kaihi.android.R
+import app.kaihi.android.platform.ui.components.SubscriptionUsageCard
 import app.kaihi.android.platform.ui.theme.dimens
+import app.kaihi.android.platform.ui.theme.kaihiEffectsSpec
+import app.kaihi.android.platform.ui.theme.kaihiSpatialSpec
 
 private val revealShape = RoundedCornerShape(bottomStart = SegmentOuterCorner, bottomEnd = SegmentOuterCorner)
 
@@ -46,20 +51,38 @@ internal fun SubscriptionGroup(
             onRefresh = onRefresh,
         )
 
+        subscription.usage?.let { usage ->
+            val bottomCorner by animateDpAsState(
+                targetValue = if (subscription.isExpanded) SegmentInnerCorner else SegmentOuterCorner,
+                animationSpec = kaihiSpatialSpec(),
+                label = "subscriptionUsageBottomCorner",
+            )
+            SubscriptionUsageCard(
+                usage = usage,
+                shape = RoundedCornerShape(
+                    topStart = SegmentInnerCorner,
+                    topEnd = SegmentInnerCorner,
+                    bottomEnd = bottomCorner,
+                    bottomStart = bottomCorner,
+                ),
+                modifier = Modifier.padding(top = dimens.xs),
+            )
+        }
+
         AnimatedVisibility(
             visible = subscription.isExpanded,
             modifier = Modifier.clip(revealShape),
-            enter = expandVertically(animationSpec = dashboardSpatialSpec(), expandFrom = Alignment.Top) +
-                fadeIn(animationSpec = dashboardEffectsSpec()),
-            exit = shrinkVertically(animationSpec = dashboardSpatialSpec(), shrinkTowards = Alignment.Top) +
-                fadeOut(animationSpec = dashboardEffectsSpec()),
+            enter = expandVertically(animationSpec = kaihiSpatialSpec(), expandFrom = Alignment.Top) +
+                fadeIn(animationSpec = kaihiEffectsSpec()),
+            exit = shrinkVertically(animationSpec = kaihiSpatialSpec(), shrinkTowards = Alignment.Top) +
+                fadeOut(animationSpec = kaihiEffectsSpec()),
         ) {
             val hasAddRow = subscription.kind != SubscriptionKind.REMOTE
             val segmentCount = subscription.servers.size + 1 + if (hasAddRow) 1 else 0
             Column(
                 modifier = Modifier
                     .clip(revealShape)
-                    .animateContentSize(animationSpec = dashboardSpatialSpec())
+                    .animateContentSize(animationSpec = kaihiSpatialSpec())
                     .padding(top = dimens.xs),
                 verticalArrangement = Arrangement.spacedBy(dimens.xs),
             ) {

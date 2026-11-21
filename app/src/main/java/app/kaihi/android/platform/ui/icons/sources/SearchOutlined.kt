@@ -1,9 +1,69 @@
 package app.kaihi.android.platform.ui.icons.sources
 
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathFillType
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.path
+import androidx.compose.ui.unit.dp
 
+@Suppress("CheckReturnValue")
 internal val _search_outlined: ImageVector
-    get() = materialSymbol(
-        name = "search",
-        pathData = "M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z",
-    )
+    get() {
+        if (__search_outlined != null) {
+            return __search_outlined!!
+        }
+        __search_outlined =
+            ImageVector.Builder(
+                    name = "search",
+                    defaultWidth = 24.dp,
+                    defaultHeight = 24.dp,
+                    viewportWidth = 24f,
+                    viewportHeight = 24f,
+                )
+                .apply {
+                    path(
+                        fill = SolidColor(Color.Black),
+                        fillAlpha = 1f,
+                        stroke = null,
+                        strokeAlpha = 1f,
+                        strokeLineWidth = 1f,
+                        strokeLineCap = StrokeCap.Butt,
+                        strokeLineJoin = StrokeJoin.Bevel,
+                        strokeLineMiter = 1f,
+                        pathFillType = PathFillType.NonZero,
+                    ) {
+                        moveTo(19.6f, 21f)
+                        lineTo(13.3f, 14.7f)
+                        quadToRelative(-0.75f, 0.6f, -1.72f, 0.95f)
+                        reflectiveQuadTo(9.5f, 16f)
+                        quadTo(6.78f, 16f, 4.89f, 14.11f)
+                        quadTo(3f, 12.23f, 3f, 9.5f)
+                        quadTo(3f, 6.77f, 4.89f, 4.89f)
+                        reflectiveQuadTo(9.5f, 3f)
+                        reflectiveQuadToRelative(4.61f, 1.89f)
+                        reflectiveQuadTo(16f, 9.5f)
+                        quadToRelative(0f, 1.1f, -0.35f, 2.07f)
+                        reflectiveQuadTo(14.7f, 13.3f)
+                        lineTo(21f, 19.6f)
+                        lineTo(19.6f, 21f)
+                        close()
+                        moveTo(9.5f, 14f)
+                        quadToRelative(1.88f, 0f, 3.19f, -1.31f)
+                        reflectiveQuadTo(14f, 9.5f)
+                        reflectiveQuadTo(12.69f, 6.31f)
+                        reflectiveQuadTo(9.5f, 5f)
+                        reflectiveQuadTo(6.31f, 6.31f)
+                        reflectiveQuadTo(5f, 9.5f)
+                        reflectiveQuadToRelative(1.31f, 3.19f)
+                        reflectiveQuadTo(9.5f, 14f)
+                        close()
+                    }
+                }
+                .build()
+        return __search_outlined!!
+    }
+
+private var __search_outlined: ImageVector? = null

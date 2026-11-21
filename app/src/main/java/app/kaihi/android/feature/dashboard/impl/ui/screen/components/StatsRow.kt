@@ -22,6 +22,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import app.kaihi.android.R
 import app.kaihi.android.core.vpn.XrayTrafficStats
 import app.kaihi.android.platform.ui.theme.dimens
+import app.kaihi.android.platform.ui.theme.kaihiEffectsSpec
+import app.kaihi.android.platform.ui.theme.kaihiSpatialSpec
 
 @Composable
 internal fun StatsRow(
@@ -61,10 +63,10 @@ private fun StatCard(visible: Boolean, label: String, value: String, modifier: M
     AnimatedVisibility(
         visible = visible,
         modifier = modifier.clip(cardShape),
-        enter = expandVertically(animationSpec = dashboardSpatialSpec(), expandFrom = Alignment.Top) +
-            fadeIn(animationSpec = dashboardEffectsSpec()),
-        exit = shrinkVertically(animationSpec = dashboardSpatialSpec(), shrinkTowards = Alignment.Top) +
-            fadeOut(animationSpec = dashboardEffectsSpec()),
+        enter = expandVertically(animationSpec = kaihiSpatialSpec(), expandFrom = Alignment.Top) +
+            fadeIn(animationSpec = kaihiEffectsSpec()),
+        exit = shrinkVertically(animationSpec = kaihiSpatialSpec(), shrinkTowards = Alignment.Top) +
+            fadeOut(animationSpec = kaihiEffectsSpec()),
     ) {
         StatCardContent(label = label, value = value)
     }
