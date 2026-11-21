@@ -2,6 +2,7 @@ package app.kaihi.android.feature.dashboard.impl.domain
 
 import app.kaihi.android.core.vpn.SubscriptionFetchFailure
 import app.kaihi.android.core.vpn.SubscriptionFetchResult
+import app.kaihi.android.core.vpn.SubscriptionContent
 import app.kaihi.android.core.vpn.FakeHttpTransport
 import app.kaihi.android.core.vpn.HttpTransport
 import app.kaihi.android.core.vpn.SubscriptionFetcher
@@ -14,6 +15,7 @@ import app.kaihi.android.core.vpn.XraySubscriptionSource
 import app.kaihi.android.core.vpn.XraySubscriptionStore
 import app.kaihi.android.core.vpn.XraySubscriptionUserInfo
 import app.kaihi.android.core.vpn.XrayVpnProfile
+import app.kaihi.android.core.vpn.XrayJsonSubscription
 import app.kaihi.android.core.vpn.XrayEndpoint
 import app.kaihi.android.core.vpn.isSameServerAs
 import app.kaihi.android.core.vpn.testEndpoint
@@ -83,6 +85,21 @@ class RemoteSubscriptionRefresherTest {
         assertTrue(updated.muxEnabled)
         assertEquals(17, updated.muxConcurrency)
         assertTrue(updated.fragmentEnabled)
+    }
+
+    @Test
+    fun `JSON refresh replaces rows and keeps the id of a matching endpoint`() = runTest {
+        val existing = profile("saved-id", "Old name", "node.example", UUID_ONE, addedAtMillis = 123L)
+        val store = newStore(listOf(subscription(servers = listOf(existing))))
+        val refresher = RemoteSubscriptionRefresher(store, fetcher(jsonSuccess()))
+
+        val outcome = refresher.refresh(SUBSCRIPTION_ID, nowMillis = NOW)
+
+        val updated = store.current().single().servers.single()
+        assertEquals(RemoteSubscriptionRefreshOutcome.Success(1), outcome)
+        assertEquals("saved-id", updated.id)
+        assertEquals("JSON node", updated.name)
+        assertEquals(123L, updated.addedAtMillis)
     }
 
     @Test
@@ -296,7 +313,7 @@ class RemoteSubscriptionRefresherTest {
 
         assertEquals(RemoteSubscriptionRefreshOutcome.AlreadyRefreshing, second)
         assertEquals(RemoteSubscriptionRefreshOutcome.Success(1), first.await())
-        assertEquals(1, transport.calls)
+        assertEquals(2, transport.calls)
     }
 
     @Test
@@ -315,7 +332,23 @@ class RemoteSubscriptionRefresherTest {
     )
 
     private fun success(vararg links: String, metadata: SubscriptionMetadata = SubscriptionMetadata()) =
-        SubscriptionFetchResult.Success(links.toList(), metadata, truncated = false)
+        SubscriptionFetchResult.Success(
+            SubscriptionContent.ShareLinks(links.toList()),
+            metadata,
+            truncated = false,
+        )
+
+    private fun jsonSuccess() = SubscriptionFetchResult.Success(
+        SubscriptionContent.XrayJson(
+            XrayJsonSubscription(
+                profiles = listOf(profile("json-id", "JSON node", "node.example", UUID_ONE)),
+                unsupported = 0,
+                invalid = 0,
+            ),
+        ),
+        SubscriptionMetadata(),
+        truncated = false,
+    )
 
     private fun subscription(
         name: String = "Imported provider",
@@ -393,24 +426,27 @@ class RemoteSubscriptionRefresherTest {
     private fun transport(result: SubscriptionFetchResult): HttpTransport = when (result) {
         is SubscriptionFetchResult.Success -> {
             val metadata = result.metadata
-            val body = buildList {
-                metadata.title?.let { add("#profile-title: $it") }
-                metadata.userInfo?.let { info ->
-                    add(
-                        "#subscription-userinfo: " + listOfNotNull(
-                            info.uploadBytes?.let { "upload=$it" },
-                            info.downloadBytes?.let { "download=$it" },
-                            info.totalBytes?.let { "total=$it" },
-                            info.expireEpochSeconds?.let { "expire=$it" },
-                        ).joinToString(";"),
-                    )
-                }
-                metadata.updateIntervalHours?.let { add("#profile-update-interval: $it") }
-                metadata.supportUrl?.let { add("#support-url: $it") }
-                metadata.webPageUrl?.let { add("#profile-web-page-url: $it") }
-                metadata.announce?.let { add("#announce: $it") }
-                addAll(result.links)
-            }.joinToString("\n")
+            val body = when (val content = result.content) {
+                is SubscriptionContent.XrayJson -> XRAY_JSON_BODY
+                is SubscriptionContent.ShareLinks -> buildList {
+                    metadata.title?.let { add("#profile-title: $it") }
+                    metadata.userInfo?.let { info ->
+                        add(
+                            "#subscription-userinfo: " + listOfNotNull(
+                                info.uploadBytes?.let { "upload=$it" },
+                                info.downloadBytes?.let { "download=$it" },
+                                info.totalBytes?.let { "total=$it" },
+                                info.expireEpochSeconds?.let { "expire=$it" },
+                            ).joinToString(";"),
+                        )
+                    }
+                    metadata.updateIntervalHours?.let { add("#profile-update-interval: $it") }
+                    metadata.supportUrl?.let { add("#support-url: $it") }
+                    metadata.webPageUrl?.let { add("#profile-web-page-url: $it") }
+                    metadata.announce?.let { add("#announce: $it") }
+                    addAll(content.links)
+                }.joinToString("\n")
+            }
             FakeHttpTransport(FakeHttpTransport.ok(body))
         }
         is SubscriptionFetchResult.Failure -> FakeHttpTransport().apply {
@@ -461,5 +497,11 @@ class RemoteSubscriptionRefresherTest {
         const val UUID_ONE = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
         const val UUID_TWO = "11111111-2222-3333-4444-555555555555"
         const val UUID_THREE = "abcdef01-2345-6789-abcd-ef0123456789"
+        const val XRAY_JSON_BODY =
+            "[{\"remarks\":\"JSON node\",\"outbounds\":[{" +
+                "\"protocol\":\"vless\",\"settings\":{\"vnext\":[{\"address\":\"node.example\",\"port\":443," +
+                "\"users\":[{\"id\":\"$UUID_ONE\",\"encryption\":\"none\"}]}]}," +
+                "\"streamSettings\":{\"network\":\"tcp\",\"tcpSettings\":{},\"security\":\"reality\"," +
+                "\"realitySettings\":{\"serverName\":\"cover.example\",\"publicKey\":\"$PUBLIC_KEY\",\"shortId\":\"0011\"}}}]}]"
     }
 }

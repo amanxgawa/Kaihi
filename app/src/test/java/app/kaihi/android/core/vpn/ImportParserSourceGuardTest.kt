@@ -28,6 +28,7 @@ class ImportParserSourceGuardTest {
             "ImportParsingUtils.kt",
             "SubscriptionMetadataParser.kt",
             "ShareLinkParser.kt",
+            "XrayJsonSubscriptionParser.kt",
         )
     }
 }

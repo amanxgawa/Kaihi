@@ -16,8 +16,9 @@ those servers belong to whoever runs them.
    traffic through it.
 
 You can also import `vless://` and `trojan://` links or an HTTPS subscription URL. Kaihi imports
-VLESS and Trojan links using REALITY or TLS over TCP, XHTTP or gRPC, and TLS over WebSocket or HTTPUpgrade;
-unsupported link types are skipped.
+VLESS and Trojan links using REALITY or TLS over TCP, XHTTP or gRPC, and TLS over WebSocket or
+HTTPUpgrade; unsupported link types are skipped. Xray JSON subscriptions are imported as one
+server per location, using only their server entries; Kaihi keeps its own routing and DNS.
 Tapping a `vless://` or `trojan://` link, or sharing a link to Kaihi from another app, opens it in
 Kaihi for review before anything is added.
 
@@ -65,9 +66,11 @@ and reuses the service account.
   the build proceeds (see `downloadLibV2ray` in `app/build.gradle.kts`).
 - **On your phone**, at runtime: an HTTPS GET to the provider when you import a subscription, open
   the dashboard with a stale subscription (24-hour default update interval), or refresh manually.
-  The request goes directly to the provider, outside the VPN, with only `Accept: */*` and a default
-  `User-Agent: Kaihi/<version>` (customizable in advanced mode). It follows at most three HTTPS
-  redirects and reads at most 1 MiB. No device identifiers or cookies are sent.
+  The request goes directly to the provider, outside the VPN, with only `Accept: */*` and a
+  `User-Agent`. Kaihi first asks as `Happ/3.0`, because panels send the Xray JSON format, which
+  lists more servers, only to clients they recognise; if the answer is not Xray JSON, it asks again as
+  `Kaihi/<version>`. A custom `User-Agent` set in advanced mode replaces both. It follows at most
+  three HTTPS redirects and reads at most 1 MiB. No device identifiers or cookies are sent.
 
 Supported server distros: Debian/Ubuntu, RHEL/Fedora/Alma/Rocky, Arch, Alpine.
 

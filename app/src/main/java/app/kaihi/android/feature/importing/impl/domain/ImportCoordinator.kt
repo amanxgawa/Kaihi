@@ -2,6 +2,7 @@ package app.kaihi.android.feature.importing.impl.domain
 
 import app.kaihi.android.core.mode.OnboardingState
 import app.kaihi.android.core.vpn.ImportInput
+import app.kaihi.android.core.vpn.SubscriptionContent
 import app.kaihi.android.core.vpn.SubscriptionFetchFailure
 import app.kaihi.android.core.vpn.SubscriptionFetchResult
 import app.kaihi.android.core.vpn.SubscriptionFetcher
@@ -122,11 +123,20 @@ internal class ImportCoordinator @Inject constructor(
             return ImportPreparation.AlreadyAdded(existing.name, existing.servers.firstOrNull()?.id)
         }
 
-        val fetched = when (val result = subscriptionFetcher.fetch(url)) {
+        val fetched = when (val result = subscriptionFetcher.fetch(url, nowMillis)) {
             is SubscriptionFetchResult.Failure -> return ImportPreparation.FetchFailed(result.reason)
             is SubscriptionFetchResult.Success -> result
         }
-        val parsed = parseLinks(fetched.links, nowMillis)
+        val parsed = when (val content = fetched.content) {
+            is SubscriptionContent.ShareLinks -> parseLinks(content.links, nowMillis)
+            is SubscriptionContent.XrayJson -> ParsedLinks(
+                profiles = content.subscription.profiles,
+                counts = ImportCounts(
+                    unsupported = content.subscription.unsupported,
+                    invalid = content.subscription.invalid,
+                ),
+            )
+        }
         val uniqueProfiles = mutableListOf<XrayVpnProfile>()
         var duplicates = 0
         parsed.profiles.forEach { profile ->

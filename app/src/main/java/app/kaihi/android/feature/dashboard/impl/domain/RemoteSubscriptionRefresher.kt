@@ -1,5 +1,6 @@
 package app.kaihi.android.feature.dashboard.impl.domain
 
+import app.kaihi.android.core.vpn.SubscriptionContent
 import app.kaihi.android.core.vpn.SubscriptionFetchFailure
 import app.kaihi.android.core.vpn.SubscriptionFetchResult
 import app.kaihi.android.core.vpn.SubscriptionFetcher
@@ -47,8 +48,9 @@ internal class RemoteSubscriptionRefresher @Inject constructor(
             val source = subscription.source as? XraySubscriptionSource.Remote
                 ?: return RemoteSubscriptionRefreshOutcome.SubscriptionUnavailable
 
+            val refreshedAtMillis = nowMillis ?: System.currentTimeMillis()
             val fetched = try {
-                subscriptionFetcher.fetch(source.url)
+                subscriptionFetcher.fetch(source.url, refreshedAtMillis)
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (_: Throwable) {
@@ -60,9 +62,11 @@ internal class RemoteSubscriptionRefresher @Inject constructor(
                 is SubscriptionFetchResult.Success -> fetched
             }
 
-            val refreshedAtMillis = nowMillis ?: System.currentTimeMillis()
-            val parsedProfiles = success.links.mapNotNull { link ->
-                (parseShareLink(link, refreshedAtMillis) as? ShareLinkResult.Success)?.profile
+            val parsedProfiles = when (val content = success.content) {
+                is SubscriptionContent.ShareLinks -> content.links.mapNotNull { link ->
+                    (parseShareLink(link, refreshedAtMillis) as? ShareLinkResult.Success)?.profile
+                }
+                is SubscriptionContent.XrayJson -> content.subscription.profiles
             }
             if (parsedProfiles.isEmpty()) return RemoteSubscriptionRefreshOutcome.NothingImportable
 

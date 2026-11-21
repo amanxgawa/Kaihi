@@ -6,6 +6,7 @@ import app.kaihi.android.core.storage.InMemoryAppStorage
 import app.kaihi.android.core.vpn.FakeHttpTransport
 import app.kaihi.android.core.vpn.SubscriptionFetchFailure
 import app.kaihi.android.core.vpn.SubscriptionFetchResult
+import app.kaihi.android.core.vpn.SubscriptionContent
 import app.kaihi.android.core.vpn.SubscriptionFetcher
 import app.kaihi.android.core.vpn.SubscriptionMetadata
 import app.kaihi.android.core.vpn.ShareLinkResult
@@ -14,6 +15,7 @@ import app.kaihi.android.core.vpn.XraySubscriptionSource
 import app.kaihi.android.core.vpn.XraySubscriptionStore
 import app.kaihi.android.core.vpn.XraySubscriptionUserInfo
 import app.kaihi.android.core.vpn.XrayVpnProfile
+import app.kaihi.android.core.vpn.XrayJsonSubscription
 import app.kaihi.android.core.vpn.VpnPreferences
 import app.kaihi.android.core.vpn.parseShareLink
 import java.io.IOException
@@ -133,7 +135,7 @@ class ImportCoordinatorTest {
         )
         val (coordinator, store, transport, storage) = fixture(
             fetchResult = SubscriptionFetchResult.Success(
-                links = listOf(REALITY_RAW_LINK, REALITY_XHTTP_LINK),
+                content = SubscriptionContent.ShareLinks(listOf(REALITY_RAW_LINK, REALITY_XHTTP_LINK)),
                 metadata = metadata,
                 truncated = true,
             ),
@@ -159,14 +161,39 @@ class ImportCoordinatorTest {
         assertEquals(preview.fetchedAtMillis, source.lastUpdatedMillis)
         assertNotNull(source.lastUpdatedMillis)
         assertTrue(storage.isCompleted())
-        assertEquals(listOf(SUBSCRIPTION_URL), transport.requestedUrls)
+        assertEquals(listOf(SUBSCRIPTION_URL, SUBSCRIPTION_URL), transport.requestedUrls)
+    }
+
+    @Test
+    fun `remote JSON preview keeps parser diagnostics`() = runTest {
+        val (coordinator, _, _, _) = fixture(
+            fetchResult = SubscriptionFetchResult.Success(
+                content = SubscriptionContent.XrayJson(
+                    XrayJsonSubscription(
+                        profiles = listOf(parseProfile(REALITY_RAW_LINK)),
+                        unsupported = 2,
+                        invalid = 0,
+                    ),
+                ),
+                metadata = SubscriptionMetadata(),
+                truncated = false,
+            ),
+        )
+
+        val preparation = coordinator.prepare(SUBSCRIPTION_URL)
+
+        assertTrue(preparation is ImportPreparation.Ready)
+        val preview = (preparation as ImportPreparation.Ready).preview
+        assertEquals(1, preview.profiles.size)
+        assertEquals(2, preview.counts.unsupported)
+        assertEquals(0, preview.counts.invalid)
     }
 
     @Test
     fun `remote without title uses URL host as the group name`() = runTest {
         val (coordinator, store) = fixture(
             fetchResult = SubscriptionFetchResult.Success(
-                links = listOf(REALITY_RAW_LINK),
+                content = SubscriptionContent.ShareLinks(listOf(REALITY_RAW_LINK)),
                 metadata = SubscriptionMetadata(),
                 truncated = false,
             ),
@@ -207,7 +234,7 @@ class ImportCoordinatorTest {
         assertEquals(ImportPreparation.FetchFailed(SubscriptionFetchFailure.TIMEOUT), preparation)
         assertTrue(store.current().isEmpty())
         assertFalse(storage.isCompleted())
-        assertEquals(1, transport.requestedUrls.size)
+        assertEquals(2, transport.requestedUrls.size)
     }
 
     @Test
@@ -234,7 +261,7 @@ class ImportCoordinatorTest {
 
         val (remoteCoordinator, remoteStore, _, remoteStorage) = fixture(
             fetchResult = SubscriptionFetchResult.Success(
-                links = listOf(REALITY_RAW_LINK),
+                content = SubscriptionContent.ShareLinks(listOf(REALITY_RAW_LINK)),
                 metadata = SubscriptionMetadata(),
                 truncated = false,
             ),
@@ -249,12 +276,12 @@ class ImportCoordinatorTest {
         val (coordinator, store, transport) = fixture(
             fetchResults = listOf(
                 SubscriptionFetchResult.Success(
-                    links = listOf(REALITY_RAW_LINK),
+                    content = SubscriptionContent.ShareLinks(listOf(REALITY_RAW_LINK)),
                     metadata = SubscriptionMetadata(title = "First response"),
                     truncated = false,
                 ),
                 SubscriptionFetchResult.Success(
-                    links = listOf(REALITY_XHTTP_LINK),
+                    content = SubscriptionContent.ShareLinks(listOf(REALITY_XHTTP_LINK)),
                     metadata = SubscriptionMetadata(title = "Second response"),
                     truncated = false,
                 ),
@@ -265,7 +292,7 @@ class ImportCoordinatorTest {
         val outcome = coordinator.add(preview)
 
         assertTrue(outcome is ImportOutcome.Success)
-        assertEquals(1, transport.requestedUrls.size)
+        assertEquals(2, transport.requestedUrls.size)
         assertEquals(preview.profiles, store.current().single().servers)
     }
 
@@ -355,12 +382,19 @@ class ImportCoordinatorTest {
     private fun FakeHttpTransport.enqueueFetchResult(result: SubscriptionFetchResult) {
         when (result) {
             is SubscriptionFetchResult.Success -> {
-                val links = if (result.truncated && result.links.isNotEmpty()) {
-                    result.links + List(500) { result.links.first() }
-                } else {
-                    result.links
+                when (val content = result.content) {
+                    is SubscriptionContent.ShareLinks -> {
+                        val links = if (result.truncated && content.links.isNotEmpty()) {
+                            content.links + List(500) { content.links.first() }
+                        } else {
+                            content.links
+                        }
+                        enqueue(FakeHttpTransport.ok(links.joinToString("\n"), result.metadata.toHeaders()))
+                    }
+                    is SubscriptionContent.XrayJson -> {
+                        enqueue(FakeHttpTransport.ok(XRAY_JSON_BODY, result.metadata.toHeaders()))
+                    }
                 }
-                enqueue(FakeHttpTransport.ok(links.joinToString("\n"), result.metadata.toHeaders()))
             }
             is SubscriptionFetchResult.Failure -> when (result.reason) {
                 SubscriptionFetchFailure.TIMEOUT -> enqueueFailure(SocketTimeoutException())
@@ -420,5 +454,12 @@ class ImportCoordinatorTest {
             "vmess://a1b2c3d4-e5f6-7890-abcd-ef1234567890@example.com:443"
         const val INVALID_LINK =
             "vless://a1b2c3d4-e5f6-7890-abcd-ef1234567890@example.com:443?security=reality&pbk=short&sni=example.com"
+        const val XRAY_JSON_BODY =
+            "[{\"remarks\":\"JSON node\",\"outbounds\":[{" +
+                "\"protocol\":\"vless\",\"settings\":{\"vnext\":[{\"address\":\"203.0.113.8\",\"port\":443," +
+                "\"users\":[{\"id\":\"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\"encryption\":\"none\"}]}]}," +
+                "\"streamSettings\":{\"network\":\"tcp\",\"tcpSettings\":{},\"security\":\"reality\"," +
+                "\"realitySettings\":{\"serverName\":\"cover.example\",\"publicKey\":\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"shortId\":\"0011\"}}}]}," +
+                "{\"outbounds\":[]},{\"outbounds\":[]}]"
     }
 }
