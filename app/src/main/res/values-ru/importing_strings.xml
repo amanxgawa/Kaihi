@@ -1,6 +1,13 @@
 <resources>
+    <string name="add_sheet_title">Добавить сервер</string>
+    <string name="add_sheet_paste_title">Вставить из буфера обмена</string>
+    <string name="add_sheet_paste_description">Использовать скопированную ссылку</string>
+    <string name="add_sheet_paste_empty">Буфер обмена пуст. Сначала скопируйте ссылку.</string>
+    <string name="add_sheet_manual_title">Ввести вручную</string>
+    <string name="add_sheet_manual_description">Введите или вставьте ссылку</string>
+    <string name="add_sheet_setup_title">Настроить новый сервер</string>
+    <string name="add_sheet_setup_description">Kaihi всё установит на арендованный вами сервер</string>
     <string name="import_title">Добавить сервер</string>
-    <string name="import_back">Назад</string>
     <string name="import_helper">Вставьте ссылку, которую вам прислали. Она начинается с vless:// или https://.</string>
     <string name="import_input_label">Ссылка</string>
     <string name="import_action">Продолжить</string>
@@ -24,11 +31,6 @@
     <string name="import_preview_title_subscription">Добавить эту подписку?</string>
     <string name="import_preview_already_title">У вас уже есть %1$s</string>
     <string name="import_preview_from">источник: %1$s</string>
-    <string name="import_preview_traffic">Использовано %1$s из %2$s</string>
-    <string name="import_preview_traffic_used_up">Трафик закончился</string>
-    <string name="import_preview_works_until">Действует до %1$s</string>
-    <string name="import_preview_expires_soon">Истекает %1$s</string>
-    <string name="import_preview_expired">Истекла %1$s. Серверы могут не работать.</string>
     <string name="import_preview_servers_heading">Серверы · %1$d</string>
     <string name="import_preview_unknown_location">Местоположение неизвестно</string>
     <string name="import_preview_truncated">Подписка очень большая. Kaihi прочитал только её начало.</string>

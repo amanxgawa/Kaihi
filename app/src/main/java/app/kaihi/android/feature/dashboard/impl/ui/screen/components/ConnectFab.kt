@@ -21,6 +21,7 @@ import app.kaihi.android.feature.dashboard.impl.ui.mvi.isBusy
 import app.kaihi.android.feature.dashboard.impl.ui.mvi.isConnected
 import app.kaihi.android.platform.ui.icons.KaihiIcons
 import app.kaihi.android.platform.ui.theme.dimens
+import app.kaihi.android.platform.ui.theme.kaihiSpatialSpec
 
 internal val connectFabClearance: Dp
     @Composable get() = with(MaterialTheme.dimens) { xxl + l + m }
@@ -42,7 +43,7 @@ internal fun ConnectFab(
         onClick = { if (!state.engineState.isBusy) onClick() },
         modifier = modifier
             .clip(FloatingActionButtonDefaults.extendedFabShape)
-            .animateContentSize(animationSpec = dashboardSpatialSpec()),
+            .animateContentSize(animationSpec = kaihiSpatialSpec()),
         containerColor = containerColor,
         contentColor = contentColorFor(containerColor),
         icon = {

@@ -9,15 +9,17 @@ import app.kaihi.android.feature.dashboard.impl.domain.model.ServerLibrary
 import app.kaihi.android.feature.dashboard.impl.ui.model.ServerDetailsUi
 import app.kaihi.android.feature.dashboard.impl.ui.model.ServerSettingsUi
 import app.kaihi.android.feature.dashboard.impl.ui.model.ServerUi
-import app.kaihi.android.feature.dashboard.impl.ui.model.RemoteSubscriptionUi
 import app.kaihi.android.feature.dashboard.impl.ui.model.SubscriptionEditorUi
 import app.kaihi.android.feature.dashboard.impl.ui.model.SubscriptionUi
 import app.kaihi.android.feature.dashboard.impl.ui.model.SubscriptionKind
-import app.kaihi.android.platform.ui.util.toFlagEmoji
+import app.kaihi.android.platform.ui.components.subscriptionUsageUi
+import app.kaihi.android.platform.ui.util.flagFor
+import app.kaihi.android.platform.ui.util.withoutLeadingFlag
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 
 internal fun ServerLibrary.toSubscriptionsUi(
+    nowMillis: Long,
     refreshingIds: Set<String> = emptySet(),
     failedRefreshIds: Set<String> = emptySet(),
 ): ImmutableList<SubscriptionUi> {
@@ -37,16 +39,18 @@ internal fun ServerLibrary.toSubscriptionsUi(
             isExpanded = subscription.id !in collapsedSubscriptionIds,
             containsSelectedServer = subscription.servers.any { it.id == selectedId },
             servers = subscription.servers.map { it.toServerUi(isSelected = it.id == selectedId) }.toImmutableList(),
-            remote = (subscription.source as? XraySubscriptionSource.Remote)?.let { remote ->
+            usage = (subscription.source as? XraySubscriptionSource.Remote)?.let { remote ->
                 val userInfo = remote.userInfo
-                RemoteSubscriptionUi(
+                subscriptionUsageUi(
                     usedBytes = userInfo?.usedBytes(),
                     totalBytes = userInfo?.totalBytes,
-                    expireEpochSeconds = userInfo?.expireEpochSeconds,
+                    expiresAtMillis = userInfo?.expireEpochSeconds?.times(1000L),
+                    announce = remote.announce,
+                    nowMillis = nowMillis,
+                    refreshFailed = subscription.id in failedRefreshIds,
                 )
             },
             isRefreshing = subscription.id in refreshingIds,
-            refreshFailed = subscription.id in failedRefreshIds,
         )
     }.toImmutableList()
 }
@@ -64,6 +68,7 @@ internal fun XraySubscription.toEditorUi(): SubscriptionEditorUi {
         announce = remote.announce,
         supportUrl = remote.supportUrl,
         webPageUrl = remote.webPageUrl,
+        isRemote = true,
     )
 }
 
@@ -71,8 +76,8 @@ internal fun XrayVpnProfile.toDetailsUi(): ServerDetailsUi {
     val reality = security as? XraySecurity.Reality
     return ServerDetailsUi(
         id = id,
-        name = name,
-        flag = countryCode?.toFlagEmoji(),
+        name = name.withoutLeadingFlag(),
+        flag = flagFor(countryCode, name),
         stack = stackLabel(),
         address = "$serverAddress:$serverPort",
         maskingAs = reality?.serverName ?: (security as? XraySecurity.Tls)?.serverName,
@@ -96,8 +101,8 @@ internal fun XrayVpnProfile.toSettingsUi(): ServerSettingsUi {
 
 private fun XrayVpnProfile.toServerUi(isSelected: Boolean) = ServerUi(
     id = id,
-    name = name,
+    name = name.withoutLeadingFlag(),
     stack = stackLabel(),
-    flag = countryCode?.toFlagEmoji(),
+    flag = flagFor(countryCode, name),
     isSelected = isSelected,
 )

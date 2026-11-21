@@ -1,14 +1,90 @@
 package app.kaihi.android.platform.ui.icons.sources
 
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathFillType
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.path
+import androidx.compose.ui.unit.dp
 
-internal val _info_outlined: ImageVector by lazy {
-    materialSymbol(
-        name = "info",
-        pathData = "M440-280h80v-240h-80v240Zm40-320q17 0 28.5-11.5T520-640q0-17-11.5-28.5T480-680q-17 0-28.5 " +
-            "11.5T440-640q0 17 11.5 28.5T480-600Zm0 520q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 " +
-            "31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 " +
-            "156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 " +
-            "93t-93 227q0 134 93 227t227 93Zm0-320Z",
-    )
-}
+@Suppress("CheckReturnValue")
+internal val _info_outlined: ImageVector
+    get() {
+        if (__info_outlined != null) {
+            return __info_outlined!!
+        }
+        __info_outlined =
+            ImageVector.Builder(
+                    name = "info",
+                    defaultWidth = 24.dp,
+                    defaultHeight = 24.dp,
+                    viewportWidth = 24f,
+                    viewportHeight = 24f,
+                )
+                .apply {
+                    path(
+                        fill = SolidColor(Color.Black),
+                        fillAlpha = 1f,
+                        stroke = null,
+                        strokeAlpha = 1f,
+                        strokeLineWidth = 1f,
+                        strokeLineCap = StrokeCap.Butt,
+                        strokeLineJoin = StrokeJoin.Bevel,
+                        strokeLineMiter = 1f,
+                        pathFillType = PathFillType.NonZero,
+                    ) {
+                        moveTo(11f, 17f)
+                        horizontalLineToRelative(2f)
+                        verticalLineTo(11f)
+                        horizontalLineTo(11f)
+                        verticalLineToRelative(6f)
+                        close()
+                        moveTo(12.71f, 8.71f)
+                        quadTo(13f, 8.42f, 13f, 8f)
+                        quadTo(13f, 7.57f, 12.71f, 7.29f)
+                        reflectiveQuadTo(12f, 7f)
+                        reflectiveQuadTo(11.29f, 7.29f)
+                        reflectiveQuadTo(11f, 8f)
+                        quadToRelative(0f, 0.42f, 0.29f, 0.71f)
+                        reflectiveQuadTo(12f, 9f)
+                        reflectiveQuadTo(12.71f, 8.71f)
+                        close()
+                        moveTo(12f, 22f)
+                        quadTo(9.93f, 22f, 8.1f, 21.21f)
+                        quadTo(6.28f, 20.43f, 4.93f, 19.08f)
+                        quadTo(3.58f, 17.73f, 2.79f, 15.9f)
+                        reflectiveQuadTo(2f, 12f)
+                        quadTo(2f, 9.92f, 2.79f, 8.1f)
+                        quadTo(3.58f, 6.27f, 4.93f, 4.93f)
+                        quadTo(6.28f, 3.57f, 8.1f, 2.79f)
+                        quadTo(9.93f, 2f, 12f, 2f)
+                        reflectiveQuadToRelative(3.9f, 0.79f)
+                        reflectiveQuadToRelative(3.17f, 2.14f)
+                        quadToRelative(1.35f, 1.35f, 2.14f, 3.17f)
+                        quadTo(22f, 9.92f, 22f, 12f)
+                        reflectiveQuadToRelative(-0.79f, 3.9f)
+                        reflectiveQuadToRelative(-2.14f, 3.17f)
+                        quadToRelative(-1.35f, 1.35f, -3.17f, 2.14f)
+                        reflectiveQuadTo(12f, 22f)
+                        close()
+                        moveToRelative(0f, -2f)
+                        quadToRelative(3.35f, 0f, 5.68f, -2.32f)
+                        reflectiveQuadTo(20f, 12f)
+                        reflectiveQuadTo(17.68f, 6.32f)
+                        reflectiveQuadTo(12f, 4f)
+                        reflectiveQuadTo(6.33f, 6.32f)
+                        reflectiveQuadTo(4f, 12f)
+                        reflectiveQuadToRelative(2.33f, 5.68f)
+                        reflectiveQuadTo(12f, 20f)
+                        close()
+                        moveToRelative(0f, -8f)
+                        close()
+                    }
+                }
+                .build()
+        return __info_outlined!!
+    }
+
+private var __info_outlined: ImageVector? = null

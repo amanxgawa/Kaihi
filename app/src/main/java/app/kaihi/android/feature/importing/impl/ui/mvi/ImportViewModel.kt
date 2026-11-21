@@ -36,9 +36,13 @@ internal class ImportViewModel @Inject constructor(
                 reduce { copy(text = intent.text, errorMessage = null) }
                 startImport()
             }
+            ImportContract.Intent.ManualEntryRequested -> reduce { copy(isManualEntry = true) }
+            is ImportContract.Intent.Pasted -> {
+                reduce { copy(text = intent.text, errorMessage = null) }
+                startImport()
+            }
             ImportContract.Intent.ImportRequested -> startImport()
             ImportContract.Intent.AddRequested -> startAdd()
-            ImportContract.Intent.PreviewDismissed -> dismissPreview()
             is ImportContract.Intent.GroupToggled -> reduce {
                 copy(
                     expandedGroups = if (intent.key in expandedGroups) {
@@ -52,14 +56,7 @@ internal class ImportViewModel @Inject constructor(
                 sendEffect(ImportContract.Effect.ShowExisting(it.firstServerId))
             }
             ImportContract.Intent.CancelRequested -> cancelImport()
-            ImportContract.Intent.BackRequested -> {
-                if (state.value.preview != null || state.value.alreadyAdded != null) {
-                    dismissPreview()
-                } else {
-                    cancelImport()
-                    sendEffect(ImportContract.Effect.NavigateBack)
-                }
-            }
+            ImportContract.Intent.SetUpServerRequested -> sendEffect(ImportContract.Effect.SetUpServer)
         }
     }
 
@@ -99,26 +96,38 @@ internal class ImportViewModel @Inject constructor(
                         }
                     }
                     is ImportPreparation.FetchFailed -> reduce {
-                        copy(errorMessage = preparation.reason.toUiText())
+                        copy(isManualEntry = true, errorMessage = preparation.reason.toUiText())
                     }
                     is ImportPreparation.NothingImportable -> reduce {
                         copy(
+                            isManualEntry = true,
                             errorMessage = UiText.Resource(
                                 R.string.import_error_nothing_importable,
                             ),
                         )
                     }
                     ImportPreparation.InsecureUrl -> reduce {
-                        copy(errorMessage = UiText.Resource(R.string.import_error_use_https))
+                        copy(
+                            isManualEntry = true,
+                            errorMessage = UiText.Resource(R.string.import_error_use_https),
+                        )
                     }
                     ImportPreparation.Unrecognized -> reduce {
-                        copy(errorMessage = UiText.Resource(R.string.import_error_unrecognized))
+                        copy(
+                            isManualEntry = true,
+                            errorMessage = UiText.Resource(R.string.import_error_unrecognized),
+                        )
                     }
                 }
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (_: Throwable) {
-                reduce { copy(errorMessage = UiText.Resource(R.string.import_error_unexpected)) }
+                reduce {
+                    copy(
+                        isManualEntry = true,
+                        errorMessage = UiText.Resource(R.string.import_error_unexpected),
+                    )
+                }
             } finally {
                 if (importJob === currentCoroutineContext()[Job]) {
                     importJob = null
@@ -181,25 +190,8 @@ internal class ImportViewModel @Inject constructor(
                 preview = null,
                 alreadyAdded = null,
                 expandedGroups = emptySet(),
+                isManualEntry = true,
                 errorMessage = error,
-            )
-        }
-    }
-
-    private fun dismissPreview() {
-        importJob?.cancel()
-        importJob = null
-        addJob?.cancel()
-        addJob = null
-        preparedPreview = null
-        reduce {
-            copy(
-                preview = null,
-                alreadyAdded = null,
-                expandedGroups = emptySet(),
-                isImporting = false,
-                isAdding = false,
-                errorMessage = null,
             )
         }
     }

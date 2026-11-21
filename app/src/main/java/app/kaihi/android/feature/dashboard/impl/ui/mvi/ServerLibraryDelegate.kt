@@ -41,7 +41,11 @@ internal class ServerLibraryDelegate @Inject constructor(
                 reduce {
                     copy(
                         isLibraryLoaded = true,
-                        subscriptions = latest.toSubscriptionsUi(refreshingIds, failedRefreshIds),
+                        subscriptions = latest.toSubscriptionsUi(
+                            nowMillis = System.currentTimeMillis(),
+                            refreshingIds = refreshingIds,
+                            failedRefreshIds = failedRefreshIds,
+                        ),
                         serverDetails = serverDetails?.let { latest.subscriptions.findServer(it.id)?.toDetailsUi() },
                         subscriptionEditor = subscriptionEditor?.let { editor ->
                             latest.subscriptions.findSubscription(editor.id)?.toEditorUi()
@@ -173,7 +177,15 @@ internal class ServerLibraryDelegate @Inject constructor(
 
     private fun updateSubscriptionUi() {
         val latest = library ?: return
-        reduce { copy(subscriptions = latest.toSubscriptionsUi(refreshingIds, failedRefreshIds)) }
+        reduce {
+            copy(
+                subscriptions = latest.toSubscriptionsUi(
+                    nowMillis = System.currentTimeMillis(),
+                    refreshingIds = refreshingIds,
+                    failedRefreshIds = failedRefreshIds,
+                ),
+            )
+        }
     }
 
     private fun RemoteSubscriptionRefreshOutcome.toUiText(): UiText? = when (this) {

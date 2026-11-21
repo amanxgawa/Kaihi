@@ -8,8 +8,10 @@ import java.util.UUID
 @Serializable
 data class ImportKey(
     val text: String? = null,
+    val offerServerSetup: Boolean = false,
     val requestId: String = UUID.randomUUID().toString(),
 ) : NavKey {
     override fun toString(): String =
-        "ImportKey(text=${if (text == null) "null" else "<redacted>"}, requestId=$requestId)"
+        "ImportKey(text=${if (text == null) "null" else "<redacted>"}, " +
+            "offerServerSetup=$offerServerSetup, requestId=$requestId)"
 }

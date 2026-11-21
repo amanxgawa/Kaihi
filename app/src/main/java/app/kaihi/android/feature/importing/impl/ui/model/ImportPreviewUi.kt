@@ -1,6 +1,6 @@
 package app.kaihi.android.feature.importing.impl.ui.model
 
-internal enum class PreviewLevel { NORMAL, WARNING, ERROR }
+import app.kaihi.android.platform.ui.components.SubscriptionUsageUi
 
 internal data class CountryGroupUi(
     val countryCode: String?,
@@ -12,12 +12,7 @@ internal data class ImportPreviewUi(
     val title: String,
     val domain: String?,
     val singleServerCountryCode: String?,
-    val usedBytes: Long?,
-    val totalBytes: Long?,
-    val trafficLevel: PreviewLevel,
-    val expiresAtMillis: Long?,
-    val expiryLevel: PreviewLevel,
-    val announce: String?,
+    val usage: SubscriptionUsageUi?,
     val serverCount: Int,
     val groups: List<CountryGroupUi>,
     val skippedCount: Int,

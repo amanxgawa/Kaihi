@@ -38,9 +38,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -62,7 +59,6 @@ import app.kaihi.android.feature.dashboard.impl.ui.screen.components.rememberIsC
 import app.kaihi.android.feature.dashboard.impl.ui.screen.components.subscriptionItems
 import app.kaihi.android.feature.dashboard.impl.ui.model.SubscriptionKind
 import app.kaihi.android.platform.ui.components.KaihiMark
-import app.kaihi.android.platform.ui.components.AddServerSheet
 import app.kaihi.android.platform.ui.components.ConfirmDialog
 import app.kaihi.android.platform.ui.icons.KaihiIcons
 import app.kaihi.android.platform.ui.theme.dimens
@@ -74,15 +70,13 @@ private const val CONNECTION_ITEM_KEY = "connection"
 private const val RECONNECT_TO_APPLY_ITEM_KEY = "reconnect-to-apply"
 private const val DEPLOY_ITEM_KEY = "deploy"
 
-private enum class AddSheetMode { WITH_SETUP, WITHOUT_SETUP }
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun DashboardScreen(
     selectServerId: String?,
     onSettingsClick: () -> Unit,
     onNavigateToWizard: (subscriptionId: String?) -> Unit,
-    onNavigateToImport: (text: String?) -> Unit,
+    onAddServer: (offerServerSetup: Boolean) -> Unit,
     onNavigateToServer: (serverId: String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: DashboardViewModel = hiltViewModel<DashboardViewModel, DashboardViewModel.Factory>(
@@ -94,8 +88,6 @@ internal fun DashboardScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val listState = rememberLazyListState()
     val isToggleScrolledAway by rememberIsConnectionToggleScrolledAway(listState)
-    var addSheetMode by rememberSaveable { mutableStateOf<AddSheetMode?>(null) }
-
     LaunchedEffect(state.errorMessage) {
         state.errorMessage?.let { message ->
             snackbarHostState.showSnackbar(message.asString(context))
@@ -176,7 +168,7 @@ internal fun DashboardScreen(
             innerPadding = innerPadding,
             onIntent = viewModel::processIntent,
             onShowAddSheet = { withSetup ->
-                addSheetMode = if (withSetup) AddSheetMode.WITH_SETUP else AddSheetMode.WITHOUT_SETUP
+                onAddServer(withSetup)
             },
         )
     }
@@ -211,25 +203,6 @@ internal fun DashboardScreen(
         )
     }
 
-    addSheetMode?.let { mode ->
-        AddServerSheet(
-            onDismiss = { addSheetMode = null },
-            onPaste = { text ->
-                addSheetMode = null
-                onNavigateToImport(text)
-            },
-            onEnterManually = {
-                addSheetMode = null
-                onNavigateToImport(null)
-            },
-            onSetUpServer = if (mode == AddSheetMode.WITH_SETUP) {
-                {
-                    addSheetMode = null
-                    viewModel.processIntent(DashboardContract.Intent.DeployServerRequested(subscriptionId = null))
-                }
-            } else null,
-        )
-    }
 }
 
 @Composable

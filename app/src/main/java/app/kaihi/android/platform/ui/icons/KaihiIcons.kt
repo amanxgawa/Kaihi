@@ -14,6 +14,7 @@ import app.kaihi.android.platform.ui.icons.sources._edit_outlined
 import app.kaihi.android.platform.ui.icons.sources._expand_more_outlined
 import app.kaihi.android.platform.ui.icons.sources._info_outlined
 import app.kaihi.android.platform.ui.icons.sources._lock_filled
+import app.kaihi.android.platform.ui.icons.sources._open_in_new_outlined
 import app.kaihi.android.platform.ui.icons.sources._rocket_launch_outlined
 import app.kaihi.android.platform.ui.icons.sources._refresh_outlined
 import app.kaihi.android.platform.ui.icons.sources._search_outlined
@@ -21,6 +22,7 @@ import app.kaihi.android.platform.ui.icons.sources._settings
 import app.kaihi.android.platform.ui.icons.sources._share_outlined
 import app.kaihi.android.platform.ui.icons.sources._shield_filled
 import app.kaihi.android.platform.ui.icons.sources._shield_outlined
+import app.kaihi.android.platform.ui.icons.sources._support_agent_outlined
 import app.kaihi.android.platform.ui.icons.sources._visibility_filled
 import app.kaihi.android.platform.ui.icons.sources._visibility_off_filled
 
@@ -52,5 +54,7 @@ object KaihiIcons {
         val ChevronRight: ImageVector get() = _chevron_right_outlined
         val Search: ImageVector get() = _search_outlined
         val Refresh: ImageVector get() = _refresh_outlined
+        val SupportAgent: ImageVector get() = _support_agent_outlined
+        val OpenInNew: ImageVector get() = _open_in_new_outlined
     }
 }

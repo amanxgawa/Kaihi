@@ -29,7 +29,28 @@ internal fun decodeUriComponent(value: String): String? {
     return decodeUtf8(bytes.toByteArray())
 }
 
-internal fun cleanDisplayText(value: String, maxCodePoints: Int): String {
+internal fun cleanDisplayText(value: String, maxCodePoints: Int, keepNewlines: Boolean = false): String {
+    if (keepNewlines) {
+        val normalized = value.replace("\r\n", "\n").replace('\r', '\n')
+        val filtered = buildString {
+            var index = 0
+            while (index < normalized.length) {
+                val codePoint = Character.codePointAt(normalized, index)
+                val category = Character.getType(codePoint)
+                if (codePoint == '\n'.code ||
+                    (category != Character.CONTROL.toInt() && category != Character.FORMAT.toInt())
+                ) {
+                    appendCodePoint(codePoint)
+                }
+                index += Character.charCount(codePoint)
+            }
+        }
+        return filtered.trimTrailingWhitespacePerLine()
+            .replace(Regex("\\n{3,}"), "\n\n")
+            .trimUnicodeWhitespace()
+            .takeCodePoints(maxCodePoints)
+    }
+
     val filtered = buildString {
         var index = 0
         while (index < value.length) {
@@ -42,6 +63,26 @@ internal fun cleanDisplayText(value: String, maxCodePoints: Int): String {
         }
     }.trimUnicodeWhitespace()
     return filtered.takeCodePoints(maxCodePoints)
+}
+
+private fun String.trimTrailingWhitespacePerLine(): String {
+    val source = this
+    return buildString(source.length) {
+        var lineStart = 0
+        while (lineStart <= source.length) {
+            val newline = source.indexOf('\n', lineStart).let { if (it < 0) source.length else it }
+            var lineEnd = newline
+            while (lineEnd > lineStart) {
+                val codePoint = Character.codePointBefore(source, lineEnd)
+                if (!codePoint.isUnicodeWhitespace()) break
+                lineEnd -= Character.charCount(codePoint)
+            }
+            append(source, lineStart, lineEnd)
+            if (newline == source.length) break
+            append('\n')
+            lineStart = newline + 1
+        }
+    }
 }
 
 internal fun decodeBase64Utf8(value: String): String? {

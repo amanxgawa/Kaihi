@@ -1,5 +1,6 @@
 package app.kaihi.android.feature.importing
 
+import app.kaihi.android.feature.importing.impl.ui.mvi.ImportContract
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
@@ -7,15 +8,8 @@ import org.junit.Test
 
 class ImportKeyTest {
     @Test
-    fun `text is redacted from toString`() {
-        val rendered = ImportKey(text = "vless://SECRET@host:443").toString()
-
-        assertFalse(rendered.contains("SECRET"))
-    }
-
-    @Test
     fun `null text is shown explicitly`() {
-        assertTrue(ImportKey().toString().startsWith("ImportKey(text=null, requestId="))
+        assertTrue(ImportKey().toString().startsWith("ImportKey(text=null, offerServerSetup=false, requestId="))
     }
 
     @Test
@@ -24,5 +18,18 @@ class ImportKeyTest {
         val second = ImportKey(text = "vless://user@host:443")
 
         assertNotEquals(first.toString(), second.toString())
+    }
+
+    @Test
+    fun `redacts subscription token from key and pasted intent`() {
+        val token = "private-token"
+        val link = "https://provider.example/$token"
+
+        val keyText = ImportKey(text = link, offerServerSetup = true).toString()
+        assertFalse(keyText.contains(token))
+        assertTrue(keyText.contains("offerServerSetup=true"))
+
+        val pastedText = ImportContract.Intent.Pasted(link).toString()
+        assertFalse(pastedText.contains(token))
     }
 }

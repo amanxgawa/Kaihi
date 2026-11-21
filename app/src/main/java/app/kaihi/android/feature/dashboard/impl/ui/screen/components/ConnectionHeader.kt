@@ -32,6 +32,8 @@ import app.kaihi.android.feature.dashboard.impl.ui.mvi.isBusy
 import app.kaihi.android.feature.dashboard.impl.ui.mvi.isConnected
 import app.kaihi.android.platform.ui.components.StatusBadge
 import app.kaihi.android.platform.ui.theme.dimens
+import app.kaihi.android.platform.ui.theme.kaihiEffectsSpec
+import app.kaihi.android.platform.ui.theme.kaihiSpatialSpec
 import kotlinx.coroutines.delay
 
 private const val SLOW_TRANSITION_HINT_DELAY_MS = 5_000L
@@ -52,7 +54,7 @@ internal fun ConnectionHeader(
 
         StatusBadge(
             text = state.statusText(),
-            modifier = Modifier.animateContentSize(animationSpec = dashboardSpatialSpec()),
+            modifier = Modifier.animateContentSize(animationSpec = kaihiSpatialSpec()),
         )
 
         SlowTransitionHint(state = state)
@@ -89,10 +91,10 @@ private fun ColumnScope.SlowTransitionHint(state: DashboardContract.State) {
 
     AnimatedVisibility(
         visible = state.engineState.isBusy && isSlow,
-        enter = expandVertically(animationSpec = dashboardSpatialSpec(), expandFrom = Alignment.Top) +
-            fadeIn(animationSpec = dashboardEffectsSpec()),
-        exit = shrinkVertically(animationSpec = dashboardSpatialSpec(), shrinkTowards = Alignment.Top) +
-            fadeOut(animationSpec = dashboardEffectsSpec()),
+        enter = expandVertically(animationSpec = kaihiSpatialSpec(), expandFrom = Alignment.Top) +
+            fadeIn(animationSpec = kaihiEffectsSpec()),
+        exit = shrinkVertically(animationSpec = kaihiSpatialSpec(), shrinkTowards = Alignment.Top) +
+            fadeOut(animationSpec = kaihiEffectsSpec()),
     ) {
         Text(
             text = stringResource(R.string.dashboard_state_taking_a_while),

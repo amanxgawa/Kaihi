@@ -7,6 +7,9 @@ import kotlin.reflect.KClass
 
 interface Destination<K : NavKey> {
 
+    val metadata: Map<String, Any>
+        get() = emptyMap()
+
     @Composable
     fun Content(key: K)
 }

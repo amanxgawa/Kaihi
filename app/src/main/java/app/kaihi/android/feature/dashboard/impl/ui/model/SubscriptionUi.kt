@@ -1,6 +1,7 @@
 package app.kaihi.android.feature.dashboard.impl.ui.model
 
 import androidx.compose.runtime.Immutable
+import app.kaihi.android.platform.ui.components.SubscriptionUsageUi
 import kotlinx.collections.immutable.ImmutableList
 
 @Immutable
@@ -11,16 +12,8 @@ internal data class SubscriptionUi(
     val isExpanded: Boolean,
     val containsSelectedServer: Boolean,
     val servers: ImmutableList<ServerUi>,
-    val remote: RemoteSubscriptionUi? = null,
+    val usage: SubscriptionUsageUi? = null,
     val isRefreshing: Boolean = false,
-    val refreshFailed: Boolean = false,
-)
-
-@Immutable
-internal data class RemoteSubscriptionUi(
-    val usedBytes: Long?,
-    val totalBytes: Long?,
-    val expireEpochSeconds: Long?,
 )
 
 internal enum class SubscriptionKind {
@@ -50,4 +43,5 @@ internal data class SubscriptionEditorUi(
     val announce: String? = null,
     val supportUrl: String? = null,
     val webPageUrl: String? = null,
+    val isRemote: Boolean = false,
 )

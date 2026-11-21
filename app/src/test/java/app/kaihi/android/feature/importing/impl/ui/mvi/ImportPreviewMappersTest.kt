@@ -21,7 +21,7 @@ class ImportPreviewMappersTest {
             counts = ImportCounts(),
             fetchedAtMillis = NOW,
         ).toUi(NOW)
-        val displayed = listOf(preview.title, requireNotNull(preview.announce)) + preview.groups.flatMap { it.serverNames }
+        val displayed = listOf(preview.title, requireNotNull(preview.usage?.announce)) + preview.groups.flatMap { it.serverNames }
         listOf('\u202E', '\u2066', '\u2069').forEach { control ->
             assertFalse(displayed.any { control in it })
         }
