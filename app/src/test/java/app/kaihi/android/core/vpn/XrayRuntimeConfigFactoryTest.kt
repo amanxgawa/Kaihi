@@ -24,7 +24,7 @@ class XrayRuntimeConfigFactoryTest {
         name = "test",
         serverAddress = "proxy.example",
         serverPort = 443,
-        uuid = "123e4567-e89b-12d3-a456-426614174000",
+        credential = "123e4567-e89b-12d3-a456-426614174000",
         security = XraySecurity.Reality(
             serverName = "www.example.com",
             publicKey = "public-key",

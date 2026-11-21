@@ -200,6 +200,9 @@ data class StreamSettingsObject(
     val method: String? = null,
     val rawSettings: RawObject? = null,
     val xhttpSettings: JsonObject? = null,
+    val wsSettings: JsonObject? = null,
+    val httpupgradeSettings: JsonObject? = null,
+    val grpcSettings: JsonObject? = null,
     val security: String? = null, // "none" | "reality" | "tls"
     val realitySettings: RealityObject? = null,
     val tlsSettings: TlsObject? = null,
@@ -303,8 +306,23 @@ data class VlessOutboundSettings(
     val vnext: List<VlessVnext>
 )
 
+@Serializable
+data class TrojanServer(
+    val address: String,
+    val port: Int,
+    val password: String,
+)
+
+@Serializable
+data class TrojanOutboundSettings(
+    val servers: List<TrojanServer>,
+)
+
 fun VlessInboundSettings.toJsonObject(): JsonObject =
     XrayJson.default.encodeToJsonElement(VlessInboundSettings.serializer(), this).jsonObject
 
 fun VlessOutboundSettings.toJsonObject(): JsonObject =
     XrayJson.default.encodeToJsonElement(VlessOutboundSettings.serializer(), this).jsonObject
+
+fun TrojanOutboundSettings.toJsonObject(): JsonObject =
+    XrayJson.default.encodeToJsonElement(TrojanOutboundSettings.serializer(), this).jsonObject

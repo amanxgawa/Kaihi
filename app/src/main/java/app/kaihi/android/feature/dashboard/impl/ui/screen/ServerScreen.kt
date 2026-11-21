@@ -122,6 +122,7 @@ internal fun ServerScreen(
                         ServerAdvancedSection(
                             fingerprint = server.fingerprint,
                             isXhttp = server.isXhttp,
+                            supportsMux = server.supportsMux,
                             muxEnabled = server.muxEnabled,
                             muxConcurrency = server.muxConcurrency,
                             fragmentEnabled = server.fragmentEnabled,

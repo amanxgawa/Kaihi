@@ -32,7 +32,7 @@
     <string name="dashboard_subscription_usage_with_total">%1$s / %2$s</string>
     <string name="dashboard_subscription_usage_used">%1$s used</string>
     <string name="dashboard_subscription_usage_total">Total %1$s</string>
-    <string name="dashboard_subscription_refresh_empty">No supported VLESS servers were found in this subscription.</string>
+    <string name="dashboard_subscription_refresh_empty">No supported servers were found in this subscription.</string>
     <string name="dashboard_subscription_edit_title">Edit subscription</string>
     <string name="dashboard_subscription_info_title">Subscription</string>
     <string name="dashboard_subscription_name_label">Name</string>
@@ -56,7 +56,7 @@
     <string name="dashboard_server_info_masking_as">Masking as</string>
     <string name="dashboard_server_info_deployed">Deployed</string>
     <string name="dashboard_server_info_added">Added</string>
-    <string name="dashboard_export_link_label">Share VLESS link</string>
+    <string name="dashboard_export_link_label">Share link</string>
     <string name="dashboard_server_forget">Forget this server</string>
     <string name="dashboard_server_forget_confirm_title">Forget this server?</string>
     <string name="dashboard_server_forget_confirm_body">This removes the saved connection from this device. Your server keeps running, so you can set it up again anytime.</string>

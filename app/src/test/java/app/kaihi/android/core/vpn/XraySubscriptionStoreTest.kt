@@ -3,11 +3,16 @@ package app.kaihi.android.core.vpn
 import app.kaihi.android.core.storage.InMemoryAppStorage
 import app.kaihi.android.core.storage.StorageDomain
 import app.kaihi.android.core.vpn.spec.XraySecurity
+import app.kaihi.android.core.vpn.spec.XrayProtocol
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -24,7 +29,7 @@ class XraySubscriptionStoreTest {
         ),
         serverAddress = "203.0.113.9",
         serverPort = 443,
-        uuid = "a1b2c3d4-e5f6-4890-abcd-ef1234567890",
+        credential = "a1b2c3d4-e5f6-4890-abcd-ef1234567890",
         security = XraySecurity.Reality(serverName = "www.example.com", publicKey = "key", shortId = "ab"),
         addedAtMillis = 1_700_000_000_000L,
     )
@@ -35,6 +40,29 @@ class XraySubscriptionStoreTest {
     @Test
     fun `starts empty when nothing is stored`() = runTest {
         assertEquals(emptyList<XraySubscription>(), store(InMemoryAppStorage()).subscriptions.first())
+    }
+
+    @Test
+    fun `Trojan profile string representation redacts its credential`() {
+        val password = "p@ss word"
+        val profile = legacyProfile.copy(protocol = XrayProtocol.TROJAN, credential = password)
+
+        assertFalse(profile.toString().contains(password))
+    }
+
+    @Test
+    fun `stored UUID field without protocol decodes as a VLESS credential`() {
+        val encoded = XrayJson.default.encodeToString(XrayVpnProfile.serializer(), legacyProfile)
+        val stored = JsonObject(
+            XrayJson.default.parseToJsonElement(encoded).jsonObject - "protocol",
+        ).toString()
+        assertTrue(stored.contains("\"uuid\":"))
+        assertFalse(stored.contains("\"protocol\":"))
+
+        val decoded = XrayJson.default.decodeFromString(XrayVpnProfile.serializer(), stored)
+
+        assertEquals(XrayProtocol.VLESS, decoded.protocol)
+        assertEquals(legacyProfile.credential, decoded.credential)
     }
 
     @Test

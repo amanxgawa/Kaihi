@@ -48,7 +48,7 @@ class XrayServerProtectionSerializationTest {
         name = "Test server",
         serverAddress = "server.example",
         serverPort = 443,
-        uuid = "00000000-0000-4000-8000-000000000001",
+        credential = "00000000-0000-4000-8000-000000000001",
         security = XraySecurity.Reality(
             serverName = "mask.example",
             publicKey = "public-key",

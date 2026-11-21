@@ -6,8 +6,8 @@ import app.kaihi.android.core.vpn.XraySubscription
 import app.kaihi.android.core.vpn.XraySubscriptionSource
 import app.kaihi.android.core.vpn.findServer
 import app.kaihi.android.core.vpn.findSubscription
-import app.kaihi.android.core.vpn.toVlessUri
-import app.kaihi.android.core.vpn.toVlessUriList
+import app.kaihi.android.core.vpn.toShareUri
+import app.kaihi.android.core.vpn.toShareUriList
 import app.kaihi.android.feature.dashboard.impl.domain.RemoteSubscriptionRefresher
 import app.kaihi.android.feature.dashboard.impl.domain.RemoteSubscriptionRefreshOutcome
 import app.kaihi.android.feature.dashboard.impl.domain.ServerLibraryCoordinator
@@ -84,7 +84,7 @@ internal class ServerLibraryDelegate @Inject constructor(
                 pendingRemoteShareId = subscriptionId
                 reduce { copy(remoteShareConfirmationSubscriptionId = subscriptionId) }
             } else {
-                sendEffect(DashboardContract.Effect.ShareText(subscription.toVlessUriList()))
+                sendEffect(DashboardContract.Effect.ShareText(subscription.toShareUriList()))
             }
         }
     }
@@ -109,7 +109,7 @@ internal class ServerLibraryDelegate @Inject constructor(
 
     fun shareServer(serverId: String) {
         library?.subscriptions?.findServer(serverId)?.let { server ->
-            sendEffect(DashboardContract.Effect.ShareText(server.toVlessUri()))
+            sendEffect(DashboardContract.Effect.ShareText(server.toShareUri()))
         }
     }
 

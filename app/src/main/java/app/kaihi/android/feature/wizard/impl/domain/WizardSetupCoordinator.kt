@@ -84,7 +84,7 @@ internal class WizardSetupCoordinator @Inject constructor(
             ),
             serverAddress = draft.serverAddress,
             serverPort = XrayServerConfigFactory.DEFAULT_SERVER_PORT,
-            uuid = draft.uuid,
+            credential = draft.uuid,
             security = XraySecurity.Reality(
                 serverName = draft.realityServerName,
                 publicKey = draft.realityPublicKey,

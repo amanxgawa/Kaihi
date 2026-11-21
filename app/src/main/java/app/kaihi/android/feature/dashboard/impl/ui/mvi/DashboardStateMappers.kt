@@ -92,6 +92,7 @@ internal fun XrayVpnProfile.toSettingsUi(): ServerSettingsUi {
         id = id,
         name = name,
         fingerprint = reality?.fingerprint,
+        supportsMux = transport is XrayTransport.Raw || transport is XrayTransport.Xhttp,
         muxEnabled = muxEnabled,
         muxConcurrency = muxConcurrency,
         fragmentEnabled = fragmentEnabled,

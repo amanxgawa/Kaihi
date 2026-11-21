@@ -9,12 +9,12 @@ import org.junit.Test
 
 class XraySubscriptionsExtTest {
 
-    private fun server(id: String, address: String, uuid: String = "uuid-$id") = XrayVpnProfile(
+    private fun server(id: String, address: String, credential: String = "uuid-$id") = XrayVpnProfile(
         id = id,
         name = "Server $id",
         serverAddress = address,
         serverPort = 443,
-        uuid = uuid,
+        credential = credential,
         security = XraySecurity.Reality(serverName = "www.example.com", publicKey = "key", shortId = "ab"),
         addedAtMillis = 0L,
     )
@@ -31,14 +31,14 @@ class XraySubscriptionsExtTest {
             subscription("work", server("b", "203.0.113.2")),
         )
 
-        val redeployed = server("fresh-id", "203.0.113.1", uuid = "rotated-uuid").copy(name = "Fresh name")
+        val redeployed = server("fresh-id", "203.0.113.1", credential = "rotated-uuid").copy(name = "Fresh name")
         val result = subscriptions.withDeployedServer(redeployed, targetSubscriptionId = "work", unusedNewSubscription)
 
         assertEquals(listOf("a"), result.findSubscription("home")!!.servers.map { it.id })
         assertEquals(listOf("b"), result.findSubscription("work")!!.servers.map { it.id })
         val stored = result.findServer("a")!!
         assertEquals("Server a", stored.name)
-        assertEquals("rotated-uuid", stored.uuid)
+        assertEquals("rotated-uuid", stored.credential)
         assertNull(result.findServer("fresh-id"))
     }
 

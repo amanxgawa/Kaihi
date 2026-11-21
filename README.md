@@ -15,10 +15,11 @@ those servers belong to whoever runs them.
 3. The app then connects to that server over VLESS + REALITY + XHTTP and routes your device's
    traffic through it.
 
-You can also import `vless://` links or an HTTPS subscription URL. Kaihi imports VLESS links using
-REALITY or TLS over TCP or XHTTP; unsupported link types are skipped.
-Tapping a `vless://` link, or sharing a link to Kaihi from another app, opens it in Kaihi for review
-before anything is added.
+You can also import `vless://` and `trojan://` links or an HTTPS subscription URL. Kaihi imports
+VLESS and Trojan links using REALITY or TLS over TCP, XHTTP or gRPC, and TLS over WebSocket or HTTPUpgrade;
+unsupported link types are skipped.
+Tapping a `vless://` or `trojan://` link, or sharing a link to Kaihi from another app, opens it in
+Kaihi for review before anything is added.
 
 ## What it installs on your server
 

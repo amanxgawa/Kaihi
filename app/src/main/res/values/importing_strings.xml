@@ -8,13 +8,13 @@
     <string name="add_sheet_setup_title">Set up a new server</string>
     <string name="add_sheet_setup_description">Kaihi installs everything on a server you rent</string>
     <string name="import_title">Add a server</string>
-    <string name="import_helper">Paste the link someone sent you. It starts with vless:// or https://.</string>
+    <string name="import_helper">Paste the link someone sent you. It starts with vless://, trojan:// or https://.</string>
     <string name="import_input_label">Link</string>
     <string name="import_action">Continue</string>
     <string name="import_progress">Checking the link…</string>
     <string name="import_cancel">Cancel</string>
     <string name="import_error_use_https">Only https:// links are supported.</string>
-    <string name="import_error_unrecognized">This doesn\'t look like a server link. It should start with vless:// or https://.</string>
+    <string name="import_error_unrecognized">This doesn\'t look like a server link. It should start with vless://, trojan:// or https://.</string>
     <string name="import_error_nothing_importable">This link doesn\'t contain a server Kaihi can use.</string>
     <string name="import_error_already_added">You already have this.</string>
     <string name="import_error_unexpected">Something went wrong. Check the link and try again.</string>

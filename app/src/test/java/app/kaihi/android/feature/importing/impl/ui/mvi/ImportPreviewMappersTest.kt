@@ -1,9 +1,9 @@
 package app.kaihi.android.feature.importing.impl.ui.mvi
 
 import app.kaihi.android.core.vpn.SubscriptionMetadata
-import app.kaihi.android.core.vpn.VlessLinkResult
+import app.kaihi.android.core.vpn.ShareLinkResult
 import app.kaihi.android.core.vpn.XrayVpnProfile
-import app.kaihi.android.core.vpn.parseVlessLink
+import app.kaihi.android.core.vpn.parseShareLink
 import app.kaihi.android.feature.importing.impl.domain.ImportCounts
 import app.kaihi.android.feature.importing.impl.domain.ImportPreparation
 import app.kaihi.android.feature.importing.impl.domain.ImportPreview
@@ -31,7 +31,7 @@ class ImportPreviewMappersTest {
     }
 
     private fun profile(): XrayVpnProfile =
-        (parseVlessLink(VALID_LINK, NOW) as VlessLinkResult.Success).profile
+        (parseShareLink(VALID_LINK, NOW) as ShareLinkResult.Success).profile
 
     private companion object {
         const val NOW = 1_700_000_000_000L

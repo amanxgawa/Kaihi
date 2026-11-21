@@ -34,7 +34,7 @@
     <string name="dashboard_subscription_usage_with_total">%1$s / %2$s</string>
     <string name="dashboard_subscription_usage_used">Использовано %1$s</string>
     <string name="dashboard_subscription_usage_total">Всего %1$s</string>
-    <string name="dashboard_subscription_refresh_empty">В подписке не найдено поддерживаемых VLESS-серверов.</string>
+    <string name="dashboard_subscription_refresh_empty">В подписке не найдено поддерживаемых серверов.</string>
     <string name="dashboard_subscription_edit_title">Изменить подписку</string>
     <string name="dashboard_subscription_info_title">Подписка</string>
     <string name="dashboard_subscription_name_label">Название</string>
@@ -58,7 +58,7 @@
     <string name="dashboard_server_info_masking_as">Маскировка под</string>
     <string name="dashboard_server_info_deployed">Развёрнут</string>
     <string name="dashboard_server_info_added">Добавлен</string>
-    <string name="dashboard_export_link_label">Поделиться VLESS-ссылкой</string>
+    <string name="dashboard_export_link_label">Поделиться ссылкой</string>
     <string name="dashboard_server_forget">Забыть этот сервер</string>
     <string name="dashboard_server_forget_confirm_title">Забыть этот сервер?</string>
     <string name="dashboard_server_forget_confirm_body">Сохранённое подключение удалится с этого устройства. Сам сервер продолжит работать, так что настроить его заново можно в любой момент.</string>

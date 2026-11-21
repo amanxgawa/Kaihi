@@ -5,16 +5,17 @@ import app.kaihi.android.core.vpn.spec.XhttpMode
 import app.kaihi.android.core.vpn.spec.XrayFingerprint
 import app.kaihi.android.core.vpn.spec.XrayFingerprintSetting
 import app.kaihi.android.core.vpn.spec.XrayFlow
+import app.kaihi.android.core.vpn.spec.XrayProtocol
 import app.kaihi.android.core.vpn.spec.XraySecurity
 import app.kaihi.android.core.vpn.spec.XrayTransport
 import java.net.URI
 import java.util.Base64
 import java.util.Locale
 
-sealed interface VlessLinkResult {
-    data class Success(val profile: XrayVpnProfile) : VlessLinkResult
-    data class Unsupported(val reason: UnsupportedReason) : VlessLinkResult
-    data class Invalid(val reason: InvalidReason) : VlessLinkResult
+sealed interface ShareLinkResult {
+    data class Success(val profile: XrayVpnProfile) : ShareLinkResult
+    data class Unsupported(val reason: UnsupportedReason) : ShareLinkResult
+    data class Invalid(val reason: InvalidReason) : ShareLinkResult
 }
 
 enum class UnsupportedReason {
@@ -31,6 +32,7 @@ enum class InvalidReason {
     TOO_LONG,
     MALFORMED_URI,
     INVALID_ID,
+    INVALID_PASSWORD,
     INVALID_HOST,
     INVALID_PORT,
     DUPLICATE_PARAMETER,
@@ -40,80 +42,96 @@ enum class InvalidReason {
 }
 
 /** Parses a share link as untrusted input. Failure values contain no part of the input. */
-fun parseVlessLink(link: String, nowMillis: Long): VlessLinkResult {
-    if (link.length > MAX_VLESS_LINK_LENGTH) return VlessLinkResult.Invalid(InvalidReason.TOO_LONG)
+fun parseShareLink(link: String, nowMillis: Long): ShareLinkResult {
+    if (link.length > MAX_SHARE_LINK_LENGTH) return ShareLinkResult.Invalid(InvalidReason.TOO_LONG)
 
     val scheme = SCHEME_REGEX.find(link)?.groupValues?.get(1)
-        ?: return VlessLinkResult.Invalid(InvalidReason.MALFORMED_URI)
-    if (!scheme.equals("vless", ignoreCase = true)) {
+        ?: return ShareLinkResult.Invalid(InvalidReason.MALFORMED_URI)
+    val protocol = when {
+        scheme.equals("vless", ignoreCase = true) -> XrayProtocol.VLESS
+        scheme.equals("trojan", ignoreCase = true) -> XrayProtocol.TROJAN
+        else -> null
+    }
+    if (protocol == null) {
         return if (scheme.lowercase(Locale.ROOT) in UNSUPPORTED_PROTOCOLS) {
-            VlessLinkResult.Unsupported(UnsupportedReason.PROTOCOL)
+            ShareLinkResult.Unsupported(UnsupportedReason.PROTOCOL)
         } else {
-            VlessLinkResult.Invalid(InvalidReason.MALFORMED_URI)
+            ShareLinkResult.Invalid(InvalidReason.MALFORMED_URI)
         }
     }
 
     val uri = try {
         URI(link)
     } catch (_: Exception) {
-        return VlessLinkResult.Invalid(InvalidReason.MALFORMED_URI)
+        return ShareLinkResult.Invalid(InvalidReason.MALFORMED_URI)
     }
-    if (uri.isOpaque || !uri.scheme.equals("vless", ignoreCase = true)) {
-        return VlessLinkResult.Invalid(InvalidReason.MALFORMED_URI)
+    if (uri.isOpaque || !uri.scheme.equals(scheme, ignoreCase = true)) {
+        return ShareLinkResult.Invalid(InvalidReason.MALFORMED_URI)
     }
 
-    val authority = uri.rawAuthority ?: return VlessLinkResult.Invalid(InvalidReason.MALFORMED_URI)
+    val authority = uri.rawAuthority ?: return ShareLinkResult.Invalid(InvalidReason.MALFORMED_URI)
     val at = authority.indexOf('@')
     if (at <= 0 || at != authority.lastIndexOf('@')) {
-        return VlessLinkResult.Invalid(InvalidReason.INVALID_ID)
+        return ShareLinkResult.Invalid(
+            if (protocol == XrayProtocol.TROJAN) InvalidReason.INVALID_PASSWORD else InvalidReason.INVALID_ID,
+        )
     }
-    val decodedId = decodeUriComponent(authority.substring(0, at))
-        ?: return VlessLinkResult.Invalid(InvalidReason.INVALID_ENCODING)
-    val id = normalizeVlessId(decodedId)
-        ?: return VlessLinkResult.Invalid(InvalidReason.INVALID_ID)
+    val decodedCredential = decodeUriComponent(authority.substring(0, at))
+        ?: return ShareLinkResult.Invalid(InvalidReason.INVALID_ENCODING)
+    val credential = when (protocol) {
+        XrayProtocol.VLESS -> normalizeVlessId(decodedCredential)
+            ?: return ShareLinkResult.Invalid(InvalidReason.INVALID_ID)
+        XrayProtocol.TROJAN -> normalizeTrojanPassword(decodedCredential)
+            ?: return ShareLinkResult.Invalid(InvalidReason.INVALID_PASSWORD)
+    }
 
     val parsedHostPort = parseHostPort(authority.substring(at + 1))
     if (parsedHostPort is HostPortParseResult.Failure) {
-        return VlessLinkResult.Invalid(parsedHostPort.reason)
+        return ShareLinkResult.Invalid(parsedHostPort.reason)
     }
     val (host, port) = (parsedHostPort as HostPortParseResult.Success).hostPort
 
     val params = parseParameters(uri.rawQuery)
     if (params is ParameterParseResult.Failure) {
-        return VlessLinkResult.Invalid(params.reason)
+        return ShareLinkResult.Invalid(params.reason)
     }
     val values = (params as ParameterParseResult.Success).values
 
-    val encryption = values["encryption"]
+    val encryption = values["encryption"].takeIf { protocol == XrayProtocol.VLESS }
     if (encryption != null && encryption != "none") {
-        return VlessLinkResult.Unsupported(UnsupportedReason.ENCRYPTION)
+        return ShareLinkResult.Unsupported(UnsupportedReason.ENCRYPTION)
     }
 
-    val securityResult = parseSecurity(values, host)
+    val securityResult = parseSecurity(values, host, defaultTls = protocol == XrayProtocol.TROJAN)
     if (securityResult is SecurityParseResult.Failure) {
         return securityResult.result
     }
     val security = (securityResult as SecurityParseResult.Success).security
 
-    val transportResult = parseTransport(values, security)
-    if (transportResult is TransportParseResult.Failure) {
-        return VlessLinkResult.Unsupported(transportResult.reason)
+    if (protocol == XrayProtocol.TROJAN && !values["flow"].isNullOrEmpty()) {
+        return ShareLinkResult.Unsupported(UnsupportedReason.TRANSPORT_OPTION)
+    }
+    val transport = when (val result = parseTransport(values, security)) {
+        is TransportParseResult.Success -> result.transport
+        is TransportParseResult.Failure -> return ShareLinkResult.Unsupported(result.reason)
+        is TransportParseResult.Invalid -> return ShareLinkResult.Invalid(result.reason)
     }
 
     val fragment = uri.rawFragment?.let(::decodeUriComponent)
-        ?: if (uri.rawFragment == null) "" else return VlessLinkResult.Invalid(InvalidReason.INVALID_ENCODING)
+        ?: if (uri.rawFragment == null) "" else return ShareLinkResult.Invalid(InvalidReason.INVALID_ENCODING)
     val name = cleanDisplayText(fragment, maxCodePoints = 64).ifEmpty { generateNickname(host) }
 
-    return VlessLinkResult.Success(
+    return ShareLinkResult.Success(
         XrayVpnProfile(
             id = newXrayId(),
             name = name,
             ssh = null,
             serverAddress = host,
             serverPort = port,
-            uuid = id,
+            protocol = protocol,
+            credential = credential,
             security = security,
-            transport = (transportResult as TransportParseResult.Success).transport,
+            transport = transport,
             addedAtMillis = nowMillis,
             countryCode = null,
         ),
@@ -125,6 +143,16 @@ private fun normalizeVlessId(value: String): String? {
     if (CANONICAL_UUID_REGEX.matches(value)) return value.lowercase(Locale.ROOT)
     val byteCount = value.toByteArray(Charsets.UTF_8).size
     if (byteCount !in 1..30) return null
+    if (value.codePoints().anyMatch {
+            Character.isWhitespace(it) || Character.isSpaceChar(it) || Character.isISOControl(it)
+        }
+    ) return null
+    return value
+}
+
+private fun normalizeTrojanPassword(value: String): String? {
+    if (!value.isWellFormedUnicode()) return null
+    if (value.toByteArray(Charsets.UTF_8).size !in 1..128) return null
     if (value.codePoints().anyMatch {
             Character.isWhitespace(it) || Character.isSpaceChar(it) || Character.isISOControl(it)
         }
@@ -247,23 +275,23 @@ private fun parseParameters(rawQuery: String?): ParameterParseResult {
 
 private sealed interface SecurityParseResult {
     data class Success(val security: XraySecurity) : SecurityParseResult
-    data class Failure(val result: VlessLinkResult) : SecurityParseResult
+    data class Failure(val result: ShareLinkResult) : SecurityParseResult
 }
 
-private fun parseSecurity(values: Map<String, String>, host: String): SecurityParseResult {
-    return when (values["security"]) {
+private fun parseSecurity(values: Map<String, String>, host: String, defaultTls: Boolean): SecurityParseResult {
+    return when (values["security"] ?: if (defaultTls) "tls" else null) {
         "reality" -> {
             val publicKey = values["pbk"]
             if (publicKey == null || !isCanonicalPublicKey(publicKey)) {
-                return SecurityParseResult.Failure(VlessLinkResult.Invalid(InvalidReason.INVALID_PUBLIC_KEY))
+                return SecurityParseResult.Failure(ShareLinkResult.Invalid(InvalidReason.INVALID_PUBLIC_KEY))
             }
             val serverName = values["sni"]
             if (serverName == null || !isSafeHostname(serverName)) {
-                return SecurityParseResult.Failure(VlessLinkResult.Invalid(InvalidReason.INVALID_HOST))
+                return SecurityParseResult.Failure(ShareLinkResult.Invalid(InvalidReason.INVALID_HOST))
             }
             val shortId = values["sid"] ?: ""
             if (shortId.length > 16 || shortId.length % 2 != 0 || shortId.any { it.digitToIntOrNull(16) == null }) {
-                return SecurityParseResult.Failure(VlessLinkResult.Invalid(InvalidReason.INVALID_SHORT_ID))
+                return SecurityParseResult.Failure(ShareLinkResult.Invalid(InvalidReason.INVALID_SHORT_ID))
             }
             val fingerprint = values["fp"]?.let { fp ->
                 XrayFingerprint.entries.firstOrNull { it.wireValue.equals(fp, ignoreCase = true) }
@@ -282,17 +310,17 @@ private fun parseSecurity(values: Map<String, String>, host: String): SecurityPa
                 it == "1" || it.equals("true", ignoreCase = true)
             } == true
             if (allowInsecure) {
-                return SecurityParseResult.Failure(VlessLinkResult.Unsupported(UnsupportedReason.INSECURE_TLS))
+                return SecurityParseResult.Failure(ShareLinkResult.Unsupported(UnsupportedReason.INSECURE_TLS))
             }
             val serverName = values["sni"] ?: host.takeIf(::isHostnameHost)
-                ?: return SecurityParseResult.Failure(VlessLinkResult.Invalid(InvalidReason.INVALID_HOST))
+                ?: return SecurityParseResult.Failure(ShareLinkResult.Invalid(InvalidReason.INVALID_HOST))
             if (!isSafeHostname(serverName)) {
-                return SecurityParseResult.Failure(VlessLinkResult.Invalid(InvalidReason.INVALID_HOST))
+                return SecurityParseResult.Failure(ShareLinkResult.Invalid(InvalidReason.INVALID_HOST))
             }
             SecurityParseResult.Success(XraySecurity.Tls(serverName = serverName))
         }
-        null, "none" -> SecurityParseResult.Failure(VlessLinkResult.Unsupported(UnsupportedReason.NO_SECURITY))
-        else -> SecurityParseResult.Failure(VlessLinkResult.Unsupported(UnsupportedReason.SECURITY))
+        null, "none" -> SecurityParseResult.Failure(ShareLinkResult.Unsupported(UnsupportedReason.NO_SECURITY))
+        else -> SecurityParseResult.Failure(ShareLinkResult.Unsupported(UnsupportedReason.SECURITY))
     }
 }
 
@@ -309,6 +337,7 @@ private fun isCanonicalPublicKey(value: String): Boolean {
 private sealed interface TransportParseResult {
     data class Success(val transport: XrayTransport) : TransportParseResult
     data class Failure(val reason: UnsupportedReason) : TransportParseResult
+    data class Invalid(val reason: InvalidReason) : TransportParseResult
 }
 
 private fun parseTransport(values: Map<String, String>, security: XraySecurity): TransportParseResult {
@@ -342,6 +371,37 @@ private fun parseTransport(values: Map<String, String>, security: XraySecurity):
             }
             TransportParseResult.Success(XrayTransport.Raw(flow = flow))
         }
+        "ws", "httpupgrade" -> {
+            if (security is XraySecurity.Reality || !values["flow"].isNullOrEmpty()) {
+                return TransportParseResult.Failure(UnsupportedReason.TRANSPORT_OPTION)
+            }
+            val path = values["path"] ?: "/"
+            if (!path.startsWith('/')) return TransportParseResult.Failure(UnsupportedReason.TRANSPORT_OPTION)
+            val host = values["host"]
+            if (host != null && !isSafeHostname(host)) {
+                return TransportParseResult.Invalid(InvalidReason.INVALID_HOST)
+            }
+            TransportParseResult.Success(
+                if (type == "ws") XrayTransport.WebSocket(path, host) else XrayTransport.HttpUpgrade(path, host),
+            )
+        }
+        "grpc" -> {
+            if (!values["flow"].isNullOrEmpty()) return TransportParseResult.Failure(UnsupportedReason.TRANSPORT_OPTION)
+            val serviceName = values["serviceName"]
+            if (serviceName != null && !GRPC_SERVICE_NAME_REGEX.matches(serviceName)) {
+                return TransportParseResult.Failure(UnsupportedReason.TRANSPORT_OPTION)
+            }
+            val multiMode = when (values["mode"]) {
+                null, "gun" -> false
+                "multi" -> true
+                else -> return TransportParseResult.Failure(UnsupportedReason.TRANSPORT_OPTION)
+            }
+            val authority = values["authority"]
+            if (authority != null && !isSafeHostname(authority)) {
+                return TransportParseResult.Invalid(InvalidReason.INVALID_HOST)
+            }
+            TransportParseResult.Success(XrayTransport.Grpc(serviceName ?: "", multiMode, authority))
+        }
         else -> TransportParseResult.Failure(UnsupportedReason.TRANSPORT)
     }
 }
@@ -362,12 +422,13 @@ private fun String.isWellFormedUnicode(): Boolean {
     return true
 }
 
-private const val MAX_VLESS_LINK_LENGTH = 8192
+private const val MAX_SHARE_LINK_LENGTH = 8192
 private val SCHEME_REGEX = Regex("^([A-Za-z][A-Za-z0-9+.-]*):")
 private val CANONICAL_UUID_REGEX = Regex("^[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$")
 private val IPV4_SHAPED_REGEX = Regex("^[0-9.]+$")
 private val BASE64_URL_NO_PADDING_REGEX = Regex("^[A-Za-z0-9_-]{43}$")
+private val GRPC_SERVICE_NAME_REGEX = Regex("^[A-Za-z0-9._/-]{1,256}$")
 private val UNSUPPORTED_PROTOCOLS = setOf(
-    "vmess", "trojan", "ss", "ssr", "shadowsocks", "hysteria", "hysteria2", "hy2", "tuic",
+    "vmess", "ss", "ssr", "shadowsocks", "hysteria", "hysteria2", "hy2", "tuic",
     "socks", "socks5", "http", "https", "wireguard", "wg",
 )

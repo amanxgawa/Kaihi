@@ -3,11 +3,12 @@ package app.kaihi.android.feature.dashboard.impl.domain
 import app.kaihi.android.core.vpn.SubscriptionFetchFailure
 import app.kaihi.android.core.vpn.SubscriptionFetchResult
 import app.kaihi.android.core.vpn.SubscriptionFetcher
-import app.kaihi.android.core.vpn.VlessLinkResult
+import app.kaihi.android.core.vpn.ShareLinkResult
 import app.kaihi.android.core.vpn.XraySubscriptionSource
 import app.kaihi.android.core.vpn.XraySubscriptionStore
 import app.kaihi.android.core.vpn.XrayVpnProfile
-import app.kaihi.android.core.vpn.parseVlessLink
+import app.kaihi.android.core.vpn.parseShareLink
+import app.kaihi.android.core.vpn.spec.XrayProtocol
 import app.kaihi.android.core.vpn.spec.XraySecurity
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
@@ -60,7 +61,7 @@ internal class RemoteSubscriptionRefresher @Inject constructor(
 
             val refreshedAtMillis = nowMillis ?: System.currentTimeMillis()
             val parsedProfiles = success.links.mapNotNull { link ->
-                (parseVlessLink(link, refreshedAtMillis) as? VlessLinkResult.Success)?.profile
+                (parseShareLink(link, refreshedAtMillis) as? ShareLinkResult.Success)?.profile
             }.distinctBy { it.identity() }
             if (parsedProfiles.isEmpty()) return RemoteSubscriptionRefreshOutcome.NothingImportable
 
@@ -108,12 +109,13 @@ internal fun XraySubscriptionSource.Remote.isStale(nowMillis: Long): Boolean {
     return nowMillis - updatedAt >= intervalMillis
 }
 
-private fun XrayVpnProfile.identity() = ServerIdentity(serverAddress, serverPort, uuid)
+private fun XrayVpnProfile.identity() = ServerIdentity(protocol, serverAddress, serverPort, credential)
 
 private data class ServerIdentity(
+    val protocol: XrayProtocol,
     val address: String,
     val port: Int,
-    val uuid: String,
+    val credential: String,
 )
 
 private fun List<XrayVpnProfile>.associateByFirst(key: (XrayVpnProfile) -> ServerIdentity): Map<ServerIdentity, XrayVpnProfile> {

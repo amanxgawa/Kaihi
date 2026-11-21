@@ -8,7 +8,10 @@ internal fun incomingImportText(
     extraText: CharSequence?,
 ): String? {
     val text = when {
-        action == "android.intent.action.VIEW" && dataString?.startsWith("vless://", ignoreCase = true) == true ->
+        action == "android.intent.action.VIEW" && (
+            dataString?.startsWith("vless://", ignoreCase = true) == true ||
+                dataString?.startsWith("trojan://", ignoreCase = true) == true
+            ) ->
             dataString
         action == "android.intent.action.SEND" && mimeType == "text/plain" -> extraText?.toString()
         else -> null
