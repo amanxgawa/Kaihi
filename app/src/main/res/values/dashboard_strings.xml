@@ -27,13 +27,14 @@
     <string name="dashboard_subscription_add_server">Add server</string>
     <string name="dashboard_subscription_share_cd">Share %1$s</string>
     <string name="dashboard_subscription_edit_cd">Edit %1$s</string>
+    <string name="dashboard_subscription_info_cd">Details of %1$s</string>
     <string name="dashboard_subscription_refresh_cd">Refresh %1$s</string>
     <string name="dashboard_subscription_usage_with_total">%1$s / %2$s</string>
     <string name="dashboard_subscription_usage_used">%1$s used</string>
     <string name="dashboard_subscription_usage_total">Total %1$s</string>
     <string name="dashboard_subscription_refresh_empty">No supported VLESS servers were found in this subscription.</string>
     <string name="dashboard_subscription_edit_title">Edit subscription</string>
-    <string name="dashboard_subscription_details_title">Details</string>
+    <string name="dashboard_subscription_info_title">Subscription</string>
     <string name="dashboard_subscription_name_label">Name</string>
     <string name="dashboard_subscription_save">Save</string>
     <string name="dashboard_subscription_delete">Delete subscription</string>
@@ -44,7 +45,6 @@
     <string name="dashboard_subscription_detail_refresh_interval">Refresh interval</string>
     <string name="dashboard_subscription_detail_interval_value">Every %1$d h</string>
     <string name="dashboard_subscription_detail_last_updated">Last updated</string>
-    <string name="dashboard_subscription_detail_announcement">Announcement</string>
     <string name="dashboard_subscription_detail_support">Support</string>
     <string name="dashboard_subscription_detail_web_page">Web page</string>
     <string name="dashboard_subscription_share_link_confirm_title">Share this subscription?</string>

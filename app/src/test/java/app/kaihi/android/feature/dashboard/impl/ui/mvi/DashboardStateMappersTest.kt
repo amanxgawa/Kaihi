@@ -9,6 +9,7 @@ import app.kaihi.android.feature.dashboard.impl.domain.model.ServerLibrary
 import app.kaihi.android.platform.ui.components.UsageLevel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DashboardStateMappersTest {
@@ -77,8 +78,16 @@ class DashboardStateMappersTest {
         assertEquals(100L, mappedGroup.usage?.totalBytes)
         assertEquals("Maintenance tonight", mappedGroup.usage?.announce)
         assertEquals(UsageLevel.NORMAL, mappedGroup.usage?.trafficLevel)
+        assertTrue(editor.isRemote)
         assertFalse(editor.toString().contains("private-token"))
         assertFalse(mappedGroup.toString().contains("private-token"))
+    }
+
+    @Test
+    fun `deployed subscription editor is not remote`() {
+        val deployed = subscription("deployed", XraySubscriptionSource.Deployed)
+
+        assertFalse(deployed.toEditorUi().isRemote)
     }
 
     @Test

@@ -148,4 +148,33 @@ class SubscriptionMetadataParserTest {
         assertEquals(1024, parsedAnnounce.codePointCount(0, parsedAnnounce.length))
         assertEquals("x".repeat(64), parseSubscriptionHeaders(mapOf("profile-title" to listOf("x".repeat(80)))).title)
     }
+
+    @Test
+    fun `keeps and normalizes line breaks in base64 announcements`() {
+        val metadata = parseSubscriptionHeaders(
+            mapOf(
+                "announce" to listOf(
+                    "base64:0J3QtSDQv9C+0LTQutC70Y7Rh9Cw0LXRgtGB0Y8/CtCf0LjRiNC40YLQtSBAc3VwcG9ydA0KDQoNCtCh0L/QsNGB0LjQsdC+",
+                ),
+            ),
+        )
+
+        assertEquals("Не подключается?\nПишите @support\n\nСпасибо", metadata.announce)
+    }
+
+    @Test
+    fun `announcement line breaks survive while format characters and tabs are removed`() {
+        val encoded = Base64.getEncoder().encodeToString("a\u202Eb\nc\u200Bd\te".toByteArray(StandardCharsets.UTF_8))
+        val metadata = parseSubscriptionHeaders(mapOf("announce" to listOf("base64:$encoded")))
+
+        assertEquals("ab\ncde", metadata.announce)
+    }
+
+    @Test
+    fun `base64 profile title keeps only its first line`() {
+        val encoded = Base64.getEncoder().encodeToString("Title\nSecond".toByteArray(StandardCharsets.UTF_8))
+        val metadata = parseSubscriptionHeaders(mapOf("profile-title" to listOf("base64:$encoded")))
+
+        assertEquals("Title", metadata.title)
+    }
 }

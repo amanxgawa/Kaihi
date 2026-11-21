@@ -29,13 +29,14 @@
     <string name="dashboard_subscription_add_server">Добавить сервер</string>
     <string name="dashboard_subscription_share_cd">Поделиться: %1$s</string>
     <string name="dashboard_subscription_edit_cd">Изменить: %1$s</string>
+    <string name="dashboard_subscription_info_cd">Сведения: %1$s</string>
     <string name="dashboard_subscription_refresh_cd">Обновить: %1$s</string>
     <string name="dashboard_subscription_usage_with_total">%1$s / %2$s</string>
     <string name="dashboard_subscription_usage_used">Использовано %1$s</string>
     <string name="dashboard_subscription_usage_total">Всего %1$s</string>
     <string name="dashboard_subscription_refresh_empty">В подписке не найдено поддерживаемых VLESS-серверов.</string>
     <string name="dashboard_subscription_edit_title">Изменить подписку</string>
-    <string name="dashboard_subscription_details_title">Сведения</string>
+    <string name="dashboard_subscription_info_title">Подписка</string>
     <string name="dashboard_subscription_name_label">Название</string>
     <string name="dashboard_subscription_save">Сохранить</string>
     <string name="dashboard_subscription_delete">Удалить подписку</string>
@@ -46,7 +47,6 @@
     <string name="dashboard_subscription_detail_refresh_interval">Интервал обновления</string>
     <string name="dashboard_subscription_detail_interval_value">Каждые %1$d ч</string>
     <string name="dashboard_subscription_detail_last_updated">Последнее обновление</string>
-    <string name="dashboard_subscription_detail_announcement">Объявление</string>
     <string name="dashboard_subscription_detail_support">Поддержка</string>
     <string name="dashboard_subscription_detail_web_page">Веб-страница</string>
     <string name="dashboard_subscription_share_link_confirm_title">Поделиться подпиской?</string>

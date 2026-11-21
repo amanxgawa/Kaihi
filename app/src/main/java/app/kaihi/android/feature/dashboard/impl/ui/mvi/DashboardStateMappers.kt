@@ -68,6 +68,7 @@ internal fun XraySubscription.toEditorUi(): SubscriptionEditorUi {
         announce = remote.announce,
         supportUrl = remote.supportUrl,
         webPageUrl = remote.webPageUrl,
+        isRemote = true,
     )
 }
 

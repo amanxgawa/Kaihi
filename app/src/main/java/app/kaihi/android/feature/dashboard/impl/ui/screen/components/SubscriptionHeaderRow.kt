@@ -155,8 +155,19 @@ internal fun SubscriptionHeaderRow(
                         }
                         IconButton(onClick = onEdit) {
                             Icon(
-                                imageVector = KaihiIcons.Outlined.Edit,
-                                contentDescription = stringResource(R.string.dashboard_subscription_edit_cd, subscription.name),
+                                imageVector = if (subscription.kind == SubscriptionKind.REMOTE) {
+                                    KaihiIcons.Outlined.Info
+                                } else {
+                                    KaihiIcons.Outlined.Edit
+                                },
+                                contentDescription = stringResource(
+                                    if (subscription.kind == SubscriptionKind.REMOTE) {
+                                        R.string.dashboard_subscription_info_cd
+                                    } else {
+                                        R.string.dashboard_subscription_edit_cd
+                                    },
+                                    subscription.name,
+                                ),
                             )
                         }
                     }

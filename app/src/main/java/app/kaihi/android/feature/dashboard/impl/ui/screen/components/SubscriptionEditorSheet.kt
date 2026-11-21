@@ -9,9 +9,16 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -27,14 +34,16 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import app.kaihi.android.R
 import app.kaihi.android.feature.dashboard.impl.ui.model.SubscriptionEditorUi
 import app.kaihi.android.platform.ui.components.ConfirmDialog
 import app.kaihi.android.platform.ui.components.KaihiTextField
+import app.kaihi.android.platform.ui.icons.KaihiIcons
 import app.kaihi.android.platform.ui.theme.dimens
 import app.kaihi.android.platform.ui.util.UiText
 import java.util.Date
@@ -66,21 +75,15 @@ internal fun SubscriptionEditorSheet(
             verticalArrangement = Arrangement.spacedBy(dimens.l),
         ) {
             Text(
-                text = stringResource(R.string.dashboard_subscription_edit_title),
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-
-            KaihiTextField(
-                value = name,
-                onValueChange = { name = it.take(MAX_NAME_LENGTH) },
-                modifier = Modifier.fillMaxWidth(),
-                label = UiText.Resource(R.string.dashboard_subscription_name_label),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    capitalization = KeyboardCapitalization.Words,
-                    imeAction = ImeAction.Done,
+                text = stringResource(
+                    if (editor.isRemote) {
+                        R.string.dashboard_subscription_info_title
+                    } else {
+                        R.string.dashboard_subscription_edit_title
+                    },
                 ),
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface,
             )
 
             val trafficValue = when {
@@ -105,60 +108,107 @@ internal fun SubscriptionEditorSheet(
                 "${DateFormat.getDateFormat(context).format(date)}, ${DateFormat.getTimeFormat(context).format(date)}"
             }
             val hasDetails = trafficValue != null || expiryMillis != null || editor.updateIntervalHours != null ||
-                lastUpdated != null || editor.announce != null || editor.supportUrl != null || editor.webPageUrl != null
+                lastUpdated != null || editor.announce != null
             if (hasDetails) {
-                Text(
-                    text = stringResource(R.string.dashboard_subscription_details_title),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                trafficValue?.let { EditorDetailRow(R.string.dashboard_subscription_detail_traffic, it) }
-                expiryMillis?.let { millis ->
-                    EditorDetailRow(
-                        R.string.dashboard_subscription_detail_expiry,
-                        DateFormat.getDateFormat(context).format(Date(millis)),
-                    )
-                }
-                editor.updateIntervalHours?.let { hours ->
-                    EditorDetailRow(
-                        R.string.dashboard_subscription_detail_refresh_interval,
-                        stringResource(R.string.dashboard_subscription_detail_interval_value, hours),
-                    )
-                }
-                lastUpdated?.let { EditorDetailRow(R.string.dashboard_subscription_detail_last_updated, it) }
-                editor.announce?.let { EditorDetailRow(R.string.dashboard_subscription_detail_announcement, it) }
-                editor.supportUrl?.let { url ->
-                    TextButton(
-                        onClick = { openHttpsUrl(context, url) },
-                        modifier = Modifier.fillMaxWidth(),
+                Surface(
+                    shape = MaterialTheme.shapes.large,
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                ) {
+                    Column(
+                        modifier = Modifier.padding(dimens.l),
+                        verticalArrangement = Arrangement.spacedBy(dimens.m),
                     ) {
-                        Text(text = stringResource(R.string.dashboard_subscription_detail_support))
-                    }
-                }
-                editor.webPageUrl?.let { url ->
-                    TextButton(
-                        onClick = { openHttpsUrl(context, url) },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(text = stringResource(R.string.dashboard_subscription_detail_web_page))
+                        trafficValue?.let { EditorDetailRow(R.string.dashboard_subscription_detail_traffic, it) }
+                        expiryMillis?.let { millis ->
+                            EditorDetailRow(
+                                R.string.dashboard_subscription_detail_expiry,
+                                DateFormat.getDateFormat(context).format(Date(millis)),
+                            )
+                        }
+                        editor.updateIntervalHours?.let { hours ->
+                            EditorDetailRow(
+                                R.string.dashboard_subscription_detail_refresh_interval,
+                                stringResource(R.string.dashboard_subscription_detail_interval_value, hours),
+                            )
+                        }
+                        lastUpdated?.let { EditorDetailRow(R.string.dashboard_subscription_detail_last_updated, it) }
+                        editor.announce?.let { announce ->
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                            Text(
+                                text = announce,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
                     }
                 }
             }
 
-            Button(
-                onClick = { onRename(name) },
-                enabled = name.isNotBlank(),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(text = stringResource(R.string.dashboard_subscription_save))
+            if (editor.supportUrl != null || editor.webPageUrl != null) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(dimens.s),
+                ) {
+                    editor.supportUrl?.let { url ->
+                        OutlinedButton(
+                            onClick = { openHttpsUrl(context, url) },
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Icon(
+                                imageVector = KaihiIcons.Outlined.SupportAgent,
+                                contentDescription = null,
+                                modifier = Modifier.size(ButtonDefaults.IconSize),
+                            )
+                            Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                            Text(text = stringResource(R.string.dashboard_subscription_detail_support))
+                        }
+                    }
+                    editor.webPageUrl?.let { url ->
+                        OutlinedButton(
+                            onClick = { openHttpsUrl(context, url) },
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Icon(
+                                imageVector = KaihiIcons.Outlined.OpenInNew,
+                                contentDescription = null,
+                                modifier = Modifier.size(ButtonDefaults.IconSize),
+                            )
+                            Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                            Text(text = stringResource(R.string.dashboard_subscription_detail_web_page))
+                        }
+                    }
+                }
             }
 
-            TextButton(
-                onClick = { showDeleteConfirm = true },
+            KaihiTextField(
+                value = name,
+                onValueChange = { name = it.take(MAX_NAME_LENGTH) },
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                label = UiText.Resource(R.string.dashboard_subscription_name_label),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.Words,
+                    imeAction = ImeAction.Done,
+                ),
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(text = stringResource(R.string.dashboard_subscription_delete))
+                TextButton(
+                    onClick = { showDeleteConfirm = true },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                ) {
+                    Text(text = stringResource(R.string.dashboard_subscription_delete))
+                }
+                Spacer(Modifier.weight(1f))
+                Button(
+                    onClick = { onRename(name) },
+                    enabled = name.isNotBlank() && name.trim() != editor.name,
+                ) {
+                    Text(text = stringResource(R.string.dashboard_subscription_save))
+                }
             }
         }
     }
@@ -178,16 +228,18 @@ internal fun SubscriptionEditorSheet(
 
 @Composable
 private fun EditorDetailRow(labelRes: Int, value: String) {
-    Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.dimens.xs)) {
+    Row(verticalAlignment = Alignment.Top) {
         Text(
             text = stringResource(labelRes),
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Text(
             text = value,
+            modifier = Modifier.weight(1f).padding(start = MaterialTheme.dimens.l),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.End,
         )
     }
 }

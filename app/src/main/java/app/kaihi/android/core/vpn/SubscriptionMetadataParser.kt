@@ -85,7 +85,7 @@ internal fun parseMetadataValues(values: Map<String, String?>): SubscriptionMeta
         ?.takeIf(String::isNotEmpty)
 
     val announce = value("announce")?.let(::decodeOptionalBase64)
-        ?.let { cleanDisplayText(it, maxCodePoints = 1024) }
+        ?.let { cleanDisplayText(it, maxCodePoints = 1024, keepNewlines = true) }
         ?.takeIf(String::isNotEmpty)
 
     return SubscriptionMetadata(

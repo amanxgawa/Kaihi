@@ -43,4 +43,5 @@ internal data class SubscriptionEditorUi(
     val announce: String? = null,
     val supportUrl: String? = null,
     val webPageUrl: String? = null,
+    val isRemote: Boolean = false,
 )
