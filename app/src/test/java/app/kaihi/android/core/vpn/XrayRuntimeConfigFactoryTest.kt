@@ -22,14 +22,7 @@ class XrayRuntimeConfigFactoryTest {
     private fun profile() = XrayVpnProfile(
         id = "server-1",
         name = "test",
-        serverAddress = "proxy.example",
-        serverPort = 443,
-        credential = "123e4567-e89b-12d3-a456-426614174000",
-        security = XraySecurity.Reality(
-            serverName = "www.example.com",
-            publicKey = "public-key",
-            shortId = "abcd",
-        ),
+        endpoints = listOf(testEndpoint()),
         addedAtMillis = 0L,
     )
 
@@ -93,7 +86,7 @@ class XrayRuntimeConfigFactoryTest {
     fun `fixed runtime config does not carry fingerprint candidates`() {
         val fixed = XrayFingerprintSetting.Fixed(XrayFingerprint.SAFARI)
         val config = XrayClientConfigFactory.createRuntimeConfig(
-            profile().copy(security = (profile().security as XraySecurity.Reality).copy(fingerprint = fixed)),
+            profile().withRealityFingerprint { fixed },
             settings = settings(ipv6Enabled = false),
         )
 
@@ -124,19 +117,16 @@ class XrayRuntimeConfigFactoryTest {
     @Test
     fun `normal mode resolves advanced settings to defaults without changing the saved profile`() {
         val savedProfile = profile().copy(
-            transport = XrayTransport.Raw(),
             muxEnabled = true,
             fragmentEnabled = true,
-            security = (profile().security as XraySecurity.Reality).copy(
-                fingerprint = XrayFingerprintSetting.Fixed(XrayFingerprint.CHROME),
-            ),
-        )
+        ).copyEndpoints { it.copy(transport = XrayTransport.Raw()) }
+            .withRealityFingerprint { XrayFingerprintSetting.Fixed(XrayFingerprint.CHROME) }
         val config = XrayClientConfigFactory.createRuntimeConfig(
             savedProfile,
             TunnelSettings(advancedMode = false, ipv6Enabled = true),
         )
         val defaultConfig = XrayClientConfigFactory.createRuntimeConfig(
-            profile().copy(transport = XrayTransport.Raw()),
+            profile().copyEndpoints { it.copy(transport = XrayTransport.Raw()) },
             TunnelSettings(advancedMode = false, ipv6Enabled = false),
         )
         val root = XrayJson.default.parseToJsonElement(config.rawJson).jsonObject
@@ -153,7 +143,7 @@ class XrayRuntimeConfigFactoryTest {
         assertTrue(config.fingerprintCandidates.isNotEmpty())
         assertEquals(
             XrayFingerprintSetting.Fixed(XrayFingerprint.CHROME),
-            (savedProfile.security as XraySecurity.Reality).fingerprint,
+            savedProfile.realityFingerprint,
         )
         assertTrue(savedProfile.muxEnabled)
         assertTrue(savedProfile.fragmentEnabled)
@@ -162,13 +152,10 @@ class XrayRuntimeConfigFactoryTest {
     @Test
     fun `advanced mode preserves the pre-resolution profile and IPv6 config`() {
         val profile = profile().copy(
-            transport = XrayTransport.Raw(),
             muxEnabled = true,
             fragmentEnabled = true,
-            security = (profile().security as XraySecurity.Reality).copy(
-                fingerprint = XrayFingerprintSetting.Fixed(XrayFingerprint.CHROME),
-            ),
-        )
+        ).copyEndpoints { it.copy(transport = XrayTransport.Raw()) }
+            .withRealityFingerprint { XrayFingerprintSetting.Fixed(XrayFingerprint.CHROME) }
         val config = XrayClientConfigFactory.createRuntimeConfig(
             profile,
             TunnelSettings(advancedMode = true, ipv6Enabled = true),
@@ -189,11 +176,7 @@ class XrayRuntimeConfigFactoryTest {
 
     @Test
     fun `normal mode keeps the last working fingerprint first for Auto`() {
-        val autoProfile = profile().copy(
-            security = (profile().security as XraySecurity.Reality).copy(
-                fingerprint = XrayFingerprintSetting.Auto(XrayFingerprint.SAFARI),
-            ),
-        )
+        val autoProfile = profile().withRealityFingerprint { XrayFingerprintSetting.Auto(XrayFingerprint.SAFARI) }
 
         val config = XrayClientConfigFactory.createRuntimeConfig(
             autoProfile,

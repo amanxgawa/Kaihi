@@ -1,9 +1,7 @@
 package app.kaihi.android.core.vpn
 
-import app.kaihi.android.core.vpn.spec.XrayProtocol
+import app.kaihi.android.core.vpn.spec.XrayFingerprintSetting
 import app.kaihi.android.core.vpn.spec.XraySecurity
-import app.kaihi.android.core.vpn.spec.XrayTransport
-import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -11,13 +9,8 @@ data class XrayVpnProfile(
     val id: String,
     val name: String,
     val ssh: XraySshAccess? = null,
-    val serverAddress: String,
-    val serverPort: Int,
-    val protocol: XrayProtocol = XrayProtocol.VLESS,
-    @SerialName("uuid") val credential: String,
-    // No default: every real profile needs real REALITY key material from a deployment.
-    val security: XraySecurity,
-    val transport: XrayTransport = XrayTransport.Xhttp(),
+    // Never empty; at most MAX_ENDPOINTS. Deployed servers always have exactly one.
+    val endpoints: List<XrayEndpoint>,
     val addedAtMillis: Long,
     // ISO 3166-1 alpha-2.
     val countryCode: String? = null,
@@ -27,16 +20,38 @@ data class XrayVpnProfile(
     val serverProtection: XrayServerProtection? = null,
 ) {
     override fun toString(): String =
-        "XrayVpnProfile(id=$id, name=$name, ssh=$ssh, serverAddress=$serverAddress, " +
-            "serverPort=$serverPort, protocol=$protocol, credential=<redacted>, security=$security, " +
-            "transport=$transport, addedAtMillis=$addedAtMillis, countryCode=$countryCode, " +
+        "XrayVpnProfile(id=$id, name=$name, ssh=$ssh, endpoints=$endpoints, " +
+            "addedAtMillis=$addedAtMillis, countryCode=$countryCode, " +
             "muxEnabled=$muxEnabled, muxConcurrency=$muxConcurrency, fragmentEnabled=$fragmentEnabled, " +
             "serverProtection=$serverProtection)"
 
     companion object {
         const val DEFAULT_MUX_CONCURRENCY = 8
+        const val MAX_ENDPOINTS = 16
     }
 }
+
+/** True when any endpoint of this row is the same server as any endpoint of [other]. */
+fun XrayVpnProfile.sharesEndpointWith(other: XrayVpnProfile): Boolean =
+    endpoints.any { endpoint -> other.endpoints.any { endpoint.isSameServerAs(it) } }
+
+/** The fingerprint setting of the first REALITY endpoint, or null when no endpoint uses REALITY. */
+val XrayVpnProfile.realityFingerprint: XrayFingerprintSetting?
+    get() = endpoints.firstNotNullOfOrNull { (it.security as? XraySecurity.Reality)?.fingerprint }
+
+/** Applies [transform] to the fingerprint of every REALITY endpoint; TLS endpoints are unchanged. */
+fun XrayVpnProfile.withRealityFingerprint(
+    transform: (XrayFingerprintSetting) -> XrayFingerprintSetting,
+): XrayVpnProfile = copy(
+    endpoints = endpoints.map { endpoint ->
+        endpoint.copy(
+            security = (endpoint.security as? XraySecurity.Reality)?.let { reality ->
+                reality.copy(fingerprint = transform(reality.fingerprint))
+            }
+                ?: endpoint.security,
+        )
+    },
+)
 
 @Serializable
 data class XraySshAccess(

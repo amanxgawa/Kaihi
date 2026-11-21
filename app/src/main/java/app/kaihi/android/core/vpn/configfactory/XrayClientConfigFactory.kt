@@ -4,9 +4,12 @@ import app.kaihi.android.BuildConfig
 import app.kaihi.android.core.vpn.SocksEndpoint
 import app.kaihi.android.core.vpn.FingerprintCandidate
 import app.kaihi.android.core.vpn.TunnelSettings
+import app.kaihi.android.core.vpn.XrayEndpoint
 import app.kaihi.android.core.vpn.XrayRuntimeConfig
 import app.kaihi.android.core.vpn.XrayVpnProfile
 import app.kaihi.android.core.vpn.configfactory.XrayClientConfigFactory.createRuntimeConfig
+import app.kaihi.android.core.vpn.realityFingerprint
+import app.kaihi.android.core.vpn.withRealityFingerprint
 import app.kaihi.android.core.vpn.ProbeTargets
 import app.kaihi.android.core.vpn.spec.BurstObservatoryObject
 import app.kaihi.android.core.vpn.spec.DnsObject
@@ -29,7 +32,6 @@ import app.kaihi.android.core.vpn.spec.XrayFlow
 import app.kaihi.android.core.vpn.spec.XrayFingerprint
 import app.kaihi.android.core.vpn.spec.XrayFingerprintSetting
 import app.kaihi.android.core.vpn.spec.XrayProtocol
-import app.kaihi.android.core.vpn.spec.XraySecurity
 import app.kaihi.android.core.vpn.spec.XrayTransport
 import app.kaihi.android.core.vpn.spec.candidates
 import app.kaihi.android.core.vpn.spec.preferred
@@ -43,7 +45,11 @@ import java.util.Base64
 
 object XrayClientConfigFactory {
     private const val SOCKS_IN_TAG = "socks-in"
+    // The balancer and observatory select by this prefix; no non-proxy outbound may start with it.
     private const val PROXY_OUTBOUND_TAG = "proxy"
+    // Probe multiple endpoints more often so the balancer notices a dead endpoint sooner.
+    private const val SINGLE_ENDPOINT_PROBE_INTERVAL = "1m"
+    private const val MULTI_ENDPOINT_PROBE_INTERVAL = "30s"
     private const val LOOPBACK = "127.0.0.1"
     private const val SOCKS_PORT = 10_808
     private const val FAKE_DNS_MARKER = "fakedns"
@@ -66,7 +72,7 @@ object XrayClientConfigFactory {
         val effective = resolve(profile, settings)
         // See SocksEndpoint for why this can't be "noauth".
         val socksCredential = generateSocksCredential()
-        val fingerprintSetting = (effective.profile.security as? XraySecurity.Reality)?.fingerprint
+        val fingerprintSetting = effective.profile.realityFingerprint
         val fingerprint = fingerprintSetting?.preferred()
         val probeUrl = ProbeTargets.urlForWholeSession()
         val candidates = (fingerprintSetting as? XrayFingerprintSetting.Auto)
@@ -102,11 +108,10 @@ object XrayClientConfigFactory {
 
     private fun settingsKey(effective: EffectiveTunnelConfig): String {
         val profile = effective.profile
-        val setting = profile.security.fingerprintSettingOrNull()
-        val fingerprint = if (setting == null || setting is XrayFingerprintSetting.Auto) {
-            XrayFingerprintSetting.Auto().preferred()
-        } else {
-            setting.preferred()
+        val setting = profile.fingerprintSettingOrNull()
+        val fingerprint = when (setting) {
+            null, is XrayFingerprintSetting.Auto -> XrayFingerprintSetting.Auto().preferred()
+            is XrayFingerprintSetting.Fixed -> setting.preferred()
         }
         val config = build(
             profile = profile,
@@ -137,7 +142,7 @@ object XrayClientConfigFactory {
      * without threading a throwaway SOCKS credential through.
      */
     fun build(profile: XrayVpnProfile, ipv6Enabled: Boolean = false): XrayConfig =
-        build(profile, generateSocksCredential(), ipv6Enabled, profile.security.fingerprintForConfig())
+        build(profile, generateSocksCredential(), ipv6Enabled, profile.fingerprintForConfig())
 
     private fun build(
         profile: XrayVpnProfile,
@@ -159,54 +164,9 @@ object XrayClientConfigFactory {
         probeUrl: String,
         fingerprint: XrayFingerprint,
     ): XrayConfig {
-        val proxyOutbound = OutboundObject(
-            protocol = when (profile.protocol) {
-                XrayProtocol.VLESS -> "vless"
-                XrayProtocol.TROJAN -> "trojan"
-            },
-            tag = PROXY_OUTBOUND_TAG,
-            settings = when (profile.protocol) {
-                XrayProtocol.VLESS -> VlessOutboundSettings(
-                    vnext = listOf(
-                        VlessVnext(
-                            address = profile.serverAddress,
-                            port = profile.serverPort,
-                            users = listOf(
-                                // Vision only applies to raw TCP. It silently breaks XHTTP despite
-                                // the TCP handshake succeeding, so it is only set for Raw transport.
-                                VlessVnextUser(
-                                    id = profile.credential,
-                                    encryption = "none",
-                                    flow = (profile.transport as? XrayTransport.Raw)?.flow?.wireValue,
-                                ),
-                            ),
-                        ),
-                    ),
-                ).toJsonObject()
-                XrayProtocol.TROJAN -> TrojanOutboundSettings(
-                    servers = listOf(
-                        TrojanServer(
-                            address = profile.serverAddress,
-                            port = profile.serverPort,
-                            password = profile.credential,
-                        ),
-                    ),
-                ).toJsonObject()
-            },
-            streamSettings = XrayTransportFactory.streamSettings(
-                transport = profile.transport,
-                security = profile.security,
-                fingerprint = fingerprint,
-                xmuxMaxConcurrency = if (profile.muxEnabled) {
-                    profile.muxConcurrency.coerceIn(MIN_MUX_CONCURRENCY, MAX_MUX_CONCURRENCY)
-                } else {
-                    MIN_MUX_CONCURRENCY
-                },
-                fragmentEnabled = profile.fragmentEnabled,
-            ),
-            // XHTTP has its own client multiplexer (xmux), so it must never use Mux.Cool.
-            mux = muxFor(profile),
-        )
+        require(profile.endpoints.isNotEmpty()) { "profile has no endpoints" }
+        val proxyOutbounds = profile.endpoints.take(XrayVpnProfile.MAX_ENDPOINTS)
+            .mapIndexed { index, endpoint -> proxyOutbound(endpoint, proxyTag(index), profile, fingerprint) }
 
         return XrayConfig(
             log = LogObject(loglevel = if (BuildConfig.DEBUG) "debug" else "warning"),
@@ -224,8 +184,7 @@ object XrayClientConfigFactory {
             dns = DnsObject(servers = listOf(JsonPrimitive(FAKE_DNS_MARKER))),
             fakedns = listOf(FakeDnsObject(ipPool = FAKE_DNS_POOL, poolSize = FAKE_DNS_POOL_SIZE)),
             inbounds = listOf(socksInbound(socksCredential)),
-            outbounds = listOf(
-                proxyOutbound,
+            outbounds = proxyOutbounds + listOf(
                 OutboundObject(protocol = "freedom", tag = "direct"),
                 OutboundObject(protocol = "blackhole", tag = "block"),
                 OutboundObject(protocol = "dns", tag = "dns-out"),
@@ -243,13 +202,74 @@ object XrayClientConfigFactory {
                     // Fixed for the session because xray reads it once, but drawn from a pool so
                     // that it is not the same name on every install. See ProbeTargets.
                     destination = probeUrl,
-                    interval = "1m",
+                    interval = if (profile.endpoints.size > 1) {
+                        MULTI_ENDPOINT_PROBE_INTERVAL
+                    } else {
+                        SINGLE_ENDPOINT_PROBE_INTERVAL
+                    },
                     sampling = 4,
                     timeout = "3s",
                 ),
             ),
         )
     }
+
+    private fun proxyTag(index: Int): String =
+        if (index == 0) PROXY_OUTBOUND_TAG else "$PROXY_OUTBOUND_TAG-${index + 1}"
+
+    private fun proxyOutbound(
+        endpoint: XrayEndpoint,
+        tag: String,
+        profile: XrayVpnProfile,
+        fingerprint: XrayFingerprint,
+    ): OutboundObject = OutboundObject(
+        protocol = when (endpoint.protocol) {
+            XrayProtocol.VLESS -> "vless"
+            XrayProtocol.TROJAN -> "trojan"
+        },
+        tag = tag,
+        settings = when (endpoint.protocol) {
+            XrayProtocol.VLESS -> VlessOutboundSettings(
+                vnext = listOf(
+                    VlessVnext(
+                        address = endpoint.address,
+                        port = endpoint.port,
+                        users = listOf(
+                            // Vision only applies to raw TCP. It silently breaks XHTTP despite
+                            // the TCP handshake succeeding, so it is only set for Raw transport.
+                            VlessVnextUser(
+                                id = endpoint.credential,
+                                encryption = "none",
+                                flow = (endpoint.transport as? XrayTransport.Raw)?.flow?.wireValue,
+                            ),
+                        ),
+                    ),
+                ),
+            ).toJsonObject()
+            XrayProtocol.TROJAN -> TrojanOutboundSettings(
+                servers = listOf(
+                    TrojanServer(
+                        address = endpoint.address,
+                        port = endpoint.port,
+                        password = endpoint.credential,
+                    ),
+                ),
+            ).toJsonObject()
+        },
+        streamSettings = XrayTransportFactory.streamSettings(
+            transport = endpoint.transport,
+            security = endpoint.security,
+            fingerprint = fingerprint,
+            xmuxMaxConcurrency = if (profile.muxEnabled) {
+                profile.muxConcurrency.coerceIn(MIN_MUX_CONCURRENCY, MAX_MUX_CONCURRENCY)
+            } else {
+                MIN_MUX_CONCURRENCY
+            },
+            fragmentEnabled = profile.fragmentEnabled,
+        ),
+        // XHTTP has its own client multiplexer (xmux), so it must never use Mux.Cool.
+        mux = muxFor(profile, endpoint),
+    )
 
     /** "password" auth, not "noauth". See SocksEndpoint for why. */
     private fun socksInbound(credential: SocksCredential) = InboundObject(
@@ -286,8 +306,8 @@ object XrayClientConfigFactory {
         return SocksCredential(user = "kaihi", pass = secret)
     }
 
-    private fun muxFor(profile: XrayVpnProfile): MuxObject? {
-        val raw = profile.transport as? XrayTransport.Raw ?: return null
+    private fun muxFor(profile: XrayVpnProfile, endpoint: XrayEndpoint): MuxObject? {
+        val raw = endpoint.transport as? XrayTransport.Raw ?: return null
         if (!profile.muxEnabled) return null
 
         val concurrency = profile.muxConcurrency.coerceIn(MIN_MUX_CONCURRENCY, MAX_MUX_CONCURRENCY)
@@ -305,10 +325,9 @@ object XrayClientConfigFactory {
 
     private data class SocksCredential(val user: String, val pass: String)
 
-    private fun XraySecurity.fingerprintSettingOrNull() =
-        (this as? XraySecurity.Reality)?.fingerprint
+    private fun XrayVpnProfile.fingerprintSettingOrNull() = realityFingerprint
 
-    private fun XraySecurity.fingerprintForConfig() =
+    private fun XrayVpnProfile.fingerprintForConfig() =
         fingerprintSettingOrNull()?.preferred() ?: XrayFingerprintSetting.Auto().preferred()
 
     private fun resolve(profile: XrayVpnProfile, settings: TunnelSettings): EffectiveTunnelConfig {
@@ -316,16 +335,14 @@ object XrayClientConfigFactory {
             return EffectiveTunnelConfig(profile, settings.ipv6Enabled, settings.excludedPackages)
         }
 
-        val security = (profile.security as? XraySecurity.Reality)?.let { reality ->
-            val fingerprint = when (val saved = reality.fingerprint) {
+        val resolvedProfile = profile.withRealityFingerprint { saved ->
+            when (saved) {
                 is XrayFingerprintSetting.Auto -> saved
                 is XrayFingerprintSetting.Fixed -> XrayFingerprintSetting.Auto()
             }
-            reality.copy(fingerprint = fingerprint)
-        } ?: profile.security
+        }
         return EffectiveTunnelConfig(
-            profile = profile.copy(
-                security = security,
+            profile = resolvedProfile.copy(
                 muxEnabled = false,
                 fragmentEnabled = false,
             ),

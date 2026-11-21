@@ -47,10 +47,9 @@ class XrayClientConfigStructureTest {
 
     @Test
     fun `Trojan outbound uses password servers and preserves client safeguards`() {
-        val trojanProfile = profile(transport = XrayTransport.Raw()).copy(
-            protocol = XrayProtocol.TROJAN,
-            credential = "p@ss word",
-        )
+        val trojanProfile = profile(transport = XrayTransport.Raw()).copyEndpoints {
+            it.copy(protocol = XrayProtocol.TROJAN, credential = "p@ss word")
+        }
         val root = Json.parseToJsonElement(XrayClientConfigFactory.build(trojanProfile).toJson()).jsonObject
         val outbound = root.outbound("proxy")
         val expectedSettings = Json.parseToJsonElement(
@@ -78,7 +77,7 @@ class XrayClientConfigStructureTest {
     @Test
     fun `WebSocket TLS stream settings match Xray JSON exactly`() {
         val websocketProfile = profile(transport = XrayTransport.WebSocket("/ws", "cdn.example.com"))
-            .copy(security = XraySecurity.Tls("cdn.example.com"))
+            .copyEndpoints { it.copy(security = XraySecurity.Tls("cdn.example.com")) }
         val root = Json.parseToJsonElement(XrayClientConfigFactory.build(websocketProfile).toJson()).jsonObject
         val stream = root.outbound("proxy").getValue("streamSettings").jsonObject
 
@@ -106,7 +105,7 @@ class XrayClientConfigStructureTest {
     @Test
     fun `HTTPUpgrade TLS stream settings omit absent host`() {
         val upgradeProfile = profile(transport = XrayTransport.HttpUpgrade("/up", null))
-            .copy(security = XraySecurity.Tls("cdn.example.com"))
+            .copyEndpoints { it.copy(security = XraySecurity.Tls("cdn.example.com")) }
         val root = Json.parseToJsonElement(XrayClientConfigFactory.build(upgradeProfile).toJson()).jsonObject
         val stream = root.outbound("proxy").getValue("streamSettings").jsonObject
 
@@ -121,7 +120,7 @@ class XrayClientConfigStructureTest {
     @Test
     fun `WebSocket client omits mux and preserves SOCKS authentication and UDP 443 blackhole`() {
         val websocketProfile = profile(transport = XrayTransport.WebSocket(), muxEnabled = true)
-            .copy(security = XraySecurity.Tls("cdn.example.com"))
+            .copyEndpoints { it.copy(security = XraySecurity.Tls("cdn.example.com")) }
         val root = Json.parseToJsonElement(XrayClientConfigFactory.build(websocketProfile).toJson()).jsonObject
         val socksInbound = root.getValue("inbounds").jsonArray.single().jsonObject
         val socksSettings = socksInbound.getValue("settings").jsonObject
@@ -477,16 +476,17 @@ class XrayClientConfigStructureTest {
     ) = XrayVpnProfile(
         id = "server-1",
         name = "test",
-        serverAddress = "proxy.example",
-        serverPort = 443,
-        credential = "123e4567-e89b-12d3-a456-426614174000",
-        security = XraySecurity.Reality(
-            serverName = "www.example.com",
-            publicKey = "public-key",
-            shortId = "abcd",
-            fingerprint = fingerprint,
+        endpoints = listOf(
+            testEndpoint(
+                transport = transport,
+                security = XraySecurity.Reality(
+                    serverName = "www.example.com",
+                    publicKey = "public-key",
+                    shortId = "abcd",
+                    fingerprint = fingerprint,
+                ),
+            ),
         ),
-        transport = transport,
         addedAtMillis = 0L,
         muxEnabled = muxEnabled,
         muxConcurrency = muxConcurrency,

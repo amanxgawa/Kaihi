@@ -108,14 +108,7 @@ class ReconnectToApplyTest {
     private fun profile() = XrayVpnProfile(
         id = "server-1",
         name = "test",
-        serverAddress = "proxy.example",
-        serverPort = 443,
-        credential = "123e4567-e89b-12d3-a456-426614174000",
-        security = XraySecurity.Reality(
-            serverName = "www.example.com",
-            publicKey = "public-key",
-            shortId = "abcd",
-        ),
+        endpoints = listOf(app.kaihi.android.core.vpn.testEndpoint()),
         addedAtMillis = 0L,
     )
 

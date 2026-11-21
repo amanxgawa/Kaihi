@@ -52,7 +52,10 @@
     <string name="dashboard_subscription_share_link_confirm_action">Share link</string>
 
     <string name="dashboard_server_details_cd">Details for %1$s</string>
-    <string name="dashboard_server_info_server">Server</string>
+    <plurals name="dashboard_server_info_servers">
+        <item quantity="one">Server</item>
+        <item quantity="other">Servers</item>
+    </plurals>
     <string name="dashboard_server_info_masking_as">Masking as</string>
     <string name="dashboard_server_info_deployed">Deployed</string>
     <string name="dashboard_server_info_added">Added</string>

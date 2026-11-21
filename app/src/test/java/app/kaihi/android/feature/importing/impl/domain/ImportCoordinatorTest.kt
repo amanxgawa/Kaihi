@@ -68,6 +68,45 @@ class ImportCoordinatorTest {
     }
 
     @Test
+    fun `stored endpoint is duplicate but same server over xhttp can be imported`() = runTest {
+        val raw = "vless://11111111-1111-4111-8111-111111111111@a.example.com:443" +
+            "?type=raw&security=reality&sni=cover.example&pbk=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&sid=0011#NL"
+        val xhttp = raw.replace("type=raw", "type=xhttp")
+        val (coordinator, store) = fixture()
+        coordinator.add(preparePreview(coordinator, raw))
+
+        val duplicate = preparePreview(coordinator, raw)
+        assertEquals(1, duplicate.counts.duplicates)
+        assertTrue(coordinator.add(duplicate) is ImportOutcome.NothingNew)
+        val distinctTransport = preparePreview(coordinator, xhttp)
+        assertEquals(0, distinctTransport.counts.duplicates)
+        val outcome = coordinator.add(distinctTransport) as ImportOutcome.Success
+
+        assertEquals(1, outcome.counts.added)
+        assertEquals(0, outcome.counts.duplicates)
+        assertEquals(2, store.current().single().servers.size)
+    }
+
+    @Test
+    fun `link matching a later stored endpoint is a duplicate`() = runTest {
+        val a = parseProfile(REALITY_RAW_LINK)
+        val b = parseProfile(REALITY_XHTTP_LINK)
+        val existing = XraySubscription(
+            id = XraySubscription.IMPORTED_ID,
+            name = "",
+            servers = listOf(a.copy(endpoints = a.endpoints + b.endpoints)),
+            source = XraySubscriptionSource.Imported,
+        )
+        val (coordinator, store) = fixture(initial = listOf(existing))
+
+        val preview = preparePreview(coordinator, REALITY_XHTTP_LINK)
+
+        assertEquals(1, preview.counts.duplicates)
+        assertTrue(coordinator.add(preview) is ImportOutcome.NothingNew)
+        assertEquals(listOf(existing), store.current())
+    }
+
+    @Test
     fun `unsupported and invalid links are counted and nothing is stored`() = runTest {
         val (coordinator, store, _, storage) = fixture()
 
