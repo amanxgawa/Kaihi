@@ -5,6 +5,7 @@ import app.kaihi.android.core.vpn.XraySubscriptionSource
 import app.kaihi.android.core.vpn.XraySubscriptionUserInfo
 import app.kaihi.android.core.vpn.XrayVpnProfile
 import app.kaihi.android.core.vpn.spec.XraySecurity
+import app.kaihi.android.core.vpn.spec.XrayTransport
 import app.kaihi.android.feature.dashboard.impl.domain.model.ServerLibrary
 import app.kaihi.android.platform.ui.components.UsageLevel
 import org.junit.Assert.assertEquals
@@ -13,6 +14,24 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DashboardStateMappersTest {
+    @Test
+    fun `server settings support mux only for raw and xhttp transports`() {
+        val profile = subscription("imported", XraySubscriptionSource.Imported).servers.single()
+        val cases = listOf(
+            XrayTransport.Raw() to true,
+            XrayTransport.Xhttp() to true,
+            XrayTransport.WebSocket() to false,
+            XrayTransport.HttpUpgrade() to false,
+            XrayTransport.Grpc() to false,
+        )
+
+        cases.forEach { (transport, expected) ->
+            val settings = profile.copy(transport = transport).toSettingsUi()
+
+            assertEquals("Mux support for $transport", expected, settings.supportsMux)
+        }
+    }
+
     @Test
     fun `flag in imported server name maps to server row and details`() {
         val profile = XrayVpnProfile(

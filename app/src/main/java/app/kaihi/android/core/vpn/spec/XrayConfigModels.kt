@@ -200,6 +200,9 @@ data class StreamSettingsObject(
     val method: String? = null,
     val rawSettings: RawObject? = null,
     val xhttpSettings: JsonObject? = null,
+    val wsSettings: JsonObject? = null,
+    val httpupgradeSettings: JsonObject? = null,
+    val grpcSettings: JsonObject? = null,
     val security: String? = null, // "none" | "reality" | "tls"
     val realitySettings: RealityObject? = null,
     val tlsSettings: TlsObject? = null,

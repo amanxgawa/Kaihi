@@ -16,7 +16,8 @@ those servers belong to whoever runs them.
    traffic through it.
 
 You can also import `vless://` and `trojan://` links or an HTTPS subscription URL. Kaihi imports
-VLESS and Trojan links using REALITY or TLS over TCP or XHTTP; unsupported link types are skipped.
+VLESS and Trojan links using REALITY or TLS over TCP, XHTTP or gRPC, and TLS over WebSocket or HTTPUpgrade;
+unsupported link types are skipped.
 Tapping a `vless://` or `trojan://` link, or sharing a link to Kaihi from another app, opens it in
 Kaihi for review before anything is added.
 

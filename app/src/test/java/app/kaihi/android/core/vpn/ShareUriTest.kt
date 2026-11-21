@@ -119,4 +119,67 @@ class ShareUriTest {
         val parsed = (parseShareLink(validPasswordProfile.toShareUri(), 11L) as ShareLinkResult.Success).profile
         assertEquals(validPasswordProfile.copy(id = parsed.id, addedAtMillis = parsed.addedAtMillis), parsed)
     }
+
+    @Test
+    fun `WebSocket exports an encoded path and optional host and round trips`() {
+        listOf(null, "cdn.example.com").forEach { host ->
+            val original = profile().copy(
+                security = XraySecurity.Tls("cdn.example.com"),
+                transport = XrayTransport.WebSocket("/ws?ed=2048", host),
+            )
+            val uri = original.toShareUri()
+            val expectedHost = host?.let { "&host=$it" }.orEmpty()
+
+            assertTrue(uri.contains("&type=ws&path=%2Fws%3Fed%3D2048$expectedHost#"))
+            assertEquals(original.transport, (parseShareLink(uri, 1L) as ShareLinkResult.Success).profile.transport)
+        }
+    }
+
+    @Test
+    fun `HTTPUpgrade exports a path and optional host and round trips for Trojan`() {
+        listOf(null, "cdn.example.com").forEach { host ->
+            val original = profile().copy(
+                protocol = XrayProtocol.TROJAN,
+                credential = "pw",
+                security = XraySecurity.Tls("cdn.example.com"),
+                transport = XrayTransport.HttpUpgrade("/up", host),
+            )
+            val uri = original.toShareUri()
+            val expectedHost = host?.let { "&host=$it" }.orEmpty()
+
+            assertTrue(uri.contains("&type=httpupgrade&path=%2Fup$expectedHost#"))
+            assertEquals(original.transport, (parseShareLink(uri, 1L) as ShareLinkResult.Success).profile.transport)
+        }
+    }
+
+    @Test
+    fun `gRPC exports encoded service name multi mode and authority and round trips`() {
+        val original = profile().copy(
+            security = XraySecurity.Reality(
+                serverName = "grpc.example.com",
+                publicKey = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+                shortId = "ab12",
+            ),
+            transport = XrayTransport.Grpc("gun-svc/method", true, "grpc.example.com"),
+        )
+        val uri = original.toShareUri()
+
+        assertTrue(uri.contains("&type=grpc&serviceName=gun-svc%2Fmethod&mode=multi&authority=grpc.example.com#"))
+        assertEquals(original.transport, (parseShareLink(uri, 1L) as ShareLinkResult.Success).profile.transport)
+    }
+
+    @Test
+    fun `gRPC omits empty service name gun mode and absent authority and round trips`() {
+        val original = profile().copy(
+            security = XraySecurity.Tls("grpc.example.com"),
+            transport = XrayTransport.Grpc(),
+        )
+        val uri = original.toShareUri()
+
+        assertTrue(uri.contains("&type=grpc#"))
+        assertFalse(uri.contains("serviceName="))
+        assertFalse(uri.contains("mode="))
+        assertFalse(uri.contains("authority="))
+        assertEquals(original.transport, (parseShareLink(uri, 1L) as ShareLinkResult.Success).profile.transport)
+    }
 }

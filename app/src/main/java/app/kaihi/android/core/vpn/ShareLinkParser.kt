@@ -111,9 +111,10 @@ fun parseShareLink(link: String, nowMillis: Long): ShareLinkResult {
     if (protocol == XrayProtocol.TROJAN && !values["flow"].isNullOrEmpty()) {
         return ShareLinkResult.Unsupported(UnsupportedReason.TRANSPORT_OPTION)
     }
-    val transportResult = parseTransport(values, security)
-    if (transportResult is TransportParseResult.Failure) {
-        return ShareLinkResult.Unsupported(transportResult.reason)
+    val transport = when (val result = parseTransport(values, security)) {
+        is TransportParseResult.Success -> result.transport
+        is TransportParseResult.Failure -> return ShareLinkResult.Unsupported(result.reason)
+        is TransportParseResult.Invalid -> return ShareLinkResult.Invalid(result.reason)
     }
 
     val fragment = uri.rawFragment?.let(::decodeUriComponent)
@@ -130,7 +131,7 @@ fun parseShareLink(link: String, nowMillis: Long): ShareLinkResult {
             protocol = protocol,
             credential = credential,
             security = security,
-            transport = (transportResult as TransportParseResult.Success).transport,
+            transport = transport,
             addedAtMillis = nowMillis,
             countryCode = null,
         ),
@@ -336,6 +337,7 @@ private fun isCanonicalPublicKey(value: String): Boolean {
 private sealed interface TransportParseResult {
     data class Success(val transport: XrayTransport) : TransportParseResult
     data class Failure(val reason: UnsupportedReason) : TransportParseResult
+    data class Invalid(val reason: InvalidReason) : TransportParseResult
 }
 
 private fun parseTransport(values: Map<String, String>, security: XraySecurity): TransportParseResult {
@@ -369,6 +371,37 @@ private fun parseTransport(values: Map<String, String>, security: XraySecurity):
             }
             TransportParseResult.Success(XrayTransport.Raw(flow = flow))
         }
+        "ws", "httpupgrade" -> {
+            if (security is XraySecurity.Reality || !values["flow"].isNullOrEmpty()) {
+                return TransportParseResult.Failure(UnsupportedReason.TRANSPORT_OPTION)
+            }
+            val path = values["path"] ?: "/"
+            if (!path.startsWith('/')) return TransportParseResult.Failure(UnsupportedReason.TRANSPORT_OPTION)
+            val host = values["host"]
+            if (host != null && !isSafeHostname(host)) {
+                return TransportParseResult.Invalid(InvalidReason.INVALID_HOST)
+            }
+            TransportParseResult.Success(
+                if (type == "ws") XrayTransport.WebSocket(path, host) else XrayTransport.HttpUpgrade(path, host),
+            )
+        }
+        "grpc" -> {
+            if (!values["flow"].isNullOrEmpty()) return TransportParseResult.Failure(UnsupportedReason.TRANSPORT_OPTION)
+            val serviceName = values["serviceName"]
+            if (serviceName != null && !GRPC_SERVICE_NAME_REGEX.matches(serviceName)) {
+                return TransportParseResult.Failure(UnsupportedReason.TRANSPORT_OPTION)
+            }
+            val multiMode = when (values["mode"]) {
+                null, "gun" -> false
+                "multi" -> true
+                else -> return TransportParseResult.Failure(UnsupportedReason.TRANSPORT_OPTION)
+            }
+            val authority = values["authority"]
+            if (authority != null && !isSafeHostname(authority)) {
+                return TransportParseResult.Invalid(InvalidReason.INVALID_HOST)
+            }
+            TransportParseResult.Success(XrayTransport.Grpc(serviceName ?: "", multiMode, authority))
+        }
         else -> TransportParseResult.Failure(UnsupportedReason.TRANSPORT)
     }
 }
@@ -394,6 +427,7 @@ private val SCHEME_REGEX = Regex("^([A-Za-z][A-Za-z0-9+.-]*):")
 private val CANONICAL_UUID_REGEX = Regex("^[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$")
 private val IPV4_SHAPED_REGEX = Regex("^[0-9.]+$")
 private val BASE64_URL_NO_PADDING_REGEX = Regex("^[A-Za-z0-9_-]{43}$")
+private val GRPC_SERVICE_NAME_REGEX = Regex("^[A-Za-z0-9._/-]{1,256}$")
 private val UNSUPPORTED_PROTOCOLS = setOf(
     "vmess", "ss", "ssr", "shadowsocks", "hysteria", "hysteria2", "hy2", "tuic",
     "socks", "socks5", "http", "https", "wireguard", "wg",

@@ -51,6 +51,22 @@ fun XrayVpnProfile.toShareUri(): String = buildString {
             parameter("type", "raw")
             if (isVless) transport.flow?.let { flow -> parameter("flow", flow.wireValue) }
         }
+        is XrayTransport.WebSocket -> {
+            parameter("type", "ws")
+            parameter("path", transport.path)
+            transport.host?.let { parameter("host", it) }
+        }
+        is XrayTransport.HttpUpgrade -> {
+            parameter("type", "httpupgrade")
+            parameter("path", transport.path)
+            transport.host?.let { parameter("host", it) }
+        }
+        is XrayTransport.Grpc -> {
+            parameter("type", "grpc")
+            if (transport.serviceName.isNotEmpty()) parameter("serviceName", transport.serviceName)
+            if (transport.multiMode) parameter("mode", "multi")
+            transport.authority?.let { parameter("authority", it) }
+        }
     }
 
     append('#').append(name.urlEncode())

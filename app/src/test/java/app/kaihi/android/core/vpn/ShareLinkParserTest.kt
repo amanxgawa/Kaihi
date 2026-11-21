@@ -68,6 +68,162 @@ class ShareLinkParserTest {
     }
 
     @Test
+    fun `parses TLS WebSocket with a decoded path query and host`() {
+        val link = "vless://$UUID@cdn.example.com:443?security=tls&sni=cdn.example.com" +
+            "&type=ws&path=%2Fws%3Fed%3D2048&host=cdn.example.com#WS"
+        val profile = success(parseShareLink(link, 0L))
+
+        assertEquals(XrayTransport.WebSocket("/ws?ed=2048", "cdn.example.com"), profile.transport)
+        assertEquals(XraySecurity.Tls("cdn.example.com"), profile.security)
+    }
+
+    @Test
+    fun `WebSocket treats an empty host as absent and preserves its path`() {
+        val link = "vless://$UUID@cdn.example.com:443?security=tls&sni=cdn.example.com" +
+            "&type=ws&path=%2Fws&host=#x"
+        val profile = success(parseShareLink(link, 0L))
+
+        assertEquals(XrayTransport.WebSocket("/ws", null), profile.transport)
+    }
+
+    @Test
+    fun `WebSocket defaults an empty path and host to absent values`() {
+        val link = "vless://$UUID@cdn.example.com:443?security=tls&sni=cdn.example.com" +
+            "&type=ws&path=&host=#x"
+        val profile = success(parseShareLink(link, 0L))
+
+        assertEquals(XrayTransport.WebSocket("/", null), profile.transport)
+    }
+
+    @Test
+    fun `gRPC defaults an empty service name and authority to absent values`() {
+        val link = "vless://$UUID@g.example.com:443?security=tls&sni=g.example.com" +
+            "&type=grpc&serviceName=&authority=&mode=gun#x"
+        val profile = success(parseShareLink(link, 0L))
+
+        assertEquals(XrayTransport.Grpc("", false, null), profile.transport)
+    }
+
+    @Test
+    fun `Trojan HTTPUpgrade defaults an empty path and host to absent values`() {
+        val profile = success(
+            parseShareLink("trojan://pw@h.example.com:443?type=httpupgrade&path=&host=#x", 0L),
+        )
+
+        assertEquals(XrayTransport.HttpUpgrade("/", null), profile.transport)
+        assertEquals(XraySecurity.Tls("h.example.com"), profile.security)
+    }
+
+    @Test
+    fun `parses Trojan TLS HTTPUpgrade without a host override`() {
+        val profile = success(
+            parseShareLink("trojan://pw@cdn.example.com:443?security=tls&type=httpupgrade&path=%2Fup#HU", 0L),
+        )
+
+        assertEquals(XrayProtocol.TROJAN, profile.protocol)
+        assertEquals(XrayTransport.HttpUpgrade("/up", null), profile.transport)
+        assertEquals(XraySecurity.Tls("cdn.example.com"), profile.security)
+    }
+
+    @Test
+    fun `parses REALITY gRPC with multi mode service name and authority`() {
+        val link = "vless://$UUID@grpc.example.com:443?security=reality&sni=grpc.example.com" +
+            "&pbk=$PUBLIC_KEY&sid=ab12&type=grpc&serviceName=gun-svc&mode=multi&authority=grpc.example.com#G"
+        val profile = success(parseShareLink(link, 0L))
+
+        assertEquals(XrayTransport.Grpc("gun-svc", multiMode = true, authority = "grpc.example.com"), profile.transport)
+        assertEquals(
+            XraySecurity.Reality(serverName = "grpc.example.com", publicKey = PUBLIC_KEY, shortId = "ab12"),
+            profile.security,
+        )
+    }
+
+    @Test
+    fun `gRPC defaults to an empty service name and gun mode with TLS or REALITY`() {
+        listOf("vless://$UUID@example.com:443?security=tls", realityLink()).forEach { base ->
+            listOf("", "&mode=gun", "&mode=").forEach { mode ->
+                val profile = success(parseShareLink("$base&type=grpc$mode", 0L))
+
+                assertEquals(XrayTransport.Grpc("", false, null), profile.transport)
+            }
+        }
+    }
+
+    @Test
+    fun `WebSocket and HTTPUpgrade default paths for VLESS and Trojan`() {
+        listOf("vless://$UUID", "trojan://pw").forEach { prefix ->
+            listOf("ws" to XrayTransport.WebSocket(), "httpupgrade" to XrayTransport.HttpUpgrade()).forEach { (type, expected) ->
+                val profile = success(parseShareLink("$prefix@example.com:443?security=tls&type=$type&flow=", 0L))
+
+                assertEquals(expected, profile.transport)
+            }
+        }
+    }
+
+    @Test
+    fun `rejects REALITY with WebSocket and HTTPUpgrade`() {
+        listOf("ws", "httpupgrade").forEach { type ->
+            assertUnsupported(parseShareLink(realityLink("&type=$type"), 0L), UnsupportedReason.TRANSPORT_OPTION)
+        }
+    }
+
+    @Test
+    fun `rejects relative WebSocket and HTTPUpgrade paths`() {
+        listOf("ws", "httpupgrade").forEach { type ->
+            assertUnsupported(
+                parseShareLink("vless://$UUID@example.com:443?security=tls&type=$type&path=ws", 0L),
+                UnsupportedReason.TRANSPORT_OPTION,
+            )
+        }
+    }
+
+    @Test
+    fun `rejects unknown gRPC modes`() {
+        assertUnsupported(parseShareLink(realityLink("&type=grpc&mode=guna"), 0L), UnsupportedReason.TRANSPORT_OPTION)
+    }
+
+    @Test
+    fun `rejects invalid gRPC service names`() {
+        listOf("a%20b", "a".repeat(257), "a%3Fb", "a%0Ab").forEach { serviceName ->
+            assertUnsupported(
+                parseShareLink(realityLink("&type=grpc&serviceName=$serviceName"), 0L),
+                UnsupportedReason.TRANSPORT_OPTION,
+            )
+        }
+    }
+
+    @Test
+    fun `accepts the gRPC service name character set and maximum length`() {
+        listOf("pkg.Service/method_1.2-3", "a".repeat(256)).forEach { serviceName ->
+            val profile = success(parseShareLink(realityLink("&type=grpc&serviceName=$serviceName"), 0L))
+
+            assertEquals(XrayTransport.Grpc(serviceName), profile.transport)
+        }
+    }
+
+    @Test
+    fun `rejects invalid transport hosts and gRPC authorities as invalid hosts`() {
+        listOf("ws" to "host", "httpupgrade" to "host", "grpc" to "authority").forEach { (type, parameter) ->
+            assertEquals(
+                ShareLinkResult.Invalid(InvalidReason.INVALID_HOST),
+                parseShareLink("vless://$UUID@example.com:443?security=tls&type=$type&$parameter=bad_host!", 0L),
+            )
+        }
+    }
+
+    @Test
+    fun `rejects nonempty flow for WebSocket HTTPUpgrade and gRPC`() {
+        listOf("vless://$UUID", "trojan://pw").forEach { prefix ->
+            listOf("ws", "httpupgrade", "grpc").forEach { type ->
+                assertUnsupported(
+                    parseShareLink("$prefix@example.com:443?security=tls&type=$type&flow=xtls-rprx-vision", 0L),
+                    UnsupportedReason.TRANSPORT_OPTION,
+                )
+            }
+        }
+    }
+
+    @Test
     fun `accepts custom ids and bracketed IPv6 literals without resolving hostnames`() {
         val custom = success(parseShareLink(realityLink(id = "custom-id_7"), 1L))
         val ipv6 = success(
@@ -407,7 +563,7 @@ class ShareLinkParserTest {
 
     @Test
     fun `returns unsupported transport and transport option values`() {
-        listOf("ws", "grpc", "httpupgrade", "kcp", "mkcp", "http", "h2", "quic").forEach { type ->
+        listOf("kcp", "mkcp", "http", "h2", "quic").forEach { type ->
             assertUnsupported(parseShareLink(realityLink("&type=$type"), 0L), UnsupportedReason.TRANSPORT)
         }
         listOf(

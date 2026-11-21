@@ -8,6 +8,7 @@ internal data class ServerSettingsUi(
     val id: String,
     val name: String,
     val fingerprint: XrayFingerprintSetting?,
+    val supportsMux: Boolean,
     val muxEnabled: Boolean,
     val muxConcurrency: Int,
     val fragmentEnabled: Boolean,

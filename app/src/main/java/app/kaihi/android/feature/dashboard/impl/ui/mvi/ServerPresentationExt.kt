@@ -13,6 +13,9 @@ internal fun XrayVpnProfile.stackLabel(): String = listOfNotNull(
     when (transport) {
         is XrayTransport.Xhttp -> "XHTTP"
         is XrayTransport.Raw -> "RAW"
+        is XrayTransport.WebSocket -> "WebSocket"
+        is XrayTransport.HttpUpgrade -> "HTTPUpgrade"
+        is XrayTransport.Grpc -> "gRPC"
     },
     (transport as? XrayTransport.Raw)?.flow?.let { "VISION" },
     when (security) {

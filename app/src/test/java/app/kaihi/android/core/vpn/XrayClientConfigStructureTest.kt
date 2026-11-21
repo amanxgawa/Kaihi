@@ -76,6 +76,75 @@ class XrayClientConfigStructureTest {
     }
 
     @Test
+    fun `WebSocket TLS stream settings match Xray JSON exactly`() {
+        val websocketProfile = profile(transport = XrayTransport.WebSocket("/ws", "cdn.example.com"))
+            .copy(security = XraySecurity.Tls("cdn.example.com"))
+        val root = Json.parseToJsonElement(XrayClientConfigFactory.build(websocketProfile).toJson()).jsonObject
+        val stream = root.outbound("proxy").getValue("streamSettings").jsonObject
+
+        assertEquals(
+            Json.parseToJsonElement(
+                """{"method":"ws","wsSettings":{"path":"/ws","host":"cdn.example.com"},"security":"tls","tlsSettings":{"serverName":"cdn.example.com","allowInsecure":false}}""",
+            ),
+            stream,
+        )
+    }
+
+    @Test
+    fun `gRPC REALITY stream settings omit absent authority`() {
+        val stream = config(transport = XrayTransport.Grpc("gun-svc", false, null))
+            .outbound("proxy").getValue("streamSettings").jsonObject
+
+        assertEquals(
+            Json.parseToJsonElement(
+                """{"method":"grpc","grpcSettings":{"serviceName":"gun-svc","multiMode":false},"security":"reality","realitySettings":{"serverName":"www.example.com","fingerprint":"firefox","password":"public-key","shortId":"abcd"}}""",
+            ),
+            stream,
+        )
+    }
+
+    @Test
+    fun `HTTPUpgrade TLS stream settings omit absent host`() {
+        val upgradeProfile = profile(transport = XrayTransport.HttpUpgrade("/up", null))
+            .copy(security = XraySecurity.Tls("cdn.example.com"))
+        val root = Json.parseToJsonElement(XrayClientConfigFactory.build(upgradeProfile).toJson()).jsonObject
+        val stream = root.outbound("proxy").getValue("streamSettings").jsonObject
+
+        assertEquals(
+            Json.parseToJsonElement(
+                """{"method":"httpupgrade","httpupgradeSettings":{"path":"/up"},"security":"tls","tlsSettings":{"serverName":"cdn.example.com","allowInsecure":false}}""",
+            ),
+            stream,
+        )
+    }
+
+    @Test
+    fun `WebSocket client omits mux and preserves SOCKS authentication and UDP 443 blackhole`() {
+        val websocketProfile = profile(transport = XrayTransport.WebSocket(), muxEnabled = true)
+            .copy(security = XraySecurity.Tls("cdn.example.com"))
+        val root = Json.parseToJsonElement(XrayClientConfigFactory.build(websocketProfile).toJson()).jsonObject
+        val socksInbound = root.getValue("inbounds").jsonArray.single().jsonObject
+        val socksSettings = socksInbound.getValue("settings").jsonObject
+        val account = socksSettings.getValue("accounts").jsonArray.single().jsonObject
+        val rules = root.routing().getValue("rules").jsonArray.map { it.jsonObject }
+
+        assertNull(root.outbound("proxy")["mux"])
+        assertEquals("socks", socksInbound.getValue("protocol").jsonPrimitive.content)
+        assertEquals("password", socksSettings.getValue("auth").jsonPrimitive.content)
+        assertTrue(account.getValue("user").jsonPrimitive.content.isNotEmpty())
+        assertTrue(account.getValue("pass").jsonPrimitive.content.isNotEmpty())
+        assertEquals("blackhole", root.outbound("block").getValue("protocol").jsonPrimitive.content)
+        assertTrue(
+            "UDP/443 blackhole rule is missing",
+            rules.any {
+                it.outboundTag() == "block" &&
+                    it["network"]?.jsonPrimitive?.content == "udp" &&
+                    it["port"]?.jsonPrimitive?.content == "443"
+            },
+        )
+    }
+
+    @Test
     fun `xhttp mux uses xmux and does not emit mux cool`() {
         val outbound = config(
             transport = XrayTransport.Xhttp(path = "/custom", mode = app.kaihi.android.core.vpn.spec.XhttpMode.AUTO),

@@ -11,6 +11,8 @@ import app.kaihi.android.core.vpn.spec.XraySecurity
 import app.kaihi.android.core.vpn.spec.XrayTransport
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 object XrayTransportFactory {
     const val DEFAULT_XHTTP_PATH = "/"
@@ -22,10 +24,10 @@ object XrayTransportFactory {
         xmuxMaxConcurrency: Int,
         fragmentEnabled: Boolean,
     ): StreamSettingsObject {
-        val (method, xhttpSettings, rawSettings) = when (transport) {
-            is XrayTransport.Xhttp -> Triple(
-                "xhttp",
-                jsonObjectOf(
+        val streamSettings = when (transport) {
+            is XrayTransport.Xhttp -> StreamSettingsObject(
+                method = "xhttp",
+                xhttpSettings = jsonObjectOf(
                     "path" to transport.path,
                     "mode" to transport.mode.wireValue,
                     "extra" to jsonObjectOf(
@@ -36,9 +38,31 @@ object XrayTransportFactory {
                         ),
                     ),
                 ),
-                null,
             )
-            is XrayTransport.Raw -> Triple("raw", null, RawObject())
+            is XrayTransport.Raw -> StreamSettingsObject(method = "raw", rawSettings = RawObject())
+            // Xray v26.10.31 deprecates WebSocket, HTTPUpgrade and gRPC in favour of XHTTP.
+            is XrayTransport.WebSocket -> StreamSettingsObject(
+                method = "ws",
+                wsSettings = buildJsonObject {
+                    put("path", transport.path)
+                    transport.host?.let { put("host", it) }
+                },
+            )
+            is XrayTransport.HttpUpgrade -> StreamSettingsObject(
+                method = "httpupgrade",
+                httpupgradeSettings = buildJsonObject {
+                    put("path", transport.path)
+                    transport.host?.let { put("host", it) }
+                },
+            )
+            is XrayTransport.Grpc -> StreamSettingsObject(
+                method = "grpc",
+                grpcSettings = buildJsonObject {
+                    put("serviceName", transport.serviceName)
+                    put("multiMode", transport.multiMode)
+                    transport.authority?.let { put("authority", it) }
+                },
+            )
         }
         val (securityName, realitySettings, tlsSettings) = when (security) {
             is XraySecurity.Reality -> Triple(
@@ -57,11 +81,8 @@ object XrayTransportFactory {
                 TlsObject(serverName = security.serverName, allowInsecure = security.allowInsecure),
             )
         }
-        return StreamSettingsObject(
-            method = method,
+        return streamSettings.copy(
             security = securityName,
-            xhttpSettings = xhttpSettings,
-            rawSettings = rawSettings,
             realitySettings = realitySettings,
             tlsSettings = tlsSettings,
             finalmask = if (fragmentEnabled) {

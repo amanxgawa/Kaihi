@@ -34,6 +34,7 @@ private const val MAX_MUX_CONCURRENCY = 128
 internal fun ServerAdvancedSection(
     fingerprint: XrayFingerprintSetting?,
     isXhttp: Boolean,
+    supportsMux: Boolean,
     muxEnabled: Boolean,
     muxConcurrency: Int,
     fragmentEnabled: Boolean,
@@ -110,31 +111,33 @@ internal fun ServerAdvancedSection(
             }
         }
 
-        SwitchRow(
-            title = stringResource(id = R.string.dashboard_server_mux_title),
-            description = stringResource(
-                id = if (isXhttp) R.string.dashboard_server_mux_description_xhttp
-                else R.string.dashboard_server_mux_description_raw,
-            ),
-            checked = muxEnabled,
-            onCheckedChange = onMuxEnabledChanged,
-        )
+        if (supportsMux) {
+            SwitchRow(
+                title = stringResource(id = R.string.dashboard_server_mux_title),
+                description = stringResource(
+                    id = if (isXhttp) R.string.dashboard_server_mux_description_xhttp
+                    else R.string.dashboard_server_mux_description_raw,
+                ),
+                checked = muxEnabled,
+                onCheckedChange = onMuxEnabledChanged,
+            )
 
-        if (muxEnabled) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(dimens.m)) {
-                StepperButton(
-                    symbol = "−",
-                    onClick = { onMuxConcurrencyChanged((muxConcurrency - 1).coerceAtLeast(MIN_MUX_CONCURRENCY)) },
-                )
-                Text(
-                    text = stringResource(id = R.string.dashboard_server_mux_concurrency, muxConcurrency),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                StepperButton(
-                    symbol = "+",
-                    onClick = { onMuxConcurrencyChanged((muxConcurrency + 1).coerceAtMost(MAX_MUX_CONCURRENCY)) },
-                )
+            if (muxEnabled) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(dimens.m)) {
+                    StepperButton(
+                        symbol = "−",
+                        onClick = { onMuxConcurrencyChanged((muxConcurrency - 1).coerceAtLeast(MIN_MUX_CONCURRENCY)) },
+                    )
+                    Text(
+                        text = stringResource(id = R.string.dashboard_server_mux_concurrency, muxConcurrency),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    StepperButton(
+                        symbol = "+",
+                        onClick = { onMuxConcurrencyChanged((muxConcurrency + 1).coerceAtMost(MAX_MUX_CONCURRENCY)) },
+                    )
+                }
             }
         }
 
