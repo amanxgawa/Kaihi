@@ -3,8 +3,8 @@ package app.kaihi.android.feature.wizard
 import app.kaihi.android.feature.wizard.impl.domain.deployment.XrayOpenRcServiceFactory
 import app.kaihi.android.feature.wizard.impl.domain.deployment.XraySystemdServiceFactory
 import app.kaihi.android.feature.wizard.impl.domain.model.PackageManager
-import app.kaihi.android.feature.wizard.impl.domain.ssh.CreateXrayServiceUserCommand
-import app.kaihi.android.feature.wizard.impl.domain.ssh.SecureXrayConfigCommand
+import app.kaihi.android.feature.wizard.impl.domain.command.CreateXrayServiceUserCommand
+import app.kaihi.android.feature.wizard.impl.domain.command.SecureXrayConfigCommand
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test

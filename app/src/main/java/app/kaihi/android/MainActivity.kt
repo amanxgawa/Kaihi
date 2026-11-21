@@ -27,9 +27,7 @@ import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
-import app.kaihi.android.core.storage.AppStorage
-import app.kaihi.android.core.storage.ExperienceKeys
-import app.kaihi.android.core.storage.StorageDomain
+import app.kaihi.android.core.mode.OnboardingState
 import app.kaihi.android.feature.dashboard.DashboardKey
 import app.kaihi.android.feature.hello.HelloKey
 import app.kaihi.android.feature.importing.ImportKey
@@ -52,7 +50,7 @@ class MainActivity : ComponentActivity() {
     lateinit var destinations: Map<Class<out NavKey>, @JvmSuppressWildcards Destination<*>>
 
     @Inject
-    lateinit var appStorage: AppStorage
+    lateinit var onboardingState: OnboardingState
 
     @Inject
     @IoDispatcher
@@ -85,10 +83,7 @@ class MainActivity : ComponentActivity() {
                     // themed frame rather than a stalled one.
                     val startKey by produceState<NavKey?>(initialValue = null) {
                         value = withContext(ioDispatcher) {
-                            val done = appStorage.getBoolean(
-                                StorageDomain.EXPERIENCE,
-                                ExperienceKeys.WIZARD_COMPLETED,
-                            )
+                            val done = onboardingState.isCompleted()
                             if (done) DashboardKey() else HelloKey
                         }
                     }

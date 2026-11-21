@@ -28,6 +28,5 @@ interface SshConnection {
         permissions: Int? = null
     ): Result<Unit>
 
-    suspend fun startLpf(remotePort: Int): Result<LpfHandle>
     suspend fun disconnect()
 }

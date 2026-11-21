@@ -1,8 +1,6 @@
 package app.kaihi.android.feature.importing.impl.domain
 
-import app.kaihi.android.core.storage.AppStorage
-import app.kaihi.android.core.storage.ExperienceKeys
-import app.kaihi.android.core.storage.StorageDomain
+import app.kaihi.android.core.mode.OnboardingState
 import app.kaihi.android.core.vpn.ImportInput
 import app.kaihi.android.core.vpn.SubscriptionFetchFailure
 import app.kaihi.android.core.vpn.SubscriptionFetchResult
@@ -57,7 +55,7 @@ internal sealed interface ImportPreview {
 
 internal sealed interface ImportPreparation {
     data class Ready(val preview: ImportPreview) : ImportPreparation
-    data class AlreadyAdded(val subscriptionId: String, val name: String, val firstServerId: String?) : ImportPreparation
+    data class AlreadyAdded(val name: String, val firstServerId: String?) : ImportPreparation
     data class FetchFailed(val reason: SubscriptionFetchFailure) : ImportPreparation
     data class NothingImportable(val counts: ImportCounts) : ImportPreparation
     data object InsecureUrl : ImportPreparation
@@ -66,14 +64,14 @@ internal sealed interface ImportPreparation {
 
 internal sealed interface ImportOutcome {
     data class Success(val counts: ImportCounts, val firstAddedServerId: String) : ImportOutcome
-    data class AlreadyAdded(val subscriptionId: String) : ImportOutcome
+    data object AlreadyAdded : ImportOutcome
     data class NothingNew(val counts: ImportCounts) : ImportOutcome
 }
 
 internal class ImportCoordinator @Inject constructor(
     private val subscriptionStore: XraySubscriptionStore,
     private val subscriptionFetcher: SubscriptionFetcher,
-    private val appStorage: AppStorage,
+    private val onboardingState: OnboardingState,
 ) {
     suspend fun prepare(text: String): ImportPreparation {
         val nowMillis = System.currentTimeMillis()
@@ -120,7 +118,7 @@ internal class ImportCoordinator @Inject constructor(
     private suspend fun prepareRemote(url: String, nowMillis: Long): ImportPreparation {
         val existing = subscriptionStore.subscriptions.first().firstRemoteWithUrl(url)
         if (existing != null) {
-            return ImportPreparation.AlreadyAdded(existing.id, existing.name, existing.servers.firstOrNull()?.id)
+            return ImportPreparation.AlreadyAdded(existing.name, existing.servers.firstOrNull()?.id)
         }
 
         val fetched = when (val result = subscriptionFetcher.fetch(url)) {
@@ -209,7 +207,7 @@ internal class ImportCoordinator @Inject constructor(
         subscriptionStore.update { subscriptions ->
             val concurrentlyAdded = subscriptions.firstRemoteWithUrl(preview.url)
             if (concurrentlyAdded != null) {
-                outcome = ImportOutcome.AlreadyAdded(concurrentlyAdded.id)
+                outcome = ImportOutcome.AlreadyAdded
                 subscriptions
             } else {
                 outcome = ImportOutcome.Success(
@@ -247,7 +245,7 @@ internal class ImportCoordinator @Inject constructor(
     }
 
     private fun markWizardCompleted() {
-        appStorage.putBoolean(StorageDomain.EXPERIENCE, ExperienceKeys.WIZARD_COMPLETED, true)
+        onboardingState.markCompleted()
     }
 
     private fun List<XraySubscription>.firstRemoteWithUrl(url: String): XraySubscription? =

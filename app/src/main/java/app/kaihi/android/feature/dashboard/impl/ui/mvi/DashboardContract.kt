@@ -1,6 +1,5 @@
 package app.kaihi.android.feature.dashboard.impl.ui.mvi
 
-import android.content.Intent as SystemIntent
 import app.kaihi.android.core.vpn.XrayEngineState
 import app.kaihi.android.core.vpn.XrayTrafficStats
 import app.kaihi.android.feature.dashboard.impl.ui.model.ServerDetailsUi
@@ -56,7 +55,7 @@ internal object DashboardContract {
     }
 
     sealed interface Effect {
-        data class RequestVpnPermission(val permissionIntent: SystemIntent) : Effect
+        data object RequestVpnPermission : Effect
         data class ShareText(val text: String) : Effect {
             override fun toString(): String = "ShareText(text=<redacted>)"
         }
@@ -67,6 +66,3 @@ internal object DashboardContract {
 
 internal val DashboardContract.State.isConnected: Boolean
     get() = engineState == XrayEngineState.RUNNING
-
-internal val DashboardContract.State.isBusy: Boolean
-    get() = engineState == XrayEngineState.STARTING || engineState == XrayEngineState.STOPPING

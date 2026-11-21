@@ -1,6 +1,6 @@
 package app.kaihi.android.feature.settings.impl.ui.mvi
 
-import app.kaihi.android.platform.mode.AppMode
+import app.kaihi.android.core.mode.AppMode
 import app.kaihi.android.platform.ui.util.UiText
 
 internal object SettingsContract {

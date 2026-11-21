@@ -1,10 +1,9 @@
 package app.kaihi.android.core.ssh.internal
 
 import app.kaihi.android.core.security.Secret
-import app.kaihi.android.core.ssh.internal.util.SecurityUtils
 import app.kaihi.android.core.ssh.model.SshAuth
 import app.kaihi.android.core.ssh.model.SshConfig
-import app.kaihi.android.core.storage.AppStorage
+import app.kaihi.android.core.storage.InMemoryAppStorage
 import app.kaihi.android.core.storage.StorageDomain
 import java.io.IOException
 import java.security.KeyPairGenerator
@@ -34,7 +33,7 @@ class SshjManagerTest {
             Base64.getMimeEncoder(64, byteArrayOf(10)).encodeToString(pair.private.encoded) +
             "\n-----END PRIVATE KEY-----\n"
         val client = FakeClient(false)
-        val manager = SshjManager(StandardTestDispatcher(testScheduler), MemoryStorage()) { client }
+        val manager = SshjManager(StandardTestDispatcher(testScheduler), InMemoryAppStorage()) { client }
 
         manager.withConnection(config, SshAuth.PrivateKey(Secret(pem))) {
             assertTrue(client.authenticated)
@@ -46,7 +45,7 @@ class SshjManagerTest {
 
     @Test
     fun `failed authentication must not create a trusted host pin`() = runTest {
-        val storage = MemoryStorage()
+        val storage = InMemoryAppStorage()
         val client = FakeClient(failAuthentication = true)
         val manager = SshjManager(StandardTestDispatcher(testScheduler), storage) { client }
 
@@ -56,22 +55,27 @@ class SshjManagerTest {
 
     @Test
     fun `failed authentication must not replace an existing trusted host pin`() = runTest {
-        val storage = MemoryStorage().apply { values["ssh.trusted-host.server.example:22"] = "SHA256:old" }
+        val storage = InMemoryAppStorage().apply {
+            putString(StorageDomain.SSH_TRUST, "ssh.trusted-host.server.example:22", "SHA256:old")
+        }
         val manager = SshjManager(StandardTestDispatcher(testScheduler), storage) { FakeClient(true) }
 
         assertTrue(manager.withConnection(config, auth) { Result.success(Unit) }.isFailure)
-        assertEquals("SHA256:old", storage.values.getValue("ssh.trusted-host.server.example:22"))
+        assertEquals("SHA256:old", storage.values.getValue(StorageDomain.SSH_TRUST to "ssh.trusted-host.server.example:22"))
     }
 
     @Test
     fun `successful authentication persists the accepted fingerprint before using the connection`() = runTest {
-        val storage = MemoryStorage()
+        val storage = InMemoryAppStorage()
         val client = FakeClient(false)
         val manager = SshjManager(StandardTestDispatcher(testScheduler), storage) { client }
 
         manager.withConnection(config, auth) {
             assertTrue(client.authenticated)
-            assertEquals(fingerprint, storage.values.getValue("ssh.trusted-host.server.example:22"))
+            assertEquals(
+                fingerprint,
+                storage.values.getValue(StorageDomain.SSH_TRUST to "ssh.trusted-host.server.example:22"),
+            )
             Result.success(Unit)
         }.getOrThrow()
         testScheduler.advanceUntilIdle()
@@ -80,7 +84,7 @@ class SshjManagerTest {
     @Test
     fun `closes the SSH client after authentication fails`() = runTest {
         val client = FakeClient(true)
-        val manager = SshjManager(StandardTestDispatcher(testScheduler), MemoryStorage()) { client }
+        val manager = SshjManager(StandardTestDispatcher(testScheduler), InMemoryAppStorage()) { client }
 
         assertTrue(manager.withConnection(config, auth) { Result.success(Unit) }.isFailure)
         assertTrue("Failed SSH client was left open", client.closed)
@@ -89,7 +93,7 @@ class SshjManagerTest {
     @Test
     fun `closes the SSH client after host verification fails`() = runTest {
         val client = FakeClient(false)
-        val manager = SshjManager(StandardTestDispatcher(testScheduler), MemoryStorage()) { client }
+        val manager = SshjManager(StandardTestDispatcher(testScheduler), InMemoryAppStorage()) { client }
 
         assertTrue(manager.withConnection(config.copy(expectedFingerprint = null), auth) { Result.success(Unit) }.isFailure)
         assertFalse(client.authenticated)
@@ -99,7 +103,7 @@ class SshjManagerTest {
     @Test
     fun `connection setup propagates cancellation and closes the client`() = runTest {
         val client = FakeClient(false, CancellationException("Setup cancelled"))
-        val manager = SshjManager(StandardTestDispatcher(testScheduler), MemoryStorage()) { client }
+        val manager = SshjManager(StandardTestDispatcher(testScheduler), InMemoryAppStorage()) { client }
 
         try {
             manager.withConnection(config, auth) { Result.success(Unit) }
@@ -137,12 +141,4 @@ class SshjManagerTest {
         override fun close() { closed = true }
     }
 
-    private class MemoryStorage : AppStorage {
-        val values = mutableMapOf<String, String>()
-        override fun getString(domain: StorageDomain, key: String): String? = values[key]
-        override fun putString(domain: StorageDomain, key: String, value: String) { values[key] = value }
-        override fun remove(domain: StorageDomain, key: String) { values.remove(key) }
-        override fun getBoolean(domain: StorageDomain, key: String): Boolean = error("Unused")
-        override fun putBoolean(domain: StorageDomain, key: String, value: Boolean) = error("Unused")
-    }
 }

@@ -24,14 +24,6 @@ internal class XrayProcessControl @Inject constructor(
         )
     }
 
-    override suspend fun reload(config: XrayRuntimeConfig): Result<Unit> = runCatching {
-        require(!needsVpnPermission()) { "VPN permission must be granted before reloading Xray." }
-        ContextCompat.startForegroundService(
-            context,
-            KaihiVpnService.reloadIntent(context, config)
-        )
-    }
-
     override suspend fun stop(): Result<Unit> = runCatching {
         context.startService(KaihiVpnService.stopIntent(context))
     }

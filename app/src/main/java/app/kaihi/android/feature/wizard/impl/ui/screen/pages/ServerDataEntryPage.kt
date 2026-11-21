@@ -43,7 +43,7 @@ import app.kaihi.android.feature.wizard.impl.ui.mvi.WizardContract.ServerAuthMet
 import app.kaihi.android.feature.wizard.impl.ui.screen.components.WizardPage
 import app.kaihi.android.platform.ui.components.KaihiTextField
 import app.kaihi.android.platform.ui.icons.KaihiIcons
-import app.kaihi.android.platform.ui.theme.size.dimens
+import app.kaihi.android.platform.ui.theme.dimens
 import app.kaihi.android.platform.ui.util.UiText
 import app.kaihi.android.platform.ui.util.asString
 

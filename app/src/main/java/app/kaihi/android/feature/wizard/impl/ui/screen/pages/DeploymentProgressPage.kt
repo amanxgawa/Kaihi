@@ -39,7 +39,7 @@ import app.kaihi.android.feature.wizard.impl.ui.mvi.DeploymentUiState
 import app.kaihi.android.feature.wizard.impl.ui.screen.components.DeploymentStepRow
 import app.kaihi.android.feature.wizard.impl.ui.screen.components.DeploymentSuccessCelebration
 import app.kaihi.android.feature.wizard.impl.ui.screen.components.LiveTerminalView
-import app.kaihi.android.platform.ui.theme.size.dimens
+import app.kaihi.android.platform.ui.theme.dimens
 import app.kaihi.android.platform.ui.util.UiText
 import app.kaihi.android.platform.ui.util.asString
 

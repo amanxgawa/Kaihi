@@ -88,26 +88,26 @@ class XrayTelemetryMonitorTest {
     @Test
     fun `reports the session server while running and clears it once stopped`() = runBlocking {
         val monitor = monitor()
-        assertNull(monitor.sessionServerId.value)
+        assertNull(monitor.sessionIdentity.value?.serverId)
 
         monitor.starting()
         monitor.running(STATS_INTERVAL_MS, serverId = "server-a", settingsKey = "k", fingerprint = "safari")
-        assertEquals("server-a", monitor.sessionServerId.value)
-        assertEquals("k", monitor.sessionSettingsKey.value)
-        assertEquals(XrayFingerprint.SAFARI, monitor.sessionFingerprint.value)
+        assertEquals("server-a", monitor.sessionIdentity.value?.serverId)
+        assertEquals("k", monitor.sessionIdentity.value?.settingsKey)
+        assertEquals("safari", monitor.sessionIdentity.value?.fingerprint)
         assertEquals(SessionIdentity("server-a", "k", "safari"), monitor.sessionIdentity.value)
 
         monitor.stopping()
-        assertNull("a stopped engine must not claim a session server", monitor.sessionServerId.value)
-        assertNull("a stopped engine must not claim session settings", monitor.sessionSettingsKey.value)
-        assertNull("a stopped engine must not claim a session fingerprint", monitor.sessionFingerprint.value)
+        assertNull("a stopped engine must not claim a session server", monitor.sessionIdentity.value?.serverId)
+        assertNull("a stopped engine must not claim session settings", monitor.sessionIdentity.value?.settingsKey)
+        assertNull("a stopped engine must not claim a session fingerprint", monitor.sessionIdentity.value?.fingerprint)
         assertNull("a stopped engine must not claim a session identity", monitor.sessionIdentity.value)
 
         monitor.starting()
         monitor.running(STATS_INTERVAL_MS, serverId = "server-b", settingsKey = "k-2", fingerprint = "firefox")
-        assertEquals("a restart reports the server it switched to", "server-b", monitor.sessionServerId.value)
-        assertEquals("a restart reports the settings it switched to", "k-2", monitor.sessionSettingsKey.value)
-        assertEquals(XrayFingerprint.FIREFOX, monitor.sessionFingerprint.value)
+        assertEquals("a restart reports the server it switched to", "server-b", monitor.sessionIdentity.value?.serverId)
+        assertEquals("a restart reports the settings it switched to", "k-2", monitor.sessionIdentity.value?.settingsKey)
+        assertEquals("firefox", monitor.sessionIdentity.value?.fingerprint)
         assertEquals(SessionIdentity("server-b", "k-2", "firefox"), monitor.sessionIdentity.value)
 
         monitor.stopping()
@@ -163,9 +163,9 @@ class XrayTelemetryMonitorTest {
         monitor.running(STATS_INTERVAL_MS, serverId = "server-a", settingsKey = "k", fingerprint = "safari")
         monitor.failed(IllegalStateException("tunnel lost"))
 
-        assertNull(monitor.sessionServerId.value)
-        assertNull(monitor.sessionSettingsKey.value)
-        assertNull(monitor.sessionFingerprint.value)
+        assertNull(monitor.sessionIdentity.value?.serverId)
+        assertNull(monitor.sessionIdentity.value?.settingsKey)
+        assertNull(monitor.sessionIdentity.value?.fingerprint)
         assertNull(monitor.sessionIdentity.value)
         monitor.stopping()
     }

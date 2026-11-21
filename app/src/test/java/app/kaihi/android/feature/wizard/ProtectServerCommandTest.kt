@@ -3,7 +3,7 @@ package app.kaihi.android.feature.wizard
 import app.kaihi.android.core.ssh.model.CommandResult
 import app.kaihi.android.core.vpn.XrayProtectionState
 import app.kaihi.android.core.vpn.XrayServerProtection
-import app.kaihi.android.feature.wizard.impl.domain.ssh.ProtectServerCommand
+import app.kaihi.android.feature.wizard.impl.domain.command.ProtectServerCommand
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

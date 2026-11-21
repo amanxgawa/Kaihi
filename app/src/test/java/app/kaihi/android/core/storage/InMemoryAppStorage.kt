@@ -1,9 +1,17 @@
 package app.kaihi.android.core.storage
 
-internal class InMemoryAppStorage : AppStorage {
-    private val values = mutableMapOf<Pair<StorageDomain, String>, String>()
+internal class InMemoryAppStorage(
+    private val undecryptable: Set<String> = emptySet(),
+) : AppStorage {
+    val values = mutableMapOf<Pair<StorageDomain, String>, String>()
+    val removed = mutableListOf<String>()
 
-    override fun getString(domain: StorageDomain, key: String): String? = values[domain to key]
+    override fun getString(domain: StorageDomain, key: String): String? {
+        if (key in undecryptable) {
+            throw SecureStorageUnreadableException(key, IllegalStateException("key gone"))
+        }
+        return values[domain to key]
+    }
 
     override fun putString(domain: StorageDomain, key: String, value: String) {
         values[domain to key] = value
@@ -18,5 +26,6 @@ internal class InMemoryAppStorage : AppStorage {
 
     override fun remove(domain: StorageDomain, key: String) {
         values.remove(domain to key)
+        removed += key
     }
 }

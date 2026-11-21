@@ -35,7 +35,7 @@ import app.kaihi.android.R
 import app.kaihi.android.feature.dashboard.impl.ui.model.SubscriptionEditorUi
 import app.kaihi.android.platform.ui.components.ConfirmDialog
 import app.kaihi.android.platform.ui.components.KaihiTextField
-import app.kaihi.android.platform.ui.theme.size.dimens
+import app.kaihi.android.platform.ui.theme.dimens
 import app.kaihi.android.platform.ui.util.UiText
 import java.util.Date
 

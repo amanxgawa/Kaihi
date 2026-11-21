@@ -19,10 +19,7 @@ internal object VpnIpcProtocol {
     const val KEY_DOWNLINK_BPS = "downlink_bps"
     const val KEY_UPLINK_TOTAL = "uplink_total"
     const val KEY_DOWNLINK_TOTAL = "downlink_total"
-    const val KEY_CONN_IN = "conn_in"
-    const val KEY_CONN_OUT = "conn_out"
 
-    const val KEY_LOG_LEVEL = "log_level"
     const val KEY_LOG_MESSAGE = "log_message"
     const val KEY_LOG_TIMESTAMP = "log_timestamp"
     const val KEY_LOG_SEQUENCE = "log_sequence"

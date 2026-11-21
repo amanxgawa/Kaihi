@@ -19,7 +19,7 @@ import androidx.compose.ui.draw.clip
 import app.kaihi.android.feature.dashboard.impl.ui.model.SubscriptionUi
 import app.kaihi.android.feature.dashboard.impl.ui.model.SubscriptionKind
 import app.kaihi.android.R
-import app.kaihi.android.platform.ui.theme.size.dimens
+import app.kaihi.android.platform.ui.theme.dimens
 
 private val revealShape = RoundedCornerShape(bottomStart = SegmentOuterCorner, bottomEnd = SegmentOuterCorner)
 

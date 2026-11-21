@@ -20,15 +20,11 @@ import kotlinx.coroutines.withTimeoutOrNull
 
 internal const val PROBE_DEADLINE_MS = 6_000L
 
-internal fun interface TunnelProbe {
-    suspend fun probe(socks: SocksEndpoint): Boolean
-}
-
 @Singleton
 internal class SocksTunnelProbe @Inject constructor(
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
-) : TunnelProbe {
-    override suspend fun probe(socks: SocksEndpoint): Boolean = withContext(ioDispatcher) {
+) {
+    suspend fun probe(socks: SocksEndpoint): Boolean = withContext(ioDispatcher) {
         val socketGuard = ProbeSocketGuard()
         val deadlineNanos = System.nanoTime() + PROBE_DEADLINE_MS * NANOS_PER_MILLI
         withTimeoutOrNull(PROBE_DEADLINE_MS) {

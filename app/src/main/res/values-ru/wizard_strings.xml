@@ -10,15 +10,9 @@
     <string name="wizard_strategy_fast_start_title">Быстрый старт</string>
     <string name="wizard_strategy_fast_start_desc">С вас сервер. Всё остальное настроится само.</string>
 
-    <string name="wizard_strategy_resilience_title">Максимальная устойчивость</string>
-    <string name="wizard_strategy_resilience_desc">Более плотная маскировка для жёстких сетей. Понадобится доменное имя, указывающее на сервер.</string>
-
-
     <!-- Tags -->
-    <string name="wizard_tag_domain">домен</string>
     <!-- Что нужно для варианта, вместо выдуманных времени и сложности. -->
     <string name="wizard_requirement_fast_start">Сервер с root-доступом по SSH</string>
-    <string name="wizard_requirement_resilience">Сервер и доменное имя</string>
     <string name="wizard_tag_recommended">Рекомендуется</string>
 
     <!-- Server Data Entry Page -->
@@ -70,7 +64,6 @@
     <!-- Errors -->
     <string name="wizard_error_vpn_permission_required">Kaihi нужно разрешение на VPN, чтобы запустить соединение.</string>
     <string name="wizard_error_incomplete_ssh_details">Сначала заполните данные для подключения к серверу.</string>
-    <string name="wizard_error_strategy_unsupported">Этот способ настройки пока недоступен. Вернитесь назад и выберите другой.</string>
     <string name="wizard_error_architecture_unknown">Архитектура сервера неизвестна. Вернитесь назад и повторите проверку подключения.</string>
     <string name="wizard_error_unknown">Неизвестная ошибка</string>
     <string name="wizard_error_save_failed">Не удалось сохранить данные сервера.</string>

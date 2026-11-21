@@ -1,6 +1,5 @@
 package app.kaihi.android.core.ssh.internal
 
-import app.kaihi.android.core.ssh.LpfHandle
 import app.kaihi.android.core.ssh.SshConnection
 import app.kaihi.android.core.ssh.model.CommandEvent
 import app.kaihi.android.core.ssh.model.CommandResult
@@ -16,17 +15,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import net.schmizz.sshj.SSHClient
-import net.schmizz.sshj.connection.channel.direct.Parameters
 import net.schmizz.sshj.sftp.OpenMode
 import timber.log.Timber
 import java.io.IOException
 import java.io.InputStream
-import java.net.InetAddress
-import java.net.ServerSocket
 import java.util.EnumSet
 import kotlin.math.min
 
@@ -39,9 +33,6 @@ internal class SshjConnection(
     override val isConnected: StateFlow<Boolean> = connected.asStateFlow()
 
     override fun refreshConnectionState(): Boolean = client.isConnected.also { connected.value = it }
-
-    private val lpfsMutex = Mutex()
-    private val activeLpfs = mutableListOf<LpfHandle>()
 
     override suspend fun execute(
         command: String,
@@ -142,40 +133,7 @@ internal class SshjConnection(
         }
     }
 
-    override suspend fun startLpf(remotePort: Int): Result<LpfHandle> = withContext(ioDispatcher) {
-        runCatching {
-            val localhost = InetAddress.getByName("127.0.0.1")
-            val serverSocket = ServerSocket(0, 50, localhost)
-
-            try {
-                val params = Parameters(
-                    "127.0.0.1",
-                    serverSocket.localPort,
-                    "127.0.0.1",
-                    remotePort
-                )
-
-                val forwarder = client.newLocalPortForwarder(params, serverSocket)
-
-                val handle = SshjLpfHandle(serverSocket, forwarder, ioDispatcher)
-                handle.start()
-
-                lpfsMutex.withLock { activeLpfs.add(handle) }
-                handle
-            } catch (error: Throwable) {
-                runCatching { serverSocket.close() }
-                    .onFailure { error.addSuppressed(it) }
-                throw error
-            }
-        }.onFailure { error -> if (error is CancellationException) throw error }
-    }
-
     override suspend fun disconnect() = withContext(ioDispatcher) {
-        lpfsMutex.withLock {
-            activeLpfs.forEach { it.stop() }
-            activeLpfs.clear()
-        }
-
         if (client.isConnected) {
             client.disconnect()
         }

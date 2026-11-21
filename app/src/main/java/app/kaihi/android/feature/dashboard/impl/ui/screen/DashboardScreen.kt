@@ -1,6 +1,7 @@
 package app.kaihi.android.feature.dashboard.impl.ui.screen
 
 import android.content.Intent
+import android.net.VpnService
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -64,7 +65,7 @@ import app.kaihi.android.platform.ui.components.KaihiMark
 import app.kaihi.android.platform.ui.components.AddServerSheet
 import app.kaihi.android.platform.ui.components.ConfirmDialog
 import app.kaihi.android.platform.ui.icons.KaihiIcons
-import app.kaihi.android.platform.ui.theme.size.dimens
+import app.kaihi.android.platform.ui.theme.dimens
 import app.kaihi.android.platform.ui.util.CollectAsEffect
 import app.kaihi.android.platform.ui.util.asString
 import app.kaihi.android.platform.ui.util.UiText
@@ -115,8 +116,10 @@ internal fun DashboardScreen(
 
     viewModel.effect.CollectAsEffect { effect ->
         when (effect) {
-            is DashboardContract.Effect.RequestVpnPermission ->
-                permissionLauncher.launch(effect.permissionIntent)
+            is DashboardContract.Effect.RequestVpnPermission -> {
+                VpnService.prepare(context)?.let(permissionLauncher::launch)
+                    ?: viewModel.processIntent(DashboardContract.Intent.VpnPermissionGranted)
+            }
 
             is DashboardContract.Effect.ShareText -> {
                 val sendIntent = Intent(Intent.ACTION_SEND).apply {
@@ -264,7 +267,7 @@ private fun DashboardContent(
             item(key = RECONNECT_TO_APPLY_ITEM_KEY) {
                 ReconnectToApplyBanner(
                     onReconnect = { onIntent(DashboardContract.Intent.ReconnectToApplyRequested) },
-                    enabled = !state.isBusy,
+                    enabled = !state.engineState.isBusy,
                     modifier = Modifier
                         .animateItem()
                         .fillMaxWidth()

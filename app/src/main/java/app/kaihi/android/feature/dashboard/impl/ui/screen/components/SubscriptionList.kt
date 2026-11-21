@@ -7,7 +7,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import app.kaihi.android.feature.dashboard.impl.ui.model.SubscriptionUi
-import app.kaihi.android.platform.ui.theme.size.dimens
+import app.kaihi.android.platform.ui.theme.dimens
 import kotlinx.collections.immutable.ImmutableList
 
 private const val SUBSCRIPTION_CONTENT_TYPE = "subscription"

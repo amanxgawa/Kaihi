@@ -1,0 +1,46 @@
+package app.kaihi.android.core.ssh
+
+import app.kaihi.android.core.ssh.command.SshCommand
+import app.kaihi.android.core.ssh.model.CommandEvent
+import app.kaihi.android.core.ssh.model.CommandResult
+import kotlinx.coroutines.CancellationException
+
+/**
+ * Runs [command] over the streaming exec channel, so [onOutputLine] receives every stdout/stderr
+ * line as it arrives (used to drive live-terminal UI) while still returning the same typed result
+ * as a plain one-shot execution once the process exits.
+ */
+suspend fun <T> SshConnection.execute(
+    command: SshCommand<T>,
+    onOutputLine: suspend (String) -> Unit = {},
+): Result<T> {
+    val stdout = StringBuilder()
+    val stderr = StringBuilder()
+    var exitCode: Int? = null
+
+    executeStreaming(command.command, command.args).collect { event ->
+        when (event) {
+            is CommandEvent.Output -> {
+                stdout.appendLine(event.line)
+                onOutputLine(event.line)
+            }
+            is CommandEvent.Error -> {
+                stderr.appendLine(event.message)
+                onOutputLine(event.message)
+            }
+            is CommandEvent.Exit -> exitCode = event.code
+        }
+    }
+
+    return try {
+        val status = checkNotNull(exitCode) {
+            "The connection ended without reporting an exit code: $stderr"
+        }
+        check(status == 0) { "Exit code $status: $stderr" }
+        Result.success(command.parseOutput(CommandResult(stdout.toString(), stderr.toString(), status)))
+    } catch (cancellation: CancellationException) {
+        throw cancellation
+    } catch (error: Throwable) {
+        Result.failure(error)
+    }
+}

@@ -4,10 +4,18 @@ import app.kaihi.android.core.vpn.spec.XraySecurity
 import kotlinx.serialization.builtins.ListSerializer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class XraySubscriptionTest {
+
+    @Test
+    fun `used bytes clamps overflow and preserves missing counters`() {
+        assertEquals(Long.MAX_VALUE, XraySubscriptionUserInfo(uploadBytes = Long.MAX_VALUE, downloadBytes = 1).usedBytes())
+        assertNull(XraySubscriptionUserInfo().usedBytes())
+        assertEquals(10L, XraySubscriptionUserInfo(uploadBytes = 10).usedBytes())
+    }
 
     private val server = XrayVpnProfile(
         id = "server-1",

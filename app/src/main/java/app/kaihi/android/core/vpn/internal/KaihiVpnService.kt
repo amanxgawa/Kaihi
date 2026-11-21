@@ -13,7 +13,6 @@ import android.os.ParcelFileDescriptor
 import android.os.Process
 import android.os.SystemClock
 import androidx.core.app.NotificationCompat
-import app.kaihi.android.MainActivity
 import app.kaihi.android.R
 import app.kaihi.android.core.vpn.XrayJson
 import app.kaihi.android.core.vpn.XrayRuntimeConfig
@@ -51,7 +50,7 @@ internal class KaihiVpnService : VpnService() {
     internal lateinit var hevSocks5Tunnel: HevSocks5Tunnel
 
     @Inject
-    internal lateinit var tunnelProbe: TunnelProbe
+    internal lateinit var tunnelProbe: SocksTunnelProbe
 
     @Inject
     @IoDispatcher
@@ -76,7 +75,7 @@ internal class KaihiVpnService : VpnService() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Timber.i("onStartCommand: %s", intent?.action)
         when (intent?.action) {
-            ACTION_START, ACTION_RELOAD -> {
+            ACTION_START -> {
                 // First and unconditional: these arrive via startForegroundService, and any path
                 // out of this branch that skips startForeground ends in
                 // ForegroundServiceDidNotStartInTimeException. An undecodable config is one such
@@ -307,26 +306,24 @@ internal class KaihiVpnService : VpnService() {
     }
 
     private fun createNotification(): Notification {
-        val contentIntent = PendingIntent.getActivity(
-            this,
-            CONTENT_REQUEST_CODE,
-            Intent(this, MainActivity::class.java),
-            PendingIntent.FLAG_IMMUTABLE,
-        )
+        // Resolve the launcher because core may not depend on an activity in the app root.
+        val contentIntent = packageManager.getLaunchIntentForPackage(packageName)?.let { launch ->
+            PendingIntent.getActivity(this, CONTENT_REQUEST_CODE, launch, PendingIntent.FLAG_IMMUTABLE)
+        }
         val disconnectIntent = PendingIntent.getService(
             this,
             DISCONNECT_REQUEST_CODE,
             stopIntent(this),
             PendingIntent.FLAG_IMMUTABLE,
         )
-        return NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
+        val builder = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_kaihi_glyph)
             .setContentTitle(getString(R.string.notification_vpn_title))
             .setContentText(getString(R.string.notification_vpn_content))
-            .setContentIntent(contentIntent)
             .addAction(R.drawable.ic_kaihi_glyph, getString(R.string.notification_vpn_disconnect), disconnectIntent)
             .setOngoing(true)
-            .build()
+        contentIntent?.let(builder::setContentIntent)
+        return builder.build()
     }
 
     private fun ensureNotificationChannel() {
@@ -340,7 +337,6 @@ internal class KaihiVpnService : VpnService() {
 
     companion object {
         const val ACTION_START = "app.kaihi.xray.START"
-        const val ACTION_RELOAD = "app.kaihi.xray.RELOAD"
         const val ACTION_STOP = "app.kaihi.xray.STOP"
         private const val NOTIFICATION_ID = 1001
         private const val NOTIFICATION_CHANNEL_ID = "kaihi_vpn"
@@ -352,9 +348,6 @@ internal class KaihiVpnService : VpnService() {
 
         fun startIntent(context: Context, config: XrayRuntimeConfig): Intent =
             configIntent(context, ACTION_START, config)
-
-        fun reloadIntent(context: Context, config: XrayRuntimeConfig): Intent =
-            configIntent(context, ACTION_RELOAD, config)
 
         fun stopIntent(context: Context): Intent = Intent(context, KaihiVpnService::class.java)
             .setAction(ACTION_STOP)

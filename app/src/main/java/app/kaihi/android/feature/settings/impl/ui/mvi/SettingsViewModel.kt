@@ -2,11 +2,10 @@ package app.kaihi.android.feature.settings.impl.ui.mvi
 
 import androidx.compose.runtime.Stable
 import app.kaihi.android.R
-import app.kaihi.android.core.vpn.VpnPreferences
+import app.kaihi.android.core.mode.AppMode
 import app.kaihi.android.core.vpn.effectiveSubscriptionUserAgent
 import app.kaihi.android.core.vpn.isValidSubscriptionUserAgent
-import app.kaihi.android.platform.mode.AppMode
-import app.kaihi.android.platform.mode.AppModeRepository
+import app.kaihi.android.feature.settings.impl.domain.SettingsPreferences
 import app.kaihi.android.platform.ui.mvi.MviViewModel
 import app.kaihi.android.platform.ui.util.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,23 +16,22 @@ import kotlinx.coroutines.flow.onEach
 @Stable
 @HiltViewModel
 internal class SettingsViewModel @Inject constructor(
-    private val appModeRepository: AppModeRepository,
-    private val vpnPreferences: VpnPreferences,
+    private val preferences: SettingsPreferences,
 ) : MviViewModel<SettingsContract.State, SettingsContract.Intent, SettingsContract.Effect>(
     SettingsContract.State(
-        mode = appModeRepository.mode.value,
-        ipv6Enabled = vpnPreferences.ipv6Enabled.value,
-        excludedAppsCount = vpnPreferences.excludedPackages.value.size,
-        subscriptionUserAgent = vpnPreferences.subscriptionUserAgent.value,
+        mode = preferences.mode.value,
+        ipv6Enabled = preferences.ipv6Enabled.value,
+        excludedAppsCount = preferences.excludedPackages.value.size,
+        subscriptionUserAgent = preferences.subscriptionUserAgent.value,
         effectiveSubscriptionUserAgent = effectiveSubscriptionUserAgent(
-            customValue = vpnPreferences.subscriptionUserAgent.value,
-            mode = appModeRepository.mode.value,
+            customValue = preferences.subscriptionUserAgent.value,
+            mode = preferences.mode.value,
         ),
     )
 ) {
 
     init {
-        appModeRepository.mode
+        preferences.mode
             .onEach { mode ->
                 reduce {
                     copy(
@@ -49,15 +47,15 @@ internal class SettingsViewModel @Inject constructor(
             }
             .launchIn(scope)
 
-        vpnPreferences.ipv6Enabled
+        preferences.ipv6Enabled
             .onEach { enabled -> reduce { copy(ipv6Enabled = enabled) } }
             .launchIn(scope)
 
-        vpnPreferences.excludedPackages
+        preferences.excludedPackages
             .onEach { packages -> reduce { copy(excludedAppsCount = packages.size) } }
             .launchIn(scope)
 
-        vpnPreferences.subscriptionUserAgent
+        preferences.subscriptionUserAgent
             .onEach { value ->
                 reduce {
                     copy(
@@ -77,10 +75,10 @@ internal class SettingsViewModel @Inject constructor(
             is SettingsContract.Intent.AdvancedModeToggled -> if (intent.enabled) {
                 sendEffect(SettingsContract.Effect.NavigateToAdvancedModeIntro)
             } else {
-                appModeRepository.setMode(AppMode.NORMAL)
+                preferences.setMode(AppMode.NORMAL)
             }
 
-            is SettingsContract.Intent.Ipv6Toggled -> vpnPreferences.setIpv6Enabled(intent.enabled)
+            is SettingsContract.Intent.Ipv6Toggled -> preferences.setIpv6Enabled(intent.enabled)
             SettingsContract.Intent.ExcludedAppsRequested -> sendEffect(SettingsContract.Effect.NavigateToExcludedApps)
             SettingsContract.Intent.SubscriptionUserAgentRequested -> if (state.value.mode == AppMode.ADVANCED) {
                 reduce {
@@ -110,7 +108,7 @@ internal class SettingsViewModel @Inject constructor(
                                 UiText.Resource(R.string.settings_subscription_user_agent_invalid),
                         )
                     }
-                } else if (vpnPreferences.setSubscriptionUserAgent(draft)) {
+                } else if (preferences.setSubscriptionUserAgent(draft)) {
                     reduce {
                         copy(
                             isSubscriptionUserAgentDialogVisible = false,
@@ -120,7 +118,7 @@ internal class SettingsViewModel @Inject constructor(
                 }
             }
             SettingsContract.Intent.SubscriptionUserAgentReset -> {
-                vpnPreferences.setSubscriptionUserAgent(null)
+                preferences.setSubscriptionUserAgent(null)
                 reduce {
                     copy(
                         isSubscriptionUserAgentDialogVisible = false,

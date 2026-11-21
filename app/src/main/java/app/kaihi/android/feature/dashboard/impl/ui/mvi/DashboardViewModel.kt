@@ -5,8 +5,7 @@ import app.kaihi.android.feature.dashboard.impl.domain.ServerLibraryCoordinator
 import app.kaihi.android.feature.dashboard.impl.ui.mvi.DashboardContract.Effect
 import app.kaihi.android.feature.dashboard.impl.ui.mvi.DashboardContract.Intent
 import app.kaihi.android.feature.dashboard.impl.ui.mvi.DashboardContract.State
-import app.kaihi.android.platform.mode.AppMode
-import app.kaihi.android.platform.mode.AppModeRepository
+import app.kaihi.android.feature.dashboard.impl.domain.AdvancedModeObserver
 import app.kaihi.android.platform.ui.mvi.MviViewModel
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
@@ -20,7 +19,7 @@ import kotlinx.coroutines.flow.onEach
 internal class DashboardViewModel @AssistedInject constructor(
     @Assisted selectServerId: String?,
     private val coordinator: ServerLibraryCoordinator,
-    appModeRepository: AppModeRepository,
+    advancedModeObserver: AdvancedModeObserver,
     private val connectionDelegate: ConnectionDelegate,
     private val libraryDelegate: ServerLibraryDelegate,
 ) : MviViewModel<State, Intent, Effect>(State()) {
@@ -31,8 +30,8 @@ internal class DashboardViewModel @AssistedInject constructor(
         selectServerId?.let(coordinator::select)
         connectionDelegate.observe()
         libraryDelegate.observe()
-        appModeRepository.mode
-            .onEach { mode -> reduce { copy(isAdvancedMode = mode == AppMode.ADVANCED) } }
+        advancedModeObserver.isAdvanced
+            .onEach { isAdvanced -> reduce { copy(isAdvancedMode = isAdvanced) } }
             .launchIn(scope)
     }
 

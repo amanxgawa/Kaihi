@@ -1,5 +1,8 @@
 package app.kaihi.android.feature.wizard
 
+import app.kaihi.android.feature.wizard.impl.domain.model.XrayServerCredentials
+import app.kaihi.android.feature.wizard.impl.ui.mvi.DeploymentPhase
+import app.kaihi.android.feature.wizard.impl.ui.mvi.DeploymentUiState
 import app.kaihi.android.feature.wizard.impl.ui.mvi.WizardContract
 import app.kaihi.android.platform.ui.util.UiSecret
 import org.junit.Assert.assertEquals
@@ -36,6 +39,25 @@ class WizardSecretMaskingTest {
         assertFalse("password leaked into state.toString()", printed.contains(PASSWORD))
         assertFalse("private key leaked into state.toString()", printed.contains(PRIVATE_KEY))
         assertTrue("non-secret fields must stay readable, or this is undebuggable", printed.contains("192.0.2.10"))
+    }
+
+    @Test
+    fun `wizard state does not leak deployed credential uuid when printed`() {
+        val uuid = "123e4567-e89b-12d3-a456-426614174000"
+        val state = WizardContract.State(
+            deployment = DeploymentUiState(
+                phase = DeploymentPhase.Succeeded(
+                    XrayServerCredentials(
+                        uuid = uuid,
+                        publicKey = "public-key",
+                        shortId = "short-id",
+                        realityServerName = "example.com",
+                    ),
+                ),
+            ),
+        )
+
+        assertFalse("credential UUID leaked into state.toString()", state.toString().contains(uuid))
     }
 
     @Test

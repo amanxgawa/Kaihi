@@ -23,7 +23,7 @@ import org.junit.Test
 class XrayTelemetryMonitorLogsTest {
 
     @Test
-    fun `a start failure is published as an ERROR log carrying the reason`() = runBlocking {
+    fun `a start failure is published as a log carrying the reason`() = runBlocking {
         val monitor = monitor()
         val received = async { monitor.logs.first() }
         delay(COLLECTOR_ATTACH_DELAY_MS)
@@ -31,7 +31,6 @@ class XrayTelemetryMonitorLogsTest {
         monitor.failed(IllegalStateException("Xray core reported success but is not running."))
 
         val log = received.await()
-        assertEquals(XrayLogLevel.ERROR, log.level)
         assertEquals("Xray core reported success but is not running.", log.message)
     }
 

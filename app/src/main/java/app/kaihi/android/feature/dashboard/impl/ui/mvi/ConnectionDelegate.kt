@@ -1,18 +1,13 @@
 package app.kaihi.android.feature.dashboard.impl.ui.mvi
 
-import android.content.Context
-import android.net.VpnService
 import app.kaihi.android.R
-import app.kaihi.android.core.vpn.TunnelSettingsSource
 import app.kaihi.android.core.vpn.XrayEngineState
-import app.kaihi.android.core.vpn.XrayServiceProvider
 import app.kaihi.android.core.vpn.XrayVpnProfile
-import app.kaihi.android.core.vpn.configfactory.XrayClientConfigFactory
 import app.kaihi.android.feature.dashboard.impl.domain.PendingSettingsMonitor
 import app.kaihi.android.feature.dashboard.impl.domain.ServerLibraryCoordinator
+import app.kaihi.android.feature.dashboard.impl.domain.VpnSession
 import app.kaihi.android.platform.ui.mvi.ViewModelDelegate
 import app.kaihi.android.platform.ui.util.UiText
-import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
@@ -22,9 +17,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import timber.log.Timber
 
 internal class ConnectionDelegate @Inject constructor(
-    @ApplicationContext private val appContext: Context,
-    private val serviceProvider: XrayServiceProvider,
-    private val tunnelSettingsSource: TunnelSettingsSource,
+    private val session: VpnSession,
     private val coordinator: ServerLibraryCoordinator,
     private val pendingSettingsMonitor: PendingSettingsMonitor,
 ) : ViewModelDelegate<DashboardContract.State, DashboardContract.Effect>() {
@@ -38,15 +31,15 @@ internal class ConnectionDelegate @Inject constructor(
     fun observe() {
         // Subscribed alongside state, before the IPC bind completes, so the replay a new client gets on
         // registering reaches both.
-        serviceProvider.monitoring.sessionServerId
+        session.sessionServerId
             .onEach { serverId ->
                 sessionServerId = serverId
                 serverId?.let(coordinator::select)
             }
             .launchIn(scope)
         combine(
-            serviceProvider.monitoring.sessionServerId,
-            serviceProvider.monitoring.sessionFingerprint,
+            session.sessionServerId,
+            session.sessionFingerprint,
         ) { serverId, fingerprint -> serverId to fingerprint }
             .onEach { (serverId, fingerprint) ->
                 if (serverId != null && fingerprint != null) {
@@ -54,13 +47,13 @@ internal class ConnectionDelegate @Inject constructor(
                 }
             }
             .launchIn(scope)
-        serviceProvider.monitoring.healthDegraded
+        session.healthDegraded
             .onEach { handleHealthDegraded() }
             .launchIn(scope)
-        serviceProvider.monitoring.state
+        session.state
             .onEach { engineState -> reduce { copy(engineState = engineState) } }
             .launchIn(scope)
-        serviceProvider.monitoring.failure
+        session.failure
             .onEach { failure -> failureMessage(failure)?.let { message -> reduce { copy(errorMessage = message) } } }
             .launchIn(scope)
         pendingSettingsMonitor.pendingServerId
@@ -69,10 +62,10 @@ internal class ConnectionDelegate @Inject constructor(
         // From :vpn rather than derived from `state` here: a UI process recreated underneath a
         // live tunnel would otherwise see RUNNING for the first time on reconnect and mistake that
         // moment for the start of the session, resetting "connected for" to zero.
-        serviceProvider.monitoring.runningSinceRealtime
+        session.runningSinceRealtime
             .onEach { runningSinceRealtime -> reduce { copy(connectedSinceRealtime = runningSinceRealtime) } }
             .launchIn(scope)
-        serviceProvider.monitoring.stats
+        session.stats
             .onEach { stats -> reduce { copy(stats = stats) } }
             .launchIn(scope)
     }
@@ -82,15 +75,14 @@ internal class ConnectionDelegate @Inject constructor(
      *  VPN subsystem doesn't tolerate back-to-back. [DashboardContract.State.engineState] flips to
      *  STARTING/STOPPING synchronously here, before the IPC round trip, so a queued repeat tap no-ops on `isBusy`. */
     suspend fun toggle() {
-        if (currentState.isBusy) return
+        if (currentState.engineState.isBusy) return
 
         if (currentState.engineState == XrayEngineState.RUNNING) {
             stop()
             return
         }
-        val permissionIntent = VpnService.prepare(appContext)
-        if (permissionIntent != null) {
-            sendEffect(DashboardContract.Effect.RequestVpnPermission(permissionIntent))
+        if (session.needsVpnPermission()) {
+            sendEffect(DashboardContract.Effect.RequestVpnPermission)
         } else {
             beginStarting()
         }
@@ -113,7 +105,7 @@ internal class ConnectionDelegate @Inject constructor(
     }
 
     suspend fun applyPendingSettings() {
-        if (currentState.isBusy || currentState.engineState != XrayEngineState.RUNNING) return
+        if (currentState.engineState.isBusy || currentState.engineState != XrayEngineState.RUNNING) return
         val serverId = currentState.reconnectToApplyServerId ?: return
         reduce { copy(engineState = XrayEngineState.STARTING, errorMessage = null) }
         pendingSettingsMonitor.restart(serverId).onFailure { error ->
@@ -134,7 +126,7 @@ internal class ConnectionDelegate @Inject constructor(
 
     private suspend fun stop() {
         reduce { copy(engineState = XrayEngineState.STOPPING, errorMessage = null) }
-        serviceProvider.control.stop().onFailure { error ->
+        session.stop().onFailure { error ->
             // Dispatch failed synchronously, so nothing arrives over IPC to undo the
             // optimistic state above and this has to do it instead.
             Timber.e(error, "stop() dispatch failed")
@@ -148,7 +140,7 @@ internal class ConnectionDelegate @Inject constructor(
     }
 
     private suspend fun beginStarting() {
-        if (currentState.isBusy) return
+        if (currentState.engineState.isBusy) return
         reduce { copy(engineState = XrayEngineState.STARTING, errorMessage = null) }
         val server = coordinator.selectedServer()
         if (server == null) {
@@ -165,9 +157,7 @@ internal class ConnectionDelegate @Inject constructor(
 
     /** Only whether the start reached the service; the session itself is confirmed later over IPC. */
     private suspend fun start(server: XrayVpnProfile, stateOnDispatchFailure: XrayEngineState): Boolean =
-        serviceProvider.control.start(
-            XrayClientConfigFactory.createRuntimeConfig(server, tunnelSettingsSource.current()),
-        )
+        session.start(server)
             .onFailure { error ->
                 Timber.e(error, "start() dispatch failed")
                 reduce {
@@ -181,7 +171,7 @@ internal class ConnectionDelegate @Inject constructor(
 
     /**
      * The `:vpn` process has already stopped itself and is about to be killed and respawned (see
-     * `KaihiVpnService.onHealthDegraded`), so this only waits for [XrayEngineState.IDLE]
+     * the VPN service's health callback), so this only waits for [XrayEngineState.IDLE]
      * before starting a new session.
      */
     private suspend fun handleHealthDegraded() {
@@ -190,7 +180,7 @@ internal class ConnectionDelegate @Inject constructor(
         try {
             reduce { copy(errorMessage = UiText.Resource(R.string.dashboard_error_connection_stalled)) }
             val wentIdle = withTimeoutOrNull(IDLE_WAIT_TIMEOUT_MS) {
-                serviceProvider.monitoring.state.first { it == XrayEngineState.IDLE }
+                session.state.first { it == XrayEngineState.IDLE }
             }
             if (wentIdle == null) {
                 reduce {

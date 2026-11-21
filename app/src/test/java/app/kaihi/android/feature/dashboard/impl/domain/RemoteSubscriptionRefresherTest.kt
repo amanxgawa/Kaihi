@@ -2,8 +2,13 @@ package app.kaihi.android.feature.dashboard.impl.domain
 
 import app.kaihi.android.core.vpn.SubscriptionFetchFailure
 import app.kaihi.android.core.vpn.SubscriptionFetchResult
+import app.kaihi.android.core.vpn.FakeHttpTransport
+import app.kaihi.android.core.vpn.HttpTransport
 import app.kaihi.android.core.vpn.SubscriptionFetcher
 import app.kaihi.android.core.vpn.SubscriptionMetadata
+import app.kaihi.android.core.vpn.VpnPreferences
+import app.kaihi.android.core.mode.AppModeRepository
+import app.kaihi.android.core.storage.InMemoryAppStorage
 import app.kaihi.android.core.vpn.XraySubscription
 import app.kaihi.android.core.vpn.XraySubscriptionSource
 import app.kaihi.android.core.vpn.XraySubscriptionStore
@@ -16,10 +21,10 @@ import app.kaihi.android.core.vpn.spec.XraySecurity
 import app.kaihi.android.core.vpn.spec.XrayTransport
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
+import java.net.SocketTimeoutException
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -50,11 +55,11 @@ class RemoteSubscriptionRefresherTest {
         )
         val link = realityLink(UUID_ONE, "node.example", "New name")
             .replace("#New%20name", "&fp=chrome&type=xhttp&path=%2Fprovider&mode=packet-up#New%20name")
-        val store = MemoryStore(listOf(subscription(servers = listOf(existing))))
-        val refresher = RemoteSubscriptionRefresher(store, FakeFetcher(success(link)))
+        val store = newStore(listOf(subscription(servers = listOf(existing))))
+        val refresher = RemoteSubscriptionRefresher(store, fetcher(success(link)))
 
         val outcome = refresher.refresh(SUBSCRIPTION_ID, nowMillis = NOW)
-        val updated = store.value.single().servers.single()
+        val updated = store.current().single().servers.single()
 
         assertEquals(RemoteSubscriptionRefreshOutcome.Success(1), outcome)
         assertEquals("saved-id", updated.id)
@@ -86,11 +91,11 @@ class RemoteSubscriptionRefresherTest {
             realityLink(UUID_THREE, "node-c.example", "Provider C"),
             realityLink(UUID_THREE, "node-c.example", "Duplicate C"),
         )
-        val store = MemoryStore(listOf(subscription(servers = listOf(matched, removed))))
-        val refresher = RemoteSubscriptionRefresher(store, FakeFetcher(success(*links.toTypedArray())))
+        val store = newStore(listOf(subscription(servers = listOf(matched, removed))))
+        val refresher = RemoteSubscriptionRefresher(store, fetcher(success(*links.toTypedArray())))
 
         val outcome = refresher.refresh(SUBSCRIPTION_ID, nowMillis = NOW)
-        val servers = store.value.single().servers
+        val servers = store.current().single().servers
 
         assertEquals(RemoteSubscriptionRefreshOutcome.Success(2), outcome)
         assertEquals("saved-a", servers.first().id)
@@ -100,45 +105,43 @@ class RemoteSubscriptionRefresherTest {
 
     @Test
     fun `refresh never overwrites a user renamed subscription`() = runTest {
-        val store = MemoryStore(listOf(subscription(name = "My chosen name")))
+        val store = newStore(listOf(subscription(name = "My chosen name")))
         val refresher = RemoteSubscriptionRefresher(
             store,
-            FakeFetcher(success(realityLink(UUID_ONE, "node.example", "Server"), metadata = SubscriptionMetadata(title = "Provider title"))),
+            fetcher(success(realityLink(UUID_ONE, "node.example", "Server"), metadata = SubscriptionMetadata(title = "Provider title"))),
         )
 
         refresher.refresh(SUBSCRIPTION_ID, nowMillis = NOW)
 
-        assertEquals("My chosen name", store.value.single().name)
-        assertEquals("Provider title", (store.value.single().source as XraySubscriptionSource.Remote).title)
+        assertEquals("My chosen name", store.current().single().name)
+        assertEquals("Provider title", (store.current().single().source as XraySubscriptionSource.Remote).title)
     }
 
     @Test
     fun `fetch failure leaves subscription unchanged`() = runTest {
         val initial = subscription(servers = listOf(profile("saved", "Existing", "node.example", UUID_ONE)))
-        val store = MemoryStore(listOf(initial))
+        val store = newStore(listOf(initial))
         val refresher = RemoteSubscriptionRefresher(
             store,
-            FakeFetcher(SubscriptionFetchResult.Failure(SubscriptionFetchFailure.TIMEOUT)),
+            fetcher(SubscriptionFetchResult.Failure(SubscriptionFetchFailure.TIMEOUT)),
         )
 
         val outcome = refresher.refresh(SUBSCRIPTION_ID, nowMillis = NOW)
 
         assertEquals(RemoteSubscriptionRefreshOutcome.FetchFailed(SubscriptionFetchFailure.TIMEOUT), outcome)
-        assertEquals(listOf(initial), store.value)
-        assertEquals(0, store.updates)
+        assertEquals(listOf(initial), store.current())
     }
 
     @Test
     fun `no importable links leaves subscription unchanged`() = runTest {
         val initial = subscription(servers = listOf(profile("saved", "Existing", "node.example", UUID_ONE)))
-        val store = MemoryStore(listOf(initial))
-        val refresher = RemoteSubscriptionRefresher(store, FakeFetcher(success("not a VLESS link")))
+        val store = newStore(listOf(initial))
+        val refresher = RemoteSubscriptionRefresher(store, fetcher(success("not a VLESS link")))
 
         val outcome = refresher.refresh(SUBSCRIPTION_ID, nowMillis = NOW)
 
         assertEquals(RemoteSubscriptionRefreshOutcome.NothingImportable, outcome)
-        assertEquals(listOf(initial), store.value)
-        assertEquals(0, store.updates)
+        assertEquals(listOf(initial), store.current())
     }
 
     @Test
@@ -151,14 +154,14 @@ class RemoteSubscriptionRefresherTest {
             webPageUrl = "https://support.example/account",
             announce = "Maintenance tonight",
         )
-        val store = MemoryStore(listOf(subscription()))
+        val store = newStore(listOf(subscription()))
         val refresher = RemoteSubscriptionRefresher(
             store,
-            FakeFetcher(success(realityLink(UUID_ONE, "node.example", "Server"), metadata = metadata)),
+            fetcher(success(realityLink(UUID_ONE, "node.example", "Server"), metadata = metadata)),
         )
 
         val outcome = refresher.refresh(SUBSCRIPTION_ID, nowMillis = NOW)
-        val remote = store.value.single().source as XraySubscriptionSource.Remote
+        val remote = store.current().single().source as XraySubscriptionSource.Remote
 
         assertTrue(outcome is RemoteSubscriptionRefreshOutcome.Success)
         assertEquals(metadata.title, remote.title)
@@ -174,8 +177,12 @@ class RemoteSubscriptionRefresherTest {
     fun `second concurrent refresh for a subscription is ignored`() = runTest {
         val started = CompletableDeferred<Unit>()
         val release = CompletableDeferred<Unit>()
-        val fetcher = BlockingFetcher(success(realityLink(UUID_ONE, "node.example", "Server")), started, release)
-        val refresher = RemoteSubscriptionRefresher(MemoryStore(listOf(subscription())), fetcher)
+        val transport = BlockingHttpTransport(
+            FakeHttpTransport.ok(realityLink(UUID_ONE, "node.example", "Server")),
+            started,
+            release,
+        )
+        val refresher = RemoteSubscriptionRefresher(newStore(listOf(subscription())), fetcher(transport))
 
         val first = async { refresher.refresh(SUBSCRIPTION_ID, nowMillis = NOW) }
         started.await()
@@ -184,7 +191,7 @@ class RemoteSubscriptionRefresherTest {
 
         assertEquals(RemoteSubscriptionRefreshOutcome.AlreadyRefreshing, second)
         assertEquals(RemoteSubscriptionRefreshOutcome.Success(1), first.await())
-        assertEquals(1, fetcher.calls)
+        assertEquals(1, transport.calls)
     }
 
     @Test
@@ -254,47 +261,88 @@ class RemoteSubscriptionRefresherTest {
         return "vless://$uuid@$address:443?security=reality&sni=cover.example&pbk=$PUBLIC_KEY&sid=0011#$encodedName"
     }
 
-    private class FakeFetcher(
-        private val result: SubscriptionFetchResult,
-    ) : SubscriptionFetcher {
-        var calls = 0
-            private set
+    private suspend fun TestScope.newStore(initial: List<XraySubscription>): XraySubscriptionStore {
+        val store = XraySubscriptionStore(InMemoryAppStorage(), StandardTestDispatcher(testScheduler))
+        if (initial.isNotEmpty()) store.update { initial }
+        return store
+    }
 
-        override suspend fun fetch(url: String): SubscriptionFetchResult {
-            calls++
-            return result
+    private suspend fun XraySubscriptionStore.current(): List<XraySubscription> = subscriptions.first()
+
+    private fun fetcher(result: SubscriptionFetchResult): SubscriptionFetcher {
+        val storage = InMemoryAppStorage()
+        return fetcher(transport(result), storage)
+    }
+
+    private fun fetcher(transport: HttpTransport): SubscriptionFetcher {
+        val storage = InMemoryAppStorage()
+        return fetcher(transport, storage)
+    }
+
+    private fun fetcher(transport: HttpTransport, storage: InMemoryAppStorage): SubscriptionFetcher =
+        SubscriptionFetcher(transport, VpnPreferences(storage), AppModeRepository(storage))
+
+    private fun transport(result: SubscriptionFetchResult): HttpTransport = when (result) {
+        is SubscriptionFetchResult.Success -> {
+            val metadata = result.metadata
+            val body = buildList {
+                metadata.title?.let { add("#profile-title: $it") }
+                metadata.userInfo?.let { info ->
+                    add(
+                        "#subscription-userinfo: " + listOfNotNull(
+                            info.uploadBytes?.let { "upload=$it" },
+                            info.downloadBytes?.let { "download=$it" },
+                            info.totalBytes?.let { "total=$it" },
+                            info.expireEpochSeconds?.let { "expire=$it" },
+                        ).joinToString(";"),
+                    )
+                }
+                metadata.updateIntervalHours?.let { add("#profile-update-interval: $it") }
+                metadata.supportUrl?.let { add("#support-url: $it") }
+                metadata.webPageUrl?.let { add("#profile-web-page-url: $it") }
+                metadata.announce?.let { add("#announce: $it") }
+                addAll(result.links)
+            }.joinToString("\n")
+            FakeHttpTransport(FakeHttpTransport.ok(body))
+        }
+        is SubscriptionFetchResult.Failure -> FakeHttpTransport().apply {
+            when (result.reason) {
+                SubscriptionFetchFailure.TIMEOUT -> enqueueFailure(SocketTimeoutException())
+                SubscriptionFetchFailure.NETWORK -> enqueueFailure(IllegalStateException("network error"))
+                SubscriptionFetchFailure.HTTP_STATUS -> enqueue(FakeHttpTransport.response(503))
+                SubscriptionFetchFailure.TOO_LARGE -> enqueue(
+                    FakeHttpTransport.response(200, body = ByteArray(1024 * 1024 + 1)),
+                )
+                SubscriptionFetchFailure.TOO_MANY_REDIRECTS -> repeat(4) { index ->
+                    enqueue(FakeHttpTransport.response(302, headers = mapOf("Location" to listOf("/$index"))))
+                }
+                SubscriptionFetchFailure.UNSUPPORTED_FORMAT -> enqueue(
+                    FakeHttpTransport.response(200, body = "{}"),
+                )
+                SubscriptionFetchFailure.EMPTY -> enqueue(FakeHttpTransport.ok(""))
+                SubscriptionFetchFailure.INSECURE_URL -> enqueue(FakeHttpTransport.response(400))
+            }
         }
     }
 
-    private class BlockingFetcher(
-        private val result: SubscriptionFetchResult,
+    private class BlockingHttpTransport(
+        private val response: app.kaihi.android.core.vpn.HttpTransportResponse,
         private val started: CompletableDeferred<Unit>,
         private val release: CompletableDeferred<Unit>,
-    ) : SubscriptionFetcher {
+    ) : HttpTransport {
         var calls = 0
             private set
 
-        override suspend fun fetch(url: String): SubscriptionFetchResult {
+        override suspend fun get(
+            url: String,
+            requestHeaders: Map<String, String>,
+            bodyLimit: Int,
+        ): app.kaihi.android.core.vpn.HttpTransportResponse {
             calls++
             started.complete(Unit)
             release.await()
-            return result
+            return response
         }
-    }
-
-    private class MemoryStore(initial: List<XraySubscription>) : XraySubscriptionStore {
-        private val state = MutableStateFlow(initial)
-        private val mutex = Mutex()
-        override val subscriptions: Flow<List<XraySubscription>> = state
-        val value: List<XraySubscription> get() = state.value
-        var updates = 0
-            private set
-
-        override suspend fun update(transform: (List<XraySubscription>) -> List<XraySubscription>): List<XraySubscription> =
-            mutex.withLock {
-                updates++
-                transform(state.value).also { state.value = it }
-            }
     }
 
     private companion object {

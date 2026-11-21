@@ -17,7 +17,7 @@ import app.kaihi.android.feature.dashboard.impl.ui.mvi.DashboardContract
 import app.kaihi.android.feature.dashboard.impl.ui.mvi.isBusy
 import app.kaihi.android.feature.dashboard.impl.ui.mvi.isConnected
 import app.kaihi.android.platform.ui.icons.KaihiIcons
-import app.kaihi.android.platform.ui.theme.size.dimens
+import app.kaihi.android.platform.ui.theme.dimens
 
 @Composable
 internal fun ConnectionToggle(
@@ -38,10 +38,10 @@ internal fun ConnectionToggle(
             .size(dimens.xxl + dimens.xxl)
             .clip(CircleShape)
             .background(containerColor)
-            .clickable(enabled = !state.isBusy, onClick = onClick),
+            .clickable(enabled = !state.engineState.isBusy, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        if (state.isBusy) {
+        if (state.engineState.isBusy) {
             CircularProgressIndicator(color = iconColor)
         } else {
             Icon(

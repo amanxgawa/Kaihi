@@ -19,10 +19,10 @@ import androidx.compose.ui.text.font.FontWeight
 import app.kaihi.android.R
 import app.kaihi.android.feature.wizard.impl.ui.mvi.WizardContract.ServerAuthMethod
 import app.kaihi.android.feature.wizard.impl.ui.mvi.WizardContract.SetupStrategy
-import app.kaihi.android.platform.mode.AppMode
+import app.kaihi.android.core.mode.AppMode
 import app.kaihi.android.feature.wizard.impl.ui.screen.components.WizardPage
 import app.kaihi.android.platform.ui.theme.JetBrainsMono
-import app.kaihi.android.platform.ui.theme.size.dimens
+import app.kaihi.android.platform.ui.theme.dimens
 
 @Composable
 internal fun ConfirmationPage(
@@ -63,7 +63,6 @@ internal fun ConfirmationPage(
             label = stringResource(R.string.wizard_confirmation_strategy_label),
             value = when (setupStrategy) {
                 SetupStrategy.FAST_START -> stringResource(R.string.wizard_strategy_fast_start_title)
-                SetupStrategy.NAIVEPROXY -> stringResource(R.string.wizard_strategy_resilience_title)
             }
         )
 

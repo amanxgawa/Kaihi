@@ -32,7 +32,7 @@ import app.kaihi.android.feature.importing.impl.ui.model.ImportPreviewUi
 import app.kaihi.android.feature.importing.impl.ui.model.PreviewLevel
 import app.kaihi.android.platform.ui.icons.KaihiIcons
 import app.kaihi.android.platform.ui.theme.KaihiTheme
-import app.kaihi.android.platform.ui.theme.size.dimens
+import app.kaihi.android.platform.ui.theme.dimens
 import app.kaihi.android.platform.ui.util.toFlagEmoji
 import java.util.Date
 import java.util.IllformedLocaleException

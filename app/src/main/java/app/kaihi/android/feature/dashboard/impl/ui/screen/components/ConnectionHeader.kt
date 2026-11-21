@@ -31,7 +31,7 @@ import app.kaihi.android.feature.dashboard.impl.ui.mvi.DashboardContract
 import app.kaihi.android.feature.dashboard.impl.ui.mvi.isBusy
 import app.kaihi.android.feature.dashboard.impl.ui.mvi.isConnected
 import app.kaihi.android.platform.ui.components.StatusBadge
-import app.kaihi.android.platform.ui.theme.size.dimens
+import app.kaihi.android.platform.ui.theme.dimens
 import kotlinx.coroutines.delay
 
 private const val SLOW_TRANSITION_HINT_DELAY_MS = 5_000L
@@ -81,14 +81,14 @@ private fun ColumnScope.SlowTransitionHint(state: DashboardContract.State) {
     val dimens = MaterialTheme.dimens
     var isSlow by remember(state.engineState) { mutableStateOf(false) }
     LaunchedEffect(state.engineState) {
-        if (state.isBusy) {
+        if (state.engineState.isBusy) {
             delay(SLOW_TRANSITION_HINT_DELAY_MS)
             isSlow = true
         }
     }
 
     AnimatedVisibility(
-        visible = state.isBusy && isSlow,
+        visible = state.engineState.isBusy && isSlow,
         enter = expandVertically(animationSpec = dashboardSpatialSpec(), expandFrom = Alignment.Top) +
             fadeIn(animationSpec = dashboardEffectsSpec()),
         exit = shrinkVertically(animationSpec = dashboardSpatialSpec(), shrinkTowards = Alignment.Top) +

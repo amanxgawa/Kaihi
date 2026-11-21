@@ -3,7 +3,7 @@ package app.kaihi.android.feature.dashboard.impl.ui.mvi
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import app.kaihi.android.core.vpn.XrayServiceProvider
+import app.kaihi.android.feature.dashboard.impl.domain.VpnSession
 import app.kaihi.android.platform.di.IoDispatcher
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -23,7 +23,7 @@ import kotlinx.coroutines.launch
 @Stable
 @HiltViewModel
 internal class XrayLogsViewModel @Inject constructor(
-    private val serviceProvider: XrayServiceProvider,
+    private val session: VpnSession,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
 ) : ViewModel() {
 
@@ -38,7 +38,7 @@ internal class XrayLogsViewModel @Inject constructor(
         // Off the main dispatcher: formatting and snapshotting are this screen's whole cost, and
         // none of it has to happen on the frame thread. Only the StateFlow write crosses back.
         viewModelScope.launch(ioDispatcher) {
-            serviceProvider.monitoring.logs
+            session.logs
                 .map { it.toDisplayLine() }
                 .onEach { line ->
                     if (buffer.size == MAX_LINES) buffer.removeFirst()

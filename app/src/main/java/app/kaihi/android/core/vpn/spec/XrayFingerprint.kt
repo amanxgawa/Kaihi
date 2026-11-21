@@ -9,5 +9,10 @@ enum class XrayFingerprint(val wireValue: String) {
     FIREFOX("firefox"),
     SAFARI("safari"),
     IOS("ios"),
-    ANDROID("android"),
+    ANDROID("android");
+
+    companion object {
+        fun fromWireValue(value: String?): XrayFingerprint? =
+            value?.let { v -> entries.firstOrNull { it.wireValue == v } }
+    }
 }

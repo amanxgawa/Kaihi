@@ -1,25 +1,30 @@
 package app.kaihi.android.feature.wizard.impl.ui.mvi
 
 import androidx.compose.runtime.Immutable
-import app.kaihi.android.core.vpn.XrayServerProtection
-import app.kaihi.android.platform.mode.AppMode
+import app.kaihi.android.core.mode.AppMode
 import app.kaihi.android.platform.ui.util.UiSecret
 import app.kaihi.android.platform.ui.util.UiText
 
 object WizardContract {
 
-    enum class SetupStrategy { FAST_START, NAIVEPROXY }
+    enum class SetupStrategy { FAST_START }
     enum class ServerAuthMethod { PASSWORD, SSH_KEY }
 
     enum class WizardPage { STRATEGY, SERVER_DATA, CONFIRMATION, DEPLOYMENT }
 
-    @Immutable
-    internal data class State(
-        val pages: List<WizardPage> = listOf(
+    fun pagesFor(mode: AppMode): List<WizardPage> = when (mode) {
+        AppMode.NORMAL -> listOf(
             WizardPage.SERVER_DATA,
             WizardPage.CONFIRMATION,
             WizardPage.DEPLOYMENT,
-        ),
+        )
+
+        AppMode.ADVANCED -> WizardPage.entries.toList()
+    }
+
+    @Immutable
+    internal data class State(
+        val pages: List<WizardPage> = pagesFor(AppMode.NORMAL),
         val setupStrategy: SetupStrategy = SetupStrategy.FAST_START,
         val serverAuthMethod: ServerAuthMethod = ServerAuthMethod.PASSWORD,
         val serverAddress: String = "",
@@ -28,12 +33,6 @@ object WizardContract {
         val sshPort: String = "22",
         val username: String = "root",
         val sshFingerprint: String = "",
-        val uuid: String = "",
-        val realityPublicKey: String = "",
-        val realityShortId: String = "",
-        val realityServerName: String = "",
-        val serverCountryCode: String? = null,
-        val serverProtection: XrayServerProtection? = null,
         val protectServer: Boolean = true,
         val serverArchitecture: String? = null,
         val connectionCheck: ConnectionCheckState = ConnectionCheckState.Idle,
@@ -82,11 +81,3 @@ internal val WizardContract.State.isSshValid: Boolean
             WizardContract.ServerAuthMethod.PASSWORD -> password.value.isNotBlank()
             WizardContract.ServerAuthMethod.SSH_KEY -> sshKey.value.isNotBlank()
         }
-
-internal val WizardContract.State.isConnectionProfileValid: Boolean
-    get() = UUID_PATTERN.matches(uuid) &&
-        realityPublicKey.isNotBlank() && realityShortId.isNotBlank() && realityServerName.isNotBlank()
-
-private val UUID_PATTERN = Regex(
-    "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
-)

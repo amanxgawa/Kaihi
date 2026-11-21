@@ -7,5 +7,4 @@ data class SshConfig(
     val expectedFingerprint: String? = null,
     val password: String? = null,
     val privateKey: String? = null,
-    val privateKeyPassphrase: String? = null
 )

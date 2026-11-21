@@ -11,7 +11,6 @@ import android.os.Message
 import android.os.Messenger
 import app.kaihi.android.core.vpn.XrayEngineState
 import app.kaihi.android.core.vpn.XrayFailure
-import app.kaihi.android.core.vpn.XrayLogLevel
 import app.kaihi.android.core.vpn.XrayLogMessage
 import app.kaihi.android.core.vpn.XrayMonitoring
 import app.kaihi.android.core.vpn.XrayTrafficStats
@@ -107,7 +106,7 @@ internal class RemoteXrayMonitoring @Inject constructor(
 
     override val sessionFingerprint: StateFlow<XrayFingerprint?> = events
         .filterIsInstance<TelemetryEvent.SessionServer>()
-        .map { event -> event.fingerprint.toFingerprint() }
+        .map { event -> XrayFingerprint.fromWireValue(event.fingerprint) }
         .stateIn(scope, SharingStarted.WhileSubscribed(UNBIND_GRACE_MS), null)
 
     override val runningSinceRealtime: StateFlow<Long?> = events
@@ -137,16 +136,12 @@ internal class RemoteXrayMonitoring @Inject constructor(
         else -> null
     }
 
-    private fun String?.toFingerprint(): XrayFingerprint? =
-        this?.let { wireValue -> XrayFingerprint.entries.firstOrNull { it.wireValue == wireValue } }
-
     private fun Flow<XrayLogMessage>.withDropMarkers(): Flow<XrayLogMessage> = flow {
         var expected = -1L
         collect { log ->
             if (expected >= 0 && log.sequence > expected) {
                 emit(
                     XrayLogMessage(
-                        level = XrayLogLevel.WARNING,
                         message = "… ${log.sequence - expected} log line(s) dropped …",
                         sequence = expected,
                     )

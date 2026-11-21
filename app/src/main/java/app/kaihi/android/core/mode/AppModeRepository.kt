@@ -1,0 +1,36 @@
+package app.kaihi.android.core.mode
+
+import app.kaihi.android.core.storage.AppStorage
+import app.kaihi.android.core.storage.ExperienceKeys
+import app.kaihi.android.core.storage.StorageDomain
+import javax.inject.Inject
+import javax.inject.Singleton
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+
+@Singleton
+class AppModeRepository @Inject constructor(
+    private val appStorage: AppStorage,
+) {
+
+    private val _mode = MutableStateFlow(readPersistedMode())
+    val mode: StateFlow<AppMode> = _mode.asStateFlow()
+
+    fun setMode(mode: AppMode) {
+        appStorage.putString(StorageDomain.EXPERIENCE, ExperienceKeys.ADVANCED_MODE_ENABLED, mode.toStoredValue())
+        _mode.value = mode
+    }
+
+    private fun readPersistedMode(): AppMode {
+        val stored = appStorage.getString(StorageDomain.EXPERIENCE, ExperienceKeys.ADVANCED_MODE_ENABLED)
+        return if (stored == ADVANCED_VALUE) AppMode.ADVANCED else AppMode.NORMAL
+    }
+
+    private fun AppMode.toStoredValue(): String = if (this == AppMode.ADVANCED) ADVANCED_VALUE else NORMAL_VALUE
+
+    private companion object {
+        const val ADVANCED_VALUE = "true"
+        const val NORMAL_VALUE = "false"
+    }
+}

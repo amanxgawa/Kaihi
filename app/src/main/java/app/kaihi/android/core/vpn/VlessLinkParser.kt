@@ -1,6 +1,6 @@
 package app.kaihi.android.core.vpn
 
-import app.kaihi.android.core.ssh.isSafeHostname
+import app.kaihi.android.core.security.isSafeHostname
 import app.kaihi.android.core.vpn.spec.XhttpMode
 import app.kaihi.android.core.vpn.spec.XrayFingerprint
 import app.kaihi.android.core.vpn.spec.XrayFingerprintSetting

@@ -1,7 +1,7 @@
 package app.kaihi.android.feature.wizard
 
 import app.kaihi.android.core.ssh.model.CommandResult
-import app.kaihi.android.feature.wizard.impl.domain.ssh.DetectServerArchCommand
+import app.kaihi.android.feature.wizard.impl.domain.command.DetectServerArchCommand
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Test

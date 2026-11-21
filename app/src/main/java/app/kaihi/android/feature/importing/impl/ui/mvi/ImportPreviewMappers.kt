@@ -1,6 +1,5 @@
 package app.kaihi.android.feature.importing.impl.ui.mvi
 
-import app.kaihi.android.core.vpn.XraySubscriptionUserInfo
 import app.kaihi.android.core.vpn.XrayVpnProfile
 import app.kaihi.android.feature.importing.impl.domain.ImportPreparation
 import app.kaihi.android.feature.importing.impl.domain.ImportPreview
@@ -84,13 +83,6 @@ private fun List<XrayVpnProfile>.toCountryGroups(): List<CountryGroupUi> {
                 .thenBy { it.key.orEmpty() },
         )
         .map { (countryCode, serverNames) -> CountryGroupUi(countryCode, serverNames) }
-}
-
-private fun XraySubscriptionUserInfo.usedBytes(): Long? {
-    if (uploadBytes == null && downloadBytes == null) return null
-    val upload = uploadBytes ?: 0L
-    val download = downloadBytes ?: 0L
-    return if (Long.MAX_VALUE - upload < download) Long.MAX_VALUE else upload + download
 }
 
 private const val THREE_DAYS_MILLIS = 3L * 24 * 60 * 60 * 1000

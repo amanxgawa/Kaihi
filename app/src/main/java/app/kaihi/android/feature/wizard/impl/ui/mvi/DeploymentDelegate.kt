@@ -4,7 +4,7 @@ import androidx.annotation.StringRes
 import app.kaihi.android.R
 import app.kaihi.android.feature.wizard.impl.domain.WizardSetupCoordinator
 import app.kaihi.android.feature.wizard.impl.domain.model.DeploymentEvent
-import app.kaihi.android.platform.mode.AppMode
+import app.kaihi.android.core.mode.AppMode
 import app.kaihi.android.platform.ui.mvi.ViewModelDelegate
 import app.kaihi.android.platform.ui.util.UiText
 import javax.inject.Inject
@@ -19,10 +19,6 @@ internal class DeploymentDelegate @Inject constructor(
     private var job: Job? = null
 
     fun start() {
-        if (currentState.setupStrategy != WizardContract.SetupStrategy.FAST_START) {
-            failBeforeStarting(R.string.wizard_error_strategy_unsupported)
-            return
-        }
         val architecture = currentState.serverArchitecture ?: run {
             failBeforeStarting(R.string.wizard_error_architecture_unknown)
             return
@@ -42,21 +38,7 @@ internal class DeploymentDelegate @Inject constructor(
                 )
             }
             events.collect { event ->
-                reduce {
-                    val next = copy(deployment = deployment.reduce(event))
-                    if (event is DeploymentEvent.Completed) {
-                        next.copy(
-                            uuid = event.credentials.uuid,
-                            realityPublicKey = event.credentials.publicKey,
-                            realityShortId = event.credentials.shortId,
-                            realityServerName = event.credentials.realityServerName,
-                            serverCountryCode = event.credentials.countryCode,
-                            serverProtection = event.credentials.protection,
-                        )
-                    } else {
-                        next
-                    }
-                }
+                reduce { copy(deployment = deployment.reduce(event)) }
             }
         }
     }

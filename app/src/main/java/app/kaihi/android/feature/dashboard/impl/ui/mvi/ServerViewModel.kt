@@ -3,10 +3,10 @@ package app.kaihi.android.feature.dashboard.impl.ui.mvi
 import androidx.compose.runtime.Stable
 import app.kaihi.android.R
 import app.kaihi.android.core.vpn.XrayEngineState
-import app.kaihi.android.core.vpn.XrayServiceProvider
 import app.kaihi.android.core.vpn.findServer
 import app.kaihi.android.feature.dashboard.impl.domain.PendingSettingsMonitor
 import app.kaihi.android.feature.dashboard.impl.domain.ServerLibraryCoordinator
+import app.kaihi.android.feature.dashboard.impl.domain.VpnSession
 import app.kaihi.android.platform.ui.mvi.MviViewModel
 import app.kaihi.android.platform.ui.util.UiText
 import dagger.assisted.Assisted
@@ -23,7 +23,7 @@ internal class ServerViewModel @AssistedInject constructor(
     @Assisted private val serverId: String,
     private val coordinator: ServerLibraryCoordinator,
     private val pendingSettingsMonitor: PendingSettingsMonitor,
-    private val serviceProvider: XrayServiceProvider,
+    private val session: VpnSession,
 ) : MviViewModel<ServerContract.State, ServerContract.Intent, ServerContract.Effect>(ServerContract.State()) {
 
     private var didNavigateBack = false
@@ -44,7 +44,7 @@ internal class ServerViewModel @AssistedInject constructor(
                 reduce { copy(showReconnectToApply = pendingServerId == serverId) }
             }
             .launchIn(scope)
-        serviceProvider.monitoring.state
+        session.state
             .onEach { engineState -> reduce { copy(engineState = engineState) } }
             .launchIn(scope)
     }
@@ -62,7 +62,7 @@ internal class ServerViewModel @AssistedInject constructor(
     }
 
     private suspend fun reconnectToApply() {
-        if (state.value.isBusy || state.value.engineState != XrayEngineState.RUNNING) return
+        if (state.value.engineState.isBusy || state.value.engineState != XrayEngineState.RUNNING) return
         if (!state.value.showReconnectToApply) return
         reduce { copy(engineState = XrayEngineState.STARTING, errorMessage = null) }
         pendingSettingsMonitor.restart(serverId).onFailure { error ->

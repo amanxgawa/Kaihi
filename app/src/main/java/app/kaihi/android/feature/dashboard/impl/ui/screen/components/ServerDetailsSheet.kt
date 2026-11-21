@@ -34,7 +34,7 @@ import app.kaihi.android.feature.dashboard.impl.ui.model.ServerDetailsUi
 import app.kaihi.android.platform.ui.components.ConfirmDialog
 import app.kaihi.android.platform.ui.icons.KaihiIcons
 import app.kaihi.android.platform.ui.theme.JetBrainsMono
-import app.kaihi.android.platform.ui.theme.size.dimens
+import app.kaihi.android.platform.ui.theme.dimens
 import app.kaihi.android.platform.ui.util.UiText
 
 @OptIn(ExperimentalMaterial3Api::class)

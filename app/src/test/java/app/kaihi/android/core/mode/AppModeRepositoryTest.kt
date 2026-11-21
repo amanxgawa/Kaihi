@@ -1,0 +1,56 @@
+package app.kaihi.android.core.mode
+
+import app.kaihi.android.core.storage.ExperienceKeys
+import app.kaihi.android.core.storage.InMemoryAppStorage
+import app.kaihi.android.core.storage.StorageDomain
+import org.junit.Assert.assertEquals
+import org.junit.Test
+
+class AppModeRepositoryTest {
+
+    @Test
+    fun `defaults to NORMAL when nothing is persisted`() {
+        val repository = AppModeRepository(InMemoryAppStorage())
+
+        assertEquals(AppMode.NORMAL, repository.mode.value)
+    }
+
+    @Test
+    fun `setMode is reflected immediately and survives a fresh repository over the same storage`() {
+        val storage = InMemoryAppStorage()
+        val repository = AppModeRepository(storage)
+
+        repository.setMode(AppMode.ADVANCED)
+        assertEquals(AppMode.ADVANCED, repository.mode.value)
+
+        val reloaded = AppModeRepository(storage)
+        assertEquals(AppMode.ADVANCED, reloaded.mode.value)
+    }
+
+    @Test
+    fun `switching back to NORMAL persists too, not just the first choice`() {
+        val storage = InMemoryAppStorage()
+        val repository = AppModeRepository(storage)
+
+        repository.setMode(AppMode.ADVANCED)
+        repository.setMode(AppMode.NORMAL)
+
+        assertEquals(AppMode.NORMAL, AppModeRepository(storage).mode.value)
+    }
+
+    /** Advanced mode unlocks a raw config editor and a server shell, so the fallback direction matters. */
+    @Test
+    fun `an unrecognized persisted value falls back to NORMAL`() {
+        listOf("", " ", "TRUE", "yes", "1", "advanced", "{}").forEach { stored ->
+            val storage = InMemoryAppStorage().apply {
+                putString(StorageDomain.EXPERIENCE, ExperienceKeys.ADVANCED_MODE_ENABLED, stored)
+            }
+
+            assertEquals(
+                "'$stored' must not be read as advanced mode",
+                AppMode.NORMAL,
+                AppModeRepository(storage).mode.value,
+            )
+        }
+    }
+}

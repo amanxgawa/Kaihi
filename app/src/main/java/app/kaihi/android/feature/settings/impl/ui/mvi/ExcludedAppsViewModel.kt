@@ -2,8 +2,8 @@ package app.kaihi.android.feature.settings.impl.ui.mvi
 
 import androidx.compose.runtime.Stable
 import app.kaihi.android.R
-import app.kaihi.android.core.vpn.VpnPreferences
 import app.kaihi.android.feature.settings.impl.domain.InstalledAppsRepository
+import app.kaihi.android.feature.settings.impl.domain.SettingsPreferences
 import app.kaihi.android.platform.ui.mvi.MviViewModel
 import app.kaihi.android.platform.ui.util.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,20 +18,20 @@ import timber.log.Timber
 @HiltViewModel
 internal class ExcludedAppsViewModel @Inject constructor(
     private val installedAppsRepository: InstalledAppsRepository,
-    private val vpnPreferences: VpnPreferences,
+    private val preferences: SettingsPreferences,
 ) : MviViewModel<ExcludedAppsContract.State, ExcludedAppsContract.Intent, ExcludedAppsContract.Effect>(
-    ExcludedAppsContract.State(excludedPackages = vpnPreferences.excludedPackages.value),
+    ExcludedAppsContract.State(excludedPackages = preferences.excludedPackages.value),
 ) {
 
     init {
-        vpnPreferences.excludedPackages
+        preferences.excludedPackages
             .onEach { packages -> reduce { copy(excludedPackages = packages) } }
             .launchIn(scope)
 
         scope.launch {
             try {
                 val apps = installedAppsRepository.listLaunchableApps()
-                val excludedPackages = vpnPreferences.excludedPackages.value
+                val excludedPackages = preferences.excludedPackages.value
                 val orderedApps = apps.partition { it.packageName in excludedPackages }
                     .let { (excluded, included) -> excluded + included }
                 reduce { copy(apps = orderedApps, isLoading = false) }
@@ -53,8 +53,8 @@ internal class ExcludedAppsViewModel @Inject constructor(
         when (intent) {
             is ExcludedAppsContract.Intent.QueryChanged -> reduce { copy(query = intent.query) }
             is ExcludedAppsContract.Intent.AppToggled -> {
-                val packages = vpnPreferences.excludedPackages.value
-                vpnPreferences.setExcludedPackages(
+                val packages = preferences.excludedPackages.value
+                preferences.setExcludedPackages(
                     if (intent.excluded) packages + intent.packageName else packages - intent.packageName,
                 )
             }
