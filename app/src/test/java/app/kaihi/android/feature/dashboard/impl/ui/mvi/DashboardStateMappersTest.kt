@@ -20,7 +20,7 @@ class DashboardStateMappersTest {
             name = "\uD83C\uDDF3\uD83C\uDDF1 Amsterdam",
             serverAddress = "server.example",
             serverPort = 443,
-            uuid = "123e4567-e89b-12d3-a456-426614174000",
+            credential = "123e4567-e89b-12d3-a456-426614174000",
             security = XraySecurity.Tls("cover.example"),
             addedAtMillis = 0L,
         )
@@ -106,7 +106,7 @@ class DashboardStateMappersTest {
                 name = "Server",
                 serverAddress = "server.example",
                 serverPort = 443,
-                uuid = "123e4567-e89b-12d3-a456-426614174000",
+                credential = "123e4567-e89b-12d3-a456-426614174000",
                 security = XraySecurity.Tls("cover.example"),
                 addedAtMillis = 0L,
             ),

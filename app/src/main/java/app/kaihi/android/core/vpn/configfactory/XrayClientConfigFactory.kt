@@ -22,10 +22,13 @@ import app.kaihi.android.core.vpn.spec.SystemPolicyObject
 import app.kaihi.android.core.vpn.spec.VlessOutboundSettings
 import app.kaihi.android.core.vpn.spec.VlessVnext
 import app.kaihi.android.core.vpn.spec.VlessVnextUser
+import app.kaihi.android.core.vpn.spec.TrojanOutboundSettings
+import app.kaihi.android.core.vpn.spec.TrojanServer
 import app.kaihi.android.core.vpn.spec.XrayConfig
 import app.kaihi.android.core.vpn.spec.XrayFlow
 import app.kaihi.android.core.vpn.spec.XrayFingerprint
 import app.kaihi.android.core.vpn.spec.XrayFingerprintSetting
+import app.kaihi.android.core.vpn.spec.XrayProtocol
 import app.kaihi.android.core.vpn.spec.XraySecurity
 import app.kaihi.android.core.vpn.spec.XrayTransport
 import app.kaihi.android.core.vpn.spec.candidates
@@ -157,25 +160,39 @@ object XrayClientConfigFactory {
         fingerprint: XrayFingerprint,
     ): XrayConfig {
         val proxyOutbound = OutboundObject(
-            protocol = "vless",
+            protocol = when (profile.protocol) {
+                XrayProtocol.VLESS -> "vless"
+                XrayProtocol.TROJAN -> "trojan"
+            },
             tag = PROXY_OUTBOUND_TAG,
-            settings = VlessOutboundSettings(
-                vnext = listOf(
-                    VlessVnext(
-                        address = profile.serverAddress,
-                        port = profile.serverPort,
-                        users = listOf(
-                            // Vision only applies to raw TCP. It silently breaks XHTTP despite
-                            // the TCP handshake succeeding, so it is only set for Raw transport.
-                            VlessVnextUser(
-                                id = profile.uuid,
-                                encryption = "none",
-                                flow = (profile.transport as? XrayTransport.Raw)?.flow?.wireValue,
+            settings = when (profile.protocol) {
+                XrayProtocol.VLESS -> VlessOutboundSettings(
+                    vnext = listOf(
+                        VlessVnext(
+                            address = profile.serverAddress,
+                            port = profile.serverPort,
+                            users = listOf(
+                                // Vision only applies to raw TCP. It silently breaks XHTTP despite
+                                // the TCP handshake succeeding, so it is only set for Raw transport.
+                                VlessVnextUser(
+                                    id = profile.credential,
+                                    encryption = "none",
+                                    flow = (profile.transport as? XrayTransport.Raw)?.flow?.wireValue,
+                                ),
                             ),
                         ),
                     ),
-                ),
-            ).toJsonObject(),
+                ).toJsonObject()
+                XrayProtocol.TROJAN -> TrojanOutboundSettings(
+                    servers = listOf(
+                        TrojanServer(
+                            address = profile.serverAddress,
+                            port = profile.serverPort,
+                            password = profile.credential,
+                        ),
+                    ),
+                ).toJsonObject()
+            },
             streamSettings = XrayTransportFactory.streamSettings(
                 transport = profile.transport,
                 security = profile.security,

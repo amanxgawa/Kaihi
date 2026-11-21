@@ -27,7 +27,7 @@ class ImportParserSourceGuardTest {
             "ImportInput.kt",
             "ImportParsingUtils.kt",
             "SubscriptionMetadataParser.kt",
-            "VlessLinkParser.kt",
+            "ShareLinkParser.kt",
         )
     }
 }

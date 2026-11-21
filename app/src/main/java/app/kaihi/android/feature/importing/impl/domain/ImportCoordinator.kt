@@ -6,14 +6,14 @@ import app.kaihi.android.core.vpn.SubscriptionFetchFailure
 import app.kaihi.android.core.vpn.SubscriptionFetchResult
 import app.kaihi.android.core.vpn.SubscriptionFetcher
 import app.kaihi.android.core.vpn.SubscriptionMetadata
-import app.kaihi.android.core.vpn.VlessLinkResult
+import app.kaihi.android.core.vpn.ShareLinkResult
 import app.kaihi.android.core.vpn.XraySubscription
 import app.kaihi.android.core.vpn.XraySubscriptionSource
 import app.kaihi.android.core.vpn.XraySubscriptionStore
 import app.kaihi.android.core.vpn.XrayVpnProfile
 import app.kaihi.android.core.vpn.classifyImportInput
 import app.kaihi.android.core.vpn.newXrayId
-import app.kaihi.android.core.vpn.parseVlessLink
+import app.kaihi.android.core.vpn.parseShareLink
 import java.net.URI
 import javax.inject.Inject
 import kotlinx.coroutines.flow.first
@@ -30,7 +30,7 @@ internal sealed interface ImportPreview {
     val profiles: List<XrayVpnProfile>
     val counts: ImportCounts
 
-    /** Pasted vless:// links. `counts.duplicates` includes links already in Imported at prepare time. */
+    /** Pasted share links. `counts.duplicates` includes links already in Imported at prepare time. */
     data class Links(
         override val profiles: List<XrayVpnProfile>,
         override val counts: ImportCounts,
@@ -232,10 +232,10 @@ internal class ImportCoordinator @Inject constructor(
         var unsupported = 0
         var invalid = 0
         lines.forEach { line ->
-            when (val result = parseVlessLink(line, nowMillis)) {
-                is VlessLinkResult.Success -> profiles += result.profile
-                is VlessLinkResult.Unsupported -> unsupported++
-                is VlessLinkResult.Invalid -> invalid++
+            when (val result = parseShareLink(line, nowMillis)) {
+                is ShareLinkResult.Success -> profiles += result.profile
+                is ShareLinkResult.Unsupported -> unsupported++
+                is ShareLinkResult.Invalid -> invalid++
             }
         }
         return ParsedLinks(
@@ -252,7 +252,8 @@ internal class ImportCoordinator @Inject constructor(
         firstOrNull { (it.source as? XraySubscriptionSource.Remote)?.url == url }
 
     private fun XrayVpnProfile.matchesImport(other: XrayVpnProfile): Boolean =
-        serverAddress == other.serverAddress && serverPort == other.serverPort && uuid == other.uuid
+        protocol == other.protocol && serverAddress == other.serverAddress &&
+            serverPort == other.serverPort && credential == other.credential
 
     private data class ParsedLinks(
         val profiles: List<XrayVpnProfile>,

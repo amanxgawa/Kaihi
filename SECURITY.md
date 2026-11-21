@@ -59,8 +59,8 @@ Whether REALITY itself is distinguishable on the wire is an open research questi
 - defeating host key verification, or weakening the trust-on-first-use flow;
 - leaking SSH credentials or profile material, through logs, Android backups, inter-process
   communication, or a generated `toString`;
-- unsafe parsing of untrusted `vless://` links or subscription responses, or leaking a subscription
-  URL;
+- unsafe parsing of untrusted `vless://` or `trojan://` links or subscription responses, or leaking a
+  subscription URL;
 - weakening the generated Xray configuration: losing a blackhole rule, degrading REALITY masking,
   or making a connection more distinguishable than intended;
 - reaching the loopback SOCKS inbound from another application on the device;

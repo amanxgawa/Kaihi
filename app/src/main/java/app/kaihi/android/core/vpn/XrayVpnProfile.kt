@@ -1,7 +1,9 @@
 package app.kaihi.android.core.vpn
 
+import app.kaihi.android.core.vpn.spec.XrayProtocol
 import app.kaihi.android.core.vpn.spec.XraySecurity
 import app.kaihi.android.core.vpn.spec.XrayTransport
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -11,7 +13,8 @@ data class XrayVpnProfile(
     val ssh: XraySshAccess? = null,
     val serverAddress: String,
     val serverPort: Int,
-    val uuid: String,
+    val protocol: XrayProtocol = XrayProtocol.VLESS,
+    @SerialName("uuid") val credential: String,
     // No default: every real profile needs real REALITY key material from a deployment.
     val security: XraySecurity,
     val transport: XrayTransport = XrayTransport.Xhttp(),
@@ -23,6 +26,13 @@ data class XrayVpnProfile(
     val fragmentEnabled: Boolean = false,
     val serverProtection: XrayServerProtection? = null,
 ) {
+    override fun toString(): String =
+        "XrayVpnProfile(id=$id, name=$name, ssh=$ssh, serverAddress=$serverAddress, " +
+            "serverPort=$serverPort, protocol=$protocol, credential=<redacted>, security=$security, " +
+            "transport=$transport, addedAtMillis=$addedAtMillis, countryCode=$countryCode, " +
+            "muxEnabled=$muxEnabled, muxConcurrency=$muxConcurrency, fragmentEnabled=$fragmentEnabled, " +
+            "serverProtection=$serverProtection)"
+
     companion object {
         const val DEFAULT_MUX_CONCURRENCY = 8
     }

@@ -4,6 +4,7 @@ import app.kaihi.android.core.vpn.configfactory.XrayClientConfigFactory
 import app.kaihi.android.core.vpn.spec.XrayFingerprint
 import app.kaihi.android.core.vpn.spec.XrayFingerprintSetting
 import app.kaihi.android.core.vpn.spec.XrayFlow
+import app.kaihi.android.core.vpn.spec.XrayProtocol
 import app.kaihi.android.core.vpn.spec.XraySecurity
 import app.kaihi.android.core.vpn.spec.XrayTransport
 import kotlinx.serialization.json.Json
@@ -42,6 +43,36 @@ class XrayClientConfigStructureTest {
     @Test
     fun `raw transport without a flow omits the field entirely`() {
         assertNull(firstUser(config(transport = XrayTransport.Raw()))["flow"])
+    }
+
+    @Test
+    fun `Trojan outbound uses password servers and preserves client safeguards`() {
+        val trojanProfile = profile(transport = XrayTransport.Raw()).copy(
+            protocol = XrayProtocol.TROJAN,
+            credential = "p@ss word",
+        )
+        val root = Json.parseToJsonElement(XrayClientConfigFactory.build(trojanProfile).toJson()).jsonObject
+        val outbound = root.outbound("proxy")
+        val expectedSettings = Json.parseToJsonElement(
+            """{"servers":[{"address":"proxy.example","port":443,"password":"p@ss word"}]}""",
+        ).jsonObject
+        val inbounds = root.getValue("inbounds").jsonArray.map { it.jsonObject }
+        val socksSettings = inbounds.single().getValue("settings").jsonObject
+        val account = socksSettings.getValue("accounts").jsonArray.single().jsonObject
+        val rules = root.routing().getValue("rules").jsonArray.map { it.jsonObject }
+
+        assertEquals("trojan", outbound.getValue("protocol").jsonPrimitive.content)
+        assertEquals(expectedSettings, outbound.getValue("settings").jsonObject)
+        assertEquals("password", socksSettings.getValue("auth").jsonPrimitive.content)
+        assertTrue(account.getValue("pass").jsonPrimitive.content.isNotEmpty())
+        assertTrue(
+            "UDP/443 blackhole rule is missing",
+            rules.any {
+                it.outboundTag() == "block" &&
+                    it["network"]?.jsonPrimitive?.content == "udp" &&
+                    it["port"]?.jsonPrimitive?.content == "443"
+            },
+        )
     }
 
     @Test
@@ -379,7 +410,7 @@ class XrayClientConfigStructureTest {
         name = "test",
         serverAddress = "proxy.example",
         serverPort = 443,
-        uuid = "123e4567-e89b-12d3-a456-426614174000",
+        credential = "123e4567-e89b-12d3-a456-426614174000",
         security = XraySecurity.Reality(
             serverName = "www.example.com",
             publicKey = "public-key",

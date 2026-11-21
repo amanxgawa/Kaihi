@@ -13,6 +13,14 @@ class IncomingImportTextTest {
     }
 
     @Test
+    fun `view intent accepts trojan links`() {
+        val link = "trojan://pw@host:443#x"
+
+        assertEquals(link, incomingImportText(VIEW, link, null, null))
+        assertEquals("TROJAN://pw@host:443#x", incomingImportText(VIEW, "TROJAN://pw@host:443#x", null, null))
+    }
+
+    @Test
     fun `view intent compares vless scheme case insensitively`() {
         val link = "VLESS://uuid@host:443"
 

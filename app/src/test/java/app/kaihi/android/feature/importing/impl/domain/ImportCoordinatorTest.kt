@@ -8,14 +8,14 @@ import app.kaihi.android.core.vpn.SubscriptionFetchFailure
 import app.kaihi.android.core.vpn.SubscriptionFetchResult
 import app.kaihi.android.core.vpn.SubscriptionFetcher
 import app.kaihi.android.core.vpn.SubscriptionMetadata
-import app.kaihi.android.core.vpn.VlessLinkResult
+import app.kaihi.android.core.vpn.ShareLinkResult
 import app.kaihi.android.core.vpn.XraySubscription
 import app.kaihi.android.core.vpn.XraySubscriptionSource
 import app.kaihi.android.core.vpn.XraySubscriptionStore
 import app.kaihi.android.core.vpn.XraySubscriptionUserInfo
 import app.kaihi.android.core.vpn.XrayVpnProfile
 import app.kaihi.android.core.vpn.VpnPreferences
-import app.kaihi.android.core.vpn.parseVlessLink
+import app.kaihi.android.core.vpn.parseShareLink
 import java.io.IOException
 import java.net.SocketTimeoutException
 import kotlinx.coroutines.flow.first
@@ -288,7 +288,7 @@ class ImportCoordinatorTest {
     }
 
     private fun parseProfile(link: String): XrayVpnProfile =
-        (parseVlessLink(link, 1L) as VlessLinkResult.Success).profile
+        (parseShareLink(link, 1L) as ShareLinkResult.Success).profile
 
     private suspend fun TestScope.fixture(
         initial: List<XraySubscription> = emptyList(),

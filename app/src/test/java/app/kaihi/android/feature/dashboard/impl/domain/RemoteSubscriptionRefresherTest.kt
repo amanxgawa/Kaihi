@@ -39,7 +39,7 @@ class RemoteSubscriptionRefresherTest {
             id = "saved-id",
             name = "My server name",
             address = "node.example",
-            uuid = UUID_ONE,
+            credential = UUID_ONE,
             security = XraySecurity.Reality(
                 serverName = "old-cover.example",
                 publicKey = "old-key",
@@ -233,7 +233,7 @@ class RemoteSubscriptionRefresherTest {
         id: String,
         name: String,
         address: String,
-        uuid: String,
+        credential: String,
         security: XraySecurity = XraySecurity.Reality("old-cover.example", "old-key", "aa11"),
         transport: XrayTransport = XrayTransport.Raw(),
         addedAtMillis: Long = 10L,
@@ -246,7 +246,7 @@ class RemoteSubscriptionRefresherTest {
         name = name,
         serverAddress = address,
         serverPort = 443,
-        uuid = uuid,
+        credential = credential,
         security = security,
         transport = transport,
         addedAtMillis = addedAtMillis,
@@ -256,9 +256,9 @@ class RemoteSubscriptionRefresherTest {
         fragmentEnabled = fragmentEnabled,
     )
 
-    private fun realityLink(uuid: String, address: String, name: String): String {
+    private fun realityLink(credential: String, address: String, name: String): String {
         val encodedName = name.replace(" ", "%20")
-        return "vless://$uuid@$address:443?security=reality&sni=cover.example&pbk=$PUBLIC_KEY&sid=0011#$encodedName"
+        return "vless://$credential@$address:443?security=reality&sni=cover.example&pbk=$PUBLIC_KEY&sid=0011#$encodedName"
     }
 
     private suspend fun TestScope.newStore(initial: List<XraySubscription>): XraySubscriptionStore {

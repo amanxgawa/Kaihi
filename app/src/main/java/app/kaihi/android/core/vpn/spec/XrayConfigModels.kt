@@ -303,8 +303,23 @@ data class VlessOutboundSettings(
     val vnext: List<VlessVnext>
 )
 
+@Serializable
+data class TrojanServer(
+    val address: String,
+    val port: Int,
+    val password: String,
+)
+
+@Serializable
+data class TrojanOutboundSettings(
+    val servers: List<TrojanServer>,
+)
+
 fun VlessInboundSettings.toJsonObject(): JsonObject =
     XrayJson.default.encodeToJsonElement(VlessInboundSettings.serializer(), this).jsonObject
 
 fun VlessOutboundSettings.toJsonObject(): JsonObject =
     XrayJson.default.encodeToJsonElement(VlessOutboundSettings.serializer(), this).jsonObject
+
+fun TrojanOutboundSettings.toJsonObject(): JsonObject =
+    XrayJson.default.encodeToJsonElement(TrojanOutboundSettings.serializer(), this).jsonObject
