@@ -8,11 +8,10 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -21,6 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,8 +30,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.kaihi.android.R
 import app.kaihi.android.feature.importing.impl.ui.mvi.ImportContract
 import app.kaihi.android.feature.importing.impl.ui.mvi.ImportViewModel
+import app.kaihi.android.feature.importing.impl.ui.model.ImportPreviewUi
 import app.kaihi.android.feature.importing.impl.ui.screen.components.ImportChooseContent
 import app.kaihi.android.feature.importing.impl.ui.screen.components.ImportPreviewContent
+import app.kaihi.android.platform.navigation.LocalBottomSheetChrome
 import app.kaihi.android.platform.ui.theme.dimens
 import app.kaihi.android.platform.ui.theme.kaihiEffectsSpec
 import app.kaihi.android.platform.ui.theme.kaihiSpatialSpec
@@ -76,15 +78,20 @@ internal fun ImportSheet(
         else -> ImportStep.CHOOSE
     }
     val dimens = MaterialTheme.dimens
+    val chrome = LocalBottomSheetChrome.current
+    val preview = state.preview
+    val pinned = step == ImportStep.PREVIEW && preview != null &&
+        preview.kind != ImportPreviewUi.Kind.SINGLE_SERVER
+    SideEffect { chrome?.isPinned = pinned }
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .verticalScroll(rememberScrollState())
             .padding(horizontal = dimens.l)
             .padding(bottom = dimens.l),
     ) {
         AnimatedContent(
+            modifier = Modifier.fillMaxWidth(),
             targetState = step,
             transitionSpec = {
                 (fadeIn(animationSpec = kaihiEffectsSpec()) togetherWith
@@ -116,7 +123,7 @@ internal fun ImportSheet(
                     },
                 )
                 ImportStep.PREVIEW -> ImportPreviewContent(
-                    preview = state.preview,
+                    preview = preview,
                     alreadyAdded = state.alreadyAdded,
                     expandedGroups = state.expandedGroups,
                     isAdding = state.isAdding,
@@ -124,7 +131,12 @@ internal fun ImportSheet(
                     onDismiss = onClose,
                     onGroupToggled = { viewModel.processIntent(ImportContract.Intent.GroupToggled(it)) },
                     onShowExisting = { viewModel.processIntent(ImportContract.Intent.ShowExistingRequested) },
-                    modifier = Modifier.fillMaxWidth(),
+                    fillHeight = pinned,
+                    modifier = if (pinned) {
+                        Modifier.fillMaxWidth().fillMaxHeight()
+                    } else {
+                        Modifier.fillMaxWidth()
+                    },
                 )
             }
         }

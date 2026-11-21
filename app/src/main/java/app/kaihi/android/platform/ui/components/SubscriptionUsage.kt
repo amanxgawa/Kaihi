@@ -4,6 +4,7 @@ import android.text.format.DateFormat
 import android.text.format.Formatter
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -83,6 +84,7 @@ fun SubscriptionUsageCard(
     shape: Shape,
     modifier: Modifier = Modifier,
     containerColor: Color = MaterialTheme.colorScheme.surfaceContainerLow,
+    contentPadding: PaddingValues = PaddingValues(horizontal = MaterialTheme.dimens.l, vertical = MaterialTheme.dimens.m),
 ) {
     val dimens = MaterialTheme.dimens
     val colors = MaterialTheme.colorScheme
@@ -93,7 +95,7 @@ fun SubscriptionUsageCard(
         color = containerColor,
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = dimens.l, vertical = dimens.m),
+            modifier = Modifier.padding(contentPadding),
             verticalArrangement = Arrangement.spacedBy(dimens.s),
         ) {
             usage.usedBytes?.let { used ->

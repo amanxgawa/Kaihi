@@ -1,12 +1,19 @@
 package app.kaihi.android.platform.navigation
 
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.rememberLifecycleOwner
 import androidx.navigation3.runtime.NavEntry
@@ -17,6 +24,14 @@ import androidx.navigation3.scene.OverlayScene
 import androidx.navigation3.scene.Scene
 import androidx.navigation3.scene.SceneStrategy
 import androidx.navigation3.scene.SceneStrategyScope
+
+@Stable
+class BottomSheetChrome internal constructor() {
+    /** When true the sheet has no drag handle and ignores drag gestures. */
+    var isPinned: Boolean by mutableStateOf(false)
+}
+
+val LocalBottomSheetChrome = staticCompositionLocalOf<BottomSheetChrome?> { null }
 
 class BottomSheetSceneStrategy<T : Any> : SceneStrategy<T> {
 
@@ -54,9 +69,18 @@ internal class BottomSheetScene<T : Any>(
 
     override val content: @Composable (() -> Unit) = {
         val state = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        val chrome = remember { BottomSheetChrome() }
         SideEffect { sheetState = state }
-        ModalBottomSheet(onDismissRequest = onBack, sheetState = state) {
-            CompositionLocalProvider(LocalLifecycleOwner provides rememberLifecycleOwner()) {
+        ModalBottomSheet(
+            onDismissRequest = onBack,
+            sheetState = state,
+            sheetGesturesEnabled = !chrome.isPinned,
+            dragHandle = if (chrome.isPinned) null else { { BottomSheetDefaults.DragHandle() } },
+        ) {
+            CompositionLocalProvider(
+                LocalLifecycleOwner provides rememberLifecycleOwner(),
+                LocalBottomSheetChrome provides chrome,
+            ) {
                 entry.Content()
             }
         }

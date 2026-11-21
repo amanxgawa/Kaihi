@@ -110,36 +110,30 @@ internal fun SubscriptionEditorSheet(
             val hasDetails = trafficValue != null || expiryMillis != null || editor.updateIntervalHours != null ||
                 lastUpdated != null || editor.announce != null
             if (hasDetails) {
-                Surface(
-                    shape = MaterialTheme.shapes.large,
-                    color = MaterialTheme.colorScheme.surfaceContainer,
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(dimens.m),
                 ) {
-                    Column(
-                        modifier = Modifier.padding(dimens.l),
-                        verticalArrangement = Arrangement.spacedBy(dimens.m),
-                    ) {
-                        trafficValue?.let { EditorDetailRow(R.string.dashboard_subscription_detail_traffic, it) }
-                        expiryMillis?.let { millis ->
-                            EditorDetailRow(
-                                R.string.dashboard_subscription_detail_expiry,
-                                DateFormat.getDateFormat(context).format(Date(millis)),
-                            )
-                        }
-                        editor.updateIntervalHours?.let { hours ->
-                            EditorDetailRow(
-                                R.string.dashboard_subscription_detail_refresh_interval,
-                                stringResource(R.string.dashboard_subscription_detail_interval_value, hours),
-                            )
-                        }
-                        lastUpdated?.let { EditorDetailRow(R.string.dashboard_subscription_detail_last_updated, it) }
-                        editor.announce?.let { announce ->
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                            Text(
-                                text = announce,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                        }
+                    trafficValue?.let { EditorDetailRow(R.string.dashboard_subscription_detail_traffic, it) }
+                    expiryMillis?.let { millis ->
+                        EditorDetailRow(
+                            R.string.dashboard_subscription_detail_expiry,
+                            DateFormat.getDateFormat(context).format(Date(millis)),
+                        )
+                    }
+                    editor.updateIntervalHours?.let { hours ->
+                        EditorDetailRow(
+                            R.string.dashboard_subscription_detail_refresh_interval,
+                            stringResource(R.string.dashboard_subscription_detail_interval_value, hours),
+                        )
+                    }
+                    lastUpdated?.let { EditorDetailRow(R.string.dashboard_subscription_detail_last_updated, it) }
+                    editor.announce?.let { announce ->
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                        Text(
+                            text = announce,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
                     }
                 }
             }
