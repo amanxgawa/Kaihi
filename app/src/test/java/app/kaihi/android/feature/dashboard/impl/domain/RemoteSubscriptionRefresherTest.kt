@@ -106,17 +106,17 @@ class RemoteSubscriptionRefresherTest {
     fun `overlapping endpoints keep saved choices and take refreshed endpoints`() {
         val a = endpoint("a.example.com")
         val b = endpoint("b.example.com")
-        val c = endpoint("c.example.com")
-        val existing = profile("x", "NL", a.address, a.credential, muxEnabled = true)
+        val d = endpoint("d.example.com")
+        val existing = profile("n", "NL", a.address, a.credential, muxEnabled = true)
             .copy(endpoints = listOf(a, b))
         val refreshed = profile("new", "NL 2", b.address, b.credential)
-            .copy(endpoints = listOf(b, c))
+            .copy(endpoints = listOf(b, d))
 
         val updated = mergeRefreshedProfiles(listOf(refreshed), listOf(existing)).single()
 
-        assertEquals("x", updated.id)
+        assertEquals("n", updated.id)
         assertTrue(updated.muxEnabled)
-        assertEquals(listOf(b, c), updated.endpoints)
+        assertEquals(listOf(b, d), updated.endpoints)
         assertEquals("NL 2", updated.name)
     }
 
@@ -138,19 +138,38 @@ class RemoteSubscriptionRefresherTest {
     }
 
     @Test
-    fun `later parsed row sharing any endpoint is dropped`() {
+    fun `later parsed row with the same endpoint set is dropped`() {
         val a = endpoint("a.example.com")
         val b = endpoint("b.example.com")
-        val existing = profile("x", "NL", a.address, a.credential).copy(endpoints = listOf(a))
+        val existing = profile("x", "NL", a.address, a.credential).copy(endpoints = listOf(a, b))
         val first = existing.copy(id = "new-first", name = "First")
-        val second = existing.copy(id = "new-second", name = "Second", endpoints = listOf(a, b))
+        val second = existing.copy(id = "new-second", name = "Second", endpoints = listOf(b, a))
 
         val updated = mergeRefreshedProfiles(listOf(first, second), listOf(existing))
 
         assertEquals(1, updated.size)
         assertEquals("x", updated.single().id)
         assertEquals("First", updated.single().name)
-        assertEquals(listOf(a), updated.single().endpoints)
+        assertEquals(listOf(a, b), updated.single().endpoints)
+    }
+
+    @Test
+    fun `Fastest and NL keep their own ids regardless of refreshed order`() {
+        val a = endpoint("a.example.com")
+        val b = endpoint("b.example.com")
+        val c = endpoint("c.example.com")
+        val fastest = profile("f", "Fastest", a.address, a.credential).copy(endpoints = listOf(a, b, c))
+        val nl = profile("n", "NL", a.address, a.credential).copy(endpoints = listOf(a))
+        val refreshedFastest = fastest.copy(id = "new-fastest")
+        val refreshedNl = nl.copy(id = "new-nl")
+
+        listOf(listOf(refreshedFastest, refreshedNl), listOf(refreshedNl, refreshedFastest)).forEach { parsed ->
+            val updated = mergeRefreshedProfiles(parsed, listOf(fastest, nl))
+
+            assertEquals(parsed.map { it.name }, updated.map { it.name })
+            assertEquals(mapOf("Fastest" to "f", "NL" to "n"), updated.associate { it.name to it.id })
+            assertEquals(parsed.map { it.endpoints }, updated.map { it.endpoints })
+        }
     }
 
     @Test

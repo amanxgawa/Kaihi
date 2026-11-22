@@ -13,9 +13,9 @@ import app.kaihi.android.core.vpn.XraySubscriptionSource
 import app.kaihi.android.core.vpn.XraySubscriptionStore
 import app.kaihi.android.core.vpn.XrayVpnProfile
 import app.kaihi.android.core.vpn.classifyImportInput
+import app.kaihi.android.core.vpn.hasSameEndpointsAs
 import app.kaihi.android.core.vpn.newXrayId
 import app.kaihi.android.core.vpn.parseShareLink
-import app.kaihi.android.core.vpn.sharesEndpointWith
 import java.net.URI
 import javax.inject.Inject
 import kotlinx.coroutines.flow.first
@@ -102,11 +102,11 @@ internal class ImportCoordinator @Inject constructor(
         val uniqueProfiles = mutableListOf<XrayVpnProfile>()
         var duplicates = 0
         parsed.profiles.forEach { profile ->
-            if (uniqueProfiles.any { it.sharesEndpointWith(profile) }) {
+            if (uniqueProfiles.any { it.hasSameEndpointsAs(profile) }) {
                 duplicates++
             } else {
                 uniqueProfiles += profile
-                if (importedProfiles.any { it.sharesEndpointWith(profile) }) duplicates++
+                if (importedProfiles.any { it.hasSameEndpointsAs(profile) }) duplicates++
             }
         }
         return ImportPreparation.Ready(
@@ -140,7 +140,7 @@ internal class ImportCoordinator @Inject constructor(
         val uniqueProfiles = mutableListOf<XrayVpnProfile>()
         var duplicates = 0
         parsed.profiles.forEach { profile ->
-            if (uniqueProfiles.any { it.sharesEndpointWith(profile) }) duplicates++ else uniqueProfiles += profile
+            if (uniqueProfiles.any { it.hasSameEndpointsAs(profile) }) duplicates++ else uniqueProfiles += profile
         }
         val counts = parsed.counts.copy(duplicates = duplicates, truncated = fetched.truncated)
         if (uniqueProfiles.isEmpty()) return ImportPreparation.NothingImportable(counts)
@@ -166,7 +166,7 @@ internal class ImportCoordinator @Inject constructor(
             val added = mutableListOf<XrayVpnProfile>()
             var duplicates = 0
             preview.profiles.forEach { profile ->
-                if (knownProfiles.any { it.sharesEndpointWith(profile) }) {
+                if (knownProfiles.any { it.hasSameEndpointsAs(profile) }) {
                     duplicates++
                 } else {
                     knownProfiles += profile

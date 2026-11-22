@@ -3,6 +3,7 @@ package app.kaihi.android.core.vpn
 import app.kaihi.android.core.vpn.spec.XrayFingerprint
 import app.kaihi.android.core.vpn.spec.XrayFingerprintSetting
 import app.kaihi.android.core.vpn.spec.XraySecurity
+import app.kaihi.android.core.vpn.spec.XrayTransport
 import kotlinx.serialization.encodeToString
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -56,6 +57,22 @@ class XrayEndpointTest {
         assertEquals(profile.endpoints[1], transformed.endpoints[1])
         assertEquals(XrayFingerprintSetting.Fixed(XrayFingerprint.CHROME), transformed.endpoints[2].realityFingerprint())
         assertEquals(null, profile(endpoints = listOf(testEndpoint(security = XraySecurity.Tls("tls.example")))).realityFingerprint)
+    }
+
+    @Test
+    fun `same endpoint sets ignore order and repeated endpoints but require every server`() {
+        val a = testEndpoint(address = "a.example.com", transport = XrayTransport.Raw())
+        val b = testEndpoint(address = "b.example.com", transport = XrayTransport.Raw())
+        val both = profile(listOf(a, b))
+        val single = profile(listOf(a))
+
+        assertTrue(both.hasSameEndpointsAs(profile(listOf(b, a))))
+        assertFalse(both.hasSameEndpointsAs(single))
+        assertFalse(single.hasSameEndpointsAs(both))
+        assertTrue(single.hasSameEndpointsAs(profile(listOf(a, a))))
+        assertTrue(profile(listOf(a, a)).hasSameEndpointsAs(single))
+        assertFalse(single.hasSameEndpointsAs(profile(listOf(a.copy(transport = XrayTransport.Xhttp())))))
+        assertTrue(single.hasSameEndpointsAs(profile(listOf(a.copy(security = XraySecurity.Tls("tls.example"))))))
     }
 
     private fun profile(endpoints: List<XrayEndpoint>) = XrayVpnProfile(

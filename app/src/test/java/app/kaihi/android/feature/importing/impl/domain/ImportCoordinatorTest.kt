@@ -18,12 +18,21 @@ import app.kaihi.android.core.vpn.XrayVpnProfile
 import app.kaihi.android.core.vpn.XrayJsonSubscription
 import app.kaihi.android.core.vpn.VpnPreferences
 import app.kaihi.android.core.vpn.parseShareLink
+import app.kaihi.android.core.vpn.spec.XrayProtocol
+import app.kaihi.android.core.vpn.spec.XraySecurity
+import app.kaihi.android.core.vpn.spec.XrayTransport
 import java.io.IOException
 import java.net.SocketTimeoutException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
+import kotlinx.serialization.json.putJsonObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -70,6 +79,16 @@ class ImportCoordinatorTest {
     }
 
     @Test
+    fun `same pasted link twice gives one profile and one duplicate`() = runTest {
+        val (coordinator, _) = fixture()
+
+        val preview = preparePreview(coordinator, "$REALITY_RAW_LINK\n$REALITY_RAW_LINK")
+
+        assertEquals(1, preview.profiles.size)
+        assertEquals(1, preview.counts.duplicates)
+    }
+
+    @Test
     fun `stored endpoint is duplicate but same server over xhttp can be imported`() = runTest {
         val raw = "vless://11111111-1111-4111-8111-111111111111@a.example.com:443" +
             "?type=raw&security=reality&sni=cover.example&pbk=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&sid=0011#NL"
@@ -90,7 +109,7 @@ class ImportCoordinatorTest {
     }
 
     @Test
-    fun `link matching a later stored endpoint is a duplicate`() = runTest {
+    fun `link matching only part of a stored row can be imported`() = runTest {
         val a = parseProfile(REALITY_RAW_LINK)
         val b = parseProfile(REALITY_XHTTP_LINK)
         val existing = XraySubscription(
@@ -103,9 +122,11 @@ class ImportCoordinatorTest {
 
         val preview = preparePreview(coordinator, REALITY_XHTTP_LINK)
 
-        assertEquals(1, preview.counts.duplicates)
-        assertTrue(coordinator.add(preview) is ImportOutcome.NothingNew)
-        assertEquals(listOf(existing), store.current())
+        assertEquals(0, preview.counts.duplicates)
+        val outcome = coordinator.add(preview) as ImportOutcome.Success
+        assertEquals(1, outcome.counts.added)
+        assertEquals(0, outcome.counts.duplicates)
+        assertEquals(existing.servers + preview.profiles, store.current().single().servers)
     }
 
     @Test
@@ -162,6 +183,40 @@ class ImportCoordinatorTest {
         assertNotNull(source.lastUpdatedMillis)
         assertTrue(storage.isCompleted())
         assertEquals(listOf(SUBSCRIPTION_URL, SUBSCRIPTION_URL), transport.requestedUrls)
+    }
+
+    @Test
+    fun `JSON preview keeps aggregate country and transport rows and drops only equal endpoint sets`() = runTest {
+        val base = parseProfile(REALITY_RAW_LINK)
+        val a = base.endpoints.single().copy(address = "a.example.com", transport = XrayTransport.Raw())
+        val b = a.copy(address = "b.example.com")
+        val c = a.copy(address = "c.example.com")
+        val rows = listOf(
+            base.copy(name = "Fastest", endpoints = listOf(a, b, c)),
+            base.copy(name = "NL", endpoints = listOf(a)),
+            base.copy(name = "DE", endpoints = listOf(b, c)),
+            base.copy(name = "NL-XHTTP", endpoints = listOf(a.copy(transport = XrayTransport.Xhttp()))),
+        )
+
+        listOf(false, true).forEach { withDuplicate ->
+            val parsedRows = if (withDuplicate) rows + base.copy(name = "DE duplicate", endpoints = listOf(c, b)) else rows
+            val (coordinator, store) = fixture(
+                fetchResult = SubscriptionFetchResult.Success(
+                    content = SubscriptionContent.XrayJson(XrayJsonSubscription(parsedRows, unsupported = 0, invalid = 0)),
+                    metadata = SubscriptionMetadata(),
+                    truncated = false,
+                ),
+            )
+
+            val preview = preparePreview(coordinator, SUBSCRIPTION_URL)
+
+            assertEquals(rows.map { it.name }, preview.profiles.map { it.name })
+            assertEquals(rows.map { it.endpoints }, preview.profiles.map { it.endpoints })
+            assertEquals(if (withDuplicate) 1 else 0, preview.counts.duplicates)
+            val outcome = coordinator.add(preview) as ImportOutcome.Success
+            assertEquals(4, outcome.counts.added)
+            assertEquals(preview.profiles, store.current().single().servers)
+        }
     }
 
     @Test
@@ -392,7 +447,7 @@ class ImportCoordinatorTest {
                         enqueue(FakeHttpTransport.ok(links.joinToString("\n"), result.metadata.toHeaders()))
                     }
                     is SubscriptionContent.XrayJson -> {
-                        enqueue(FakeHttpTransport.ok(XRAY_JSON_BODY, result.metadata.toHeaders()))
+                        enqueue(FakeHttpTransport.ok(content.subscription.toJsonBody(), result.metadata.toHeaders()))
                     }
                 }
             }
@@ -418,6 +473,57 @@ class ImportCoordinatorTest {
             }
         }
     }
+
+    private fun XrayJsonSubscription.toJsonBody(): String = buildJsonArray {
+        profiles.forEach { profile ->
+            add(buildJsonObject {
+                put("remarks", profile.name)
+                putJsonArray("outbounds") {
+                    profile.endpoints.forEach { endpoint ->
+                        require(endpoint.protocol == XrayProtocol.VLESS)
+                        val reality = endpoint.security as XraySecurity.Reality
+                        val transport = endpoint.transport
+                        require(transport is XrayTransport.Raw || transport is XrayTransport.Xhttp)
+                        add(buildJsonObject {
+                            put("protocol", "vless")
+                            putJsonObject("settings") {
+                                putJsonArray("vnext") {
+                                    add(buildJsonObject {
+                                        put("address", endpoint.address)
+                                        put("port", endpoint.port)
+                                        putJsonArray("users") {
+                                            add(buildJsonObject {
+                                                put("id", endpoint.credential)
+                                                put("encryption", "none")
+                                                (transport as? XrayTransport.Raw)?.flow?.let { put("flow", it.wireValue) }
+                                            })
+                                        }
+                                    })
+                                }
+                            }
+                            putJsonObject("streamSettings") {
+                                put("network", if (transport is XrayTransport.Raw) "raw" else "xhttp")
+                                put("security", "reality")
+                                putJsonObject("realitySettings") {
+                                    put("serverName", reality.serverName)
+                                    put("publicKey", reality.publicKey)
+                                    put("shortId", reality.shortId)
+                                }
+                                if (transport is XrayTransport.Xhttp) {
+                                    putJsonObject("xhttpSettings") {
+                                        put("path", transport.path)
+                                        put("mode", transport.mode.wireValue)
+                                    }
+                                }
+                            }
+                        })
+                    }
+                }
+            })
+        }
+        repeat(unsupported) { add(buildJsonObject { putJsonArray("outbounds") {} }) }
+        repeat(invalid) { add(JsonNull) }
+    }.toString()
 
     private fun SubscriptionMetadata.toHeaders(): Map<String, List<String>> = buildMap {
         title?.let { put("profile-title", listOf(it)) }
@@ -454,12 +560,5 @@ class ImportCoordinatorTest {
             "vmess://a1b2c3d4-e5f6-7890-abcd-ef1234567890@example.com:443"
         const val INVALID_LINK =
             "vless://a1b2c3d4-e5f6-7890-abcd-ef1234567890@example.com:443?security=reality&pbk=short&sni=example.com"
-        const val XRAY_JSON_BODY =
-            "[{\"remarks\":\"JSON node\",\"outbounds\":[{" +
-                "\"protocol\":\"vless\",\"settings\":{\"vnext\":[{\"address\":\"203.0.113.8\",\"port\":443," +
-                "\"users\":[{\"id\":\"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\"encryption\":\"none\"}]}]}," +
-                "\"streamSettings\":{\"network\":\"tcp\",\"tcpSettings\":{},\"security\":\"reality\"," +
-                "\"realitySettings\":{\"serverName\":\"cover.example\",\"publicKey\":\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"shortId\":\"0011\"}}}]}," +
-                "{\"outbounds\":[]},{\"outbounds\":[]}]"
     }
 }
