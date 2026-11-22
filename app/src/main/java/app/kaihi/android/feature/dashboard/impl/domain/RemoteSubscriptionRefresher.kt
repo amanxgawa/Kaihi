@@ -1,5 +1,6 @@
 package app.kaihi.android.feature.dashboard.impl.domain
 
+import app.kaihi.android.core.vpn.SubscriptionContent
 import app.kaihi.android.core.vpn.SubscriptionFetchFailure
 import app.kaihi.android.core.vpn.SubscriptionFetchResult
 import app.kaihi.android.core.vpn.SubscriptionFetcher
@@ -7,6 +8,7 @@ import app.kaihi.android.core.vpn.ShareLinkResult
 import app.kaihi.android.core.vpn.XraySubscriptionSource
 import app.kaihi.android.core.vpn.XraySubscriptionStore
 import app.kaihi.android.core.vpn.XrayVpnProfile
+import app.kaihi.android.core.vpn.hasSameEndpointsAs
 import app.kaihi.android.core.vpn.parseShareLink
 import app.kaihi.android.core.vpn.realityFingerprint
 import app.kaihi.android.core.vpn.sharesEndpointWith
@@ -47,8 +49,9 @@ internal class RemoteSubscriptionRefresher @Inject constructor(
             val source = subscription.source as? XraySubscriptionSource.Remote
                 ?: return RemoteSubscriptionRefreshOutcome.SubscriptionUnavailable
 
+            val refreshedAtMillis = nowMillis ?: System.currentTimeMillis()
             val fetched = try {
-                subscriptionFetcher.fetch(source.url)
+                subscriptionFetcher.fetch(source.url, refreshedAtMillis)
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (_: Throwable) {
@@ -60,9 +63,11 @@ internal class RemoteSubscriptionRefresher @Inject constructor(
                 is SubscriptionFetchResult.Success -> fetched
             }
 
-            val refreshedAtMillis = nowMillis ?: System.currentTimeMillis()
-            val parsedProfiles = success.links.mapNotNull { link ->
-                (parseShareLink(link, refreshedAtMillis) as? ShareLinkResult.Success)?.profile
+            val parsedProfiles = when (val content = success.content) {
+                is SubscriptionContent.ShareLinks -> content.links.mapNotNull { link ->
+                    (parseShareLink(link, refreshedAtMillis) as? ShareLinkResult.Success)?.profile
+                }
+                is SubscriptionContent.XrayJson -> content.subscription.profiles
             }
             if (parsedProfiles.isEmpty()) return RemoteSubscriptionRefreshOutcome.NothingImportable
 
@@ -113,31 +118,27 @@ internal fun mergeRefreshedProfiles(
 ): List<XrayVpnProfile> {
     val uniqueProfiles = mutableListOf<XrayVpnProfile>()
     parsedProfiles.forEach { profile ->
-        if (uniqueProfiles.none { it.sharesEndpointWith(profile) }) uniqueProfiles += profile
+        if (uniqueProfiles.none { it.hasSameEndpointsAs(profile) }) uniqueProfiles += profile
     }
     val claimed = BooleanArray(existingProfiles.size)
     val matches = arrayOfNulls<XrayVpnProfile>(uniqueProfiles.size)
-    uniqueProfiles.forEachIndexed { index, profile ->
-        val match = existingProfiles.indices.firstOrNull {
-            !claimed[it] && profile.sharesEndpointWith(existingProfiles[it])
-        }
-        if (match != null) {
-            claimed[match] = true
-            matches[index] = existingProfiles[match]
-        }
-    }
-    // Reserve every endpoint match before falling back to names.
-    uniqueProfiles.forEachIndexed { index, profile ->
-        if (matches[index] == null) {
-            val match = existingProfiles.indices.firstOrNull {
-                !claimed[it] && profile.name == existingProfiles[it].name
-            }
-            if (match != null) {
-                claimed[match] = true
-                matches[index] = existingProfiles[match]
+    fun claimMatches(predicate: (XrayVpnProfile, XrayVpnProfile) -> Boolean) {
+        uniqueProfiles.forEachIndexed { index, profile ->
+            if (matches[index] == null) {
+                val match = existingProfiles.indices.firstOrNull {
+                    !claimed[it] && predicate(profile, existingProfiles[it])
+                }
+                if (match != null) {
+                    claimed[match] = true
+                    matches[index] = existingProfiles[match]
+                }
             }
         }
     }
+    // Reserve exact endpoint sets before overlap matches, and all endpoint matches before names.
+    claimMatches { profile, existing -> profile.hasSameEndpointsAs(existing) }
+    claimMatches { profile, existing -> profile.sharesEndpointWith(existing) }
+    claimMatches { profile, existing -> profile.name == existing.name }
     return uniqueProfiles.mapIndexed { index, profile ->
         matches[index]?.let(profile::keepUserChoices) ?: profile
     }

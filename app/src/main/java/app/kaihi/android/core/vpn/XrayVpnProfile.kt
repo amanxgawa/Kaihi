@@ -35,6 +35,11 @@ data class XrayVpnProfile(
 fun XrayVpnProfile.sharesEndpointWith(other: XrayVpnProfile): Boolean =
     endpoints.any { endpoint -> other.endpoints.any { endpoint.isSameServerAs(it) } }
 
+/** Same endpoints as [other], ignoring order and duplicates (compared with isSameServerAs). */
+fun XrayVpnProfile.hasSameEndpointsAs(other: XrayVpnProfile): Boolean =
+    endpoints.all { endpoint -> other.endpoints.any { endpoint.isSameServerAs(it) } } &&
+        other.endpoints.all { endpoint -> endpoints.any { endpoint.isSameServerAs(it) } }
+
 /** The fingerprint setting of the first REALITY endpoint, or null when no endpoint uses REALITY. */
 val XrayVpnProfile.realityFingerprint: XrayFingerprintSetting?
     get() = endpoints.firstNotNullOfOrNull { (it.security as? XraySecurity.Reality)?.fingerprint }

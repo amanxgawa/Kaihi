@@ -18,6 +18,11 @@ sealed interface ShareLinkResult {
     data class Invalid(val reason: InvalidReason) : ShareLinkResult
 }
 
+internal sealed interface EndpointParseResult {
+    data class Success(val endpoint: XrayEndpoint) : EndpointParseResult
+    data class Failure(val result: ShareLinkResult) : EndpointParseResult
+}
+
 enum class UnsupportedReason {
     PROTOCOL,
     ENCRYPTION,
@@ -78,7 +83,7 @@ fun parseShareLink(link: String, nowMillis: Long): ShareLinkResult {
     }
     val decodedCredential = decodeUriComponent(authority.substring(0, at))
         ?: return ShareLinkResult.Invalid(InvalidReason.INVALID_ENCODING)
-    val credential = when (protocol) {
+    when (protocol) {
         XrayProtocol.VLESS -> normalizeVlessId(decodedCredential)
             ?: return ShareLinkResult.Invalid(InvalidReason.INVALID_ID)
         XrayProtocol.TROJAN -> normalizeTrojanPassword(decodedCredential)
@@ -97,24 +102,9 @@ fun parseShareLink(link: String, nowMillis: Long): ShareLinkResult {
     }
     val values = (params as ParameterParseResult.Success).values
 
-    val encryption = values["encryption"].takeIf { protocol == XrayProtocol.VLESS }
-    if (encryption != null && encryption != "none") {
-        return ShareLinkResult.Unsupported(UnsupportedReason.ENCRYPTION)
-    }
-
-    val securityResult = parseSecurity(values, host, defaultTls = protocol == XrayProtocol.TROJAN)
-    if (securityResult is SecurityParseResult.Failure) {
-        return securityResult.result
-    }
-    val security = (securityResult as SecurityParseResult.Success).security
-
-    if (protocol == XrayProtocol.TROJAN && !values["flow"].isNullOrEmpty()) {
-        return ShareLinkResult.Unsupported(UnsupportedReason.TRANSPORT_OPTION)
-    }
-    val transport = when (val result = parseTransport(values, security)) {
-        is TransportParseResult.Success -> result.transport
-        is TransportParseResult.Failure -> return ShareLinkResult.Unsupported(result.reason)
-        is TransportParseResult.Invalid -> return ShareLinkResult.Invalid(result.reason)
+    val endpoint = when (val result = parseEndpoint(protocol, decodedCredential, host, port, values)) {
+        is EndpointParseResult.Success -> result.endpoint
+        is EndpointParseResult.Failure -> return result.result
     }
 
     val fragment = uri.rawFragment?.let(::decodeUriComponent)
@@ -126,18 +116,65 @@ fun parseShareLink(link: String, nowMillis: Long): ShareLinkResult {
             id = newXrayId(),
             name = name,
             ssh = null,
-            endpoints = listOf(
-                XrayEndpoint(
-                    address = host,
-                    port = port,
-                    protocol = protocol,
-                    credential = credential,
-                    security = security,
-                    transport = transport,
-                ),
-            ),
+            endpoints = listOf(endpoint),
             addedAtMillis = nowMillis,
             countryCode = null,
+        ),
+    )
+}
+
+internal fun parseEndpoint(
+    protocol: XrayProtocol,
+    credential: String,
+    host: String,
+    port: Int,
+    values: Map<String, String>,
+): EndpointParseResult {
+    val normalizedCredential = when (protocol) {
+        XrayProtocol.VLESS -> normalizeVlessId(credential)
+            ?: return EndpointParseResult.Failure(ShareLinkResult.Invalid(InvalidReason.INVALID_ID))
+        XrayProtocol.TROJAN -> normalizeTrojanPassword(credential)
+            ?: return EndpointParseResult.Failure(ShareLinkResult.Invalid(InvalidReason.INVALID_PASSWORD))
+    }
+    if (!isAcceptedHost(host)) {
+        return EndpointParseResult.Failure(ShareLinkResult.Invalid(InvalidReason.INVALID_HOST))
+    }
+    if (port !in 1..65535) {
+        return EndpointParseResult.Failure(ShareLinkResult.Invalid(InvalidReason.INVALID_PORT))
+    }
+
+    val encryption = values["encryption"].takeIf { protocol == XrayProtocol.VLESS }
+    if (encryption != null && encryption != "none") {
+        return EndpointParseResult.Failure(ShareLinkResult.Unsupported(UnsupportedReason.ENCRYPTION))
+    }
+
+    val securityResult = parseSecurity(values, host, defaultTls = protocol == XrayProtocol.TROJAN)
+    if (securityResult is SecurityParseResult.Failure) {
+        return EndpointParseResult.Failure(securityResult.result)
+    }
+    val security = (securityResult as SecurityParseResult.Success).security
+
+    if (protocol == XrayProtocol.TROJAN && !values["flow"].isNullOrEmpty()) {
+        return EndpointParseResult.Failure(ShareLinkResult.Unsupported(UnsupportedReason.TRANSPORT_OPTION))
+    }
+    val transport = when (val result = parseTransport(values, security)) {
+        is TransportParseResult.Success -> result.transport
+        is TransportParseResult.Failure -> return EndpointParseResult.Failure(
+            ShareLinkResult.Unsupported(result.reason),
+        )
+        is TransportParseResult.Invalid -> return EndpointParseResult.Failure(
+            ShareLinkResult.Invalid(result.reason),
+        )
+    }
+
+    return EndpointParseResult.Success(
+        XrayEndpoint(
+            address = host,
+            port = port,
+            protocol = protocol,
+            credential = normalizedCredential,
+            security = security,
+            transport = transport,
         ),
     )
 }
@@ -201,6 +238,7 @@ private fun parseHostPort(value: String): HostPortParseResult {
 
 private fun isAcceptedHost(host: String): Boolean = when {
     host.contains('%') -> false
+    isStrictIpv6(host) -> true
     looksLikeDottedIpv4(host) -> isStrictIpv4(host)
     else -> isSafeHostname(host)
 }
@@ -290,7 +328,7 @@ private fun parseSecurity(values: Map<String, String>, host: String, defaultTls:
                 return SecurityParseResult.Failure(ShareLinkResult.Invalid(InvalidReason.INVALID_PUBLIC_KEY))
             }
             val serverName = values["sni"]
-            if (serverName == null || !isSafeHostname(serverName)) {
+            if (serverName != null && !isSafeHostname(serverName)) {
                 return SecurityParseResult.Failure(ShareLinkResult.Invalid(InvalidReason.INVALID_HOST))
             }
             val shortId = values["sid"] ?: ""
@@ -302,7 +340,9 @@ private fun parseSecurity(values: Map<String, String>, host: String, defaultTls:
             }
             SecurityParseResult.Success(
                 XraySecurity.Reality(
-                    serverName = serverName,
+                    // Xray-core v26.10.31 transport/internet/reality/reality.go UClient
+                    // falls back to dest.Address.String() when ServerName is empty.
+                    serverName = serverName ?: host,
                     publicKey = publicKey,
                     shortId = shortId,
                     fingerprint = XrayFingerprintSetting.Auto(lastWorking = fingerprint),

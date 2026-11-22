@@ -4,6 +4,7 @@ import java.nio.charset.StandardCharsets
 
 internal class FakeHttpTransport(vararg responses: HttpTransportResponse) : HttpTransport {
     private val responses = ArrayDeque<Result<HttpTransportResponse>>()
+    private var lastResponse: Result<HttpTransportResponse>? = null
     val requestedUrls = mutableListOf<String>()
     val requestHeaders = mutableListOf<Map<String, String>>()
 
@@ -26,7 +27,12 @@ internal class FakeHttpTransport(vararg responses: HttpTransportResponse) : Http
     ): HttpTransportResponse {
         requestedUrls += url
         this.requestHeaders += requestHeaders
-        return responses.removeFirst().getOrThrow()
+        val result = if (responses.isEmpty()) {
+            requireNotNull(lastResponse) { "No fake HTTP response configured" }
+        } else {
+            responses.removeFirst().also { lastResponse = it }
+        }
+        return result.getOrThrow()
     }
 
     companion object {

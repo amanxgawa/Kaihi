@@ -73,6 +73,26 @@ class ShareUriTest {
     }
 
     @Test
+    fun `REALITY with the IP address as SNI omits sni and round trips the endpoint`() {
+        val endpoint = testEndpoint(
+            address = "203.0.113.7",
+            credential = "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+            security = XraySecurity.Reality(
+                serverName = "203.0.113.7",
+                publicKey = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+                shortId = "0123456789abcdef",
+                fingerprint = XrayFingerprintSetting.Auto(XrayFingerprint.CHROME),
+            ),
+            transport = XrayTransport.Grpc("abcd-efgh-ijkl-m", false, null),
+        )
+        val uri = endpoint.toShareUri("x")
+        val parsed = parseShareLink(uri, 0L)
+
+        assertEquals(endpoint, (parsed as ShareLinkResult.Success).profile.firstEndpoint)
+        assertFalse(uri.contains("sni="))
+    }
+
+    @Test
     fun `exports the preferred concrete fingerprint for auto and fixed settings`() {
         val base = profile()
         val auto = base.copyEndpoints {
