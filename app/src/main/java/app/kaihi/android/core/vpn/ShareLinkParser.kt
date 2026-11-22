@@ -328,7 +328,7 @@ private fun parseSecurity(values: Map<String, String>, host: String, defaultTls:
                 return SecurityParseResult.Failure(ShareLinkResult.Invalid(InvalidReason.INVALID_PUBLIC_KEY))
             }
             val serverName = values["sni"]
-            if (serverName == null || !isSafeHostname(serverName)) {
+            if (serverName != null && !isSafeHostname(serverName)) {
                 return SecurityParseResult.Failure(ShareLinkResult.Invalid(InvalidReason.INVALID_HOST))
             }
             val shortId = values["sid"] ?: ""
@@ -340,7 +340,9 @@ private fun parseSecurity(values: Map<String, String>, host: String, defaultTls:
             }
             SecurityParseResult.Success(
                 XraySecurity.Reality(
-                    serverName = serverName,
+                    // Xray-core v26.10.31 transport/internet/reality/reality.go UClient
+                    // falls back to dest.Address.String() when ServerName is empty.
+                    serverName = serverName ?: host,
                     publicKey = publicKey,
                     shortId = shortId,
                     fingerprint = XrayFingerprintSetting.Auto(lastWorking = fingerprint),

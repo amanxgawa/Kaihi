@@ -29,7 +29,7 @@ fun XrayEndpoint.toShareUri(name: String): String = buildString {
     when (val security = endpoint.security) {
         is XraySecurity.Reality -> {
             parameter("security", "reality")
-            parameter("sni", security.serverName)
+            if (security.serverName != endpoint.address) parameter("sni", security.serverName)
             parameter("fp", security.fingerprint.preferred().wireValue)
             parameter("pbk", security.publicKey)
             parameter("sid", security.shortId)

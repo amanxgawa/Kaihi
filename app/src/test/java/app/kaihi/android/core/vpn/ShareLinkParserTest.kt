@@ -139,6 +139,40 @@ class ShareLinkParserTest {
     }
 
     @Test
+    fun `REALITY gRPC without SNI uses the IPv4 server address`() {
+        val link = "vless://$UUID@203.0.113.7:443?security=reality&pbk=$PUBLIC_KEY" +
+            "&sid=ab12&type=grpc&serviceName=svc#x"
+        val endpoint = success(parseShareLink(link, 0L)).firstEndpoint
+
+        assertEquals(
+            XraySecurity.Reality(serverName = "203.0.113.7", publicKey = PUBLIC_KEY, shortId = "ab12"),
+            endpoint.security,
+        )
+        assertEquals(XrayTransport.Grpc("svc", false, null), endpoint.transport)
+    }
+
+    @Test
+    fun `REALITY gRPC without SNI uses the server hostname`() {
+        val link = "vless://$UUID@nl.example.com:443?security=reality&pbk=$PUBLIC_KEY" +
+            "&sid=ab12&type=grpc&serviceName=svc#x"
+        val endpoint = success(parseShareLink(link, 0L)).firstEndpoint
+
+        assertEquals(
+            XraySecurity.Reality(serverName = "nl.example.com", publicKey = PUBLIC_KEY, shortId = "ab12"),
+            endpoint.security,
+        )
+        assertEquals(XrayTransport.Grpc("svc", false, null), endpoint.transport)
+    }
+
+    @Test
+    fun `REALITY still rejects an explicitly invalid SNI`() {
+        val link = "vless://$UUID@203.0.113.7:443?security=reality&pbk=$PUBLIC_KEY" +
+            "&sid=ab12&sni=bad%20host!&type=grpc&serviceName=svc#x"
+
+        assertEquals(ShareLinkResult.Invalid(InvalidReason.INVALID_HOST), parseShareLink(link, 0L))
+    }
+
+    @Test
     fun `gRPC defaults to an empty service name and gun mode with TLS or REALITY`() {
         listOf("vless://$UUID@example.com:443?security=tls", realityLink()).forEach { base ->
             listOf("", "&mode=gun", "&mode=").forEach { mode ->
@@ -354,15 +388,17 @@ class ShareLinkParserTest {
     }
 
     @Test
-    fun `requires a nonempty SNI for REALITY and still rejects duplicate empty parameters`() {
+    fun `REALITY treats empty SNI as absent and still rejects duplicate empty parameters`() {
         val missingRealitySni = parseShareLink(
             "vless://$UUID@example.com:443?security=reality&sni=&pbk=$PUBLIC_KEY",
             0L,
         )
         val duplicate = parseShareLink("vless://$UUID@example.com:443?security=&security=tls", 0L)
 
-        assertTrue(missingRealitySni is ShareLinkResult.Invalid)
-        assertEquals(InvalidReason.INVALID_HOST, (missingRealitySni as ShareLinkResult.Invalid).reason)
+        assertEquals(
+            XraySecurity.Reality(serverName = "example.com", publicKey = PUBLIC_KEY, shortId = ""),
+            success(missingRealitySni).firstEndpoint.security,
+        )
         assertTrue(duplicate is ShareLinkResult.Invalid)
         assertEquals(InvalidReason.DUPLICATE_PARAMETER, (duplicate as ShareLinkResult.Invalid).reason)
     }

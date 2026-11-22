@@ -69,6 +69,43 @@ class XrayJsonSubscriptionParserTest {
     }
 
     @Test
+    fun `Remnawave REALITY gRPC with empty serverName uses the server address`() {
+        val outbound = """
+            {
+              "protocol":"vless",
+              "settings":{"vnext":[{"address":"203.0.113.7","port":443,
+                "users":[{"id":"$UUID","encryption":"none","flow":""}]}]},
+              "streamSettings":{
+                "network":"grpc",
+                "grpcSettings":{"serviceName":"abcd-efgh-ijkl-m","authority":"","mode":false},
+                "security":"reality",
+                "realitySettings":{"serverName":"","publicKey":"$K1",
+                  "shortId":"0123456789abcdef","fingerprint":"chrome"}
+              }
+            }
+        """.trimIndent()
+        val result = requireNotNull(parseXrayJsonSubscription(subscription(outbound), 0L))
+        val endpoint = result.profiles.single().endpoints.single()
+
+        assertEquals(0, result.invalid)
+        assertEquals(0, result.unsupported)
+        assertEquals("203.0.113.7", endpoint.address)
+        assertEquals(443, endpoint.port)
+        assertEquals(XrayProtocol.VLESS, endpoint.protocol)
+        assertEquals(UUID, endpoint.credential)
+        assertEquals(XrayTransport.Grpc("abcd-efgh-ijkl-m", false, null), endpoint.transport)
+        assertEquals(
+            XraySecurity.Reality(
+                serverName = "203.0.113.7",
+                publicKey = K1,
+                shortId = "0123456789abcdef",
+                fingerprint = XrayFingerprintSetting.Auto(XrayFingerprint.CHROME),
+            ),
+            endpoint.security,
+        )
+    }
+
+    @Test
     fun `rejects Trojan password whitespace with the shared share-link validation`() {
         val body = """[{"outbounds":[{"protocol":"trojan","settings":{"servers":[{"address":"t.example.com","port":8443,"password":"p@ss word"}]}}]}]"""
 
