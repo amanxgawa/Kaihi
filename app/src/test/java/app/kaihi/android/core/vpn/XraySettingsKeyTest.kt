@@ -31,10 +31,8 @@ class XraySettingsKeyTest {
         assertNotEquals(key, XrayClientConfigFactory.settingsKey(profile.copy(fragmentEnabled = true), settings(false)))
         assertNotEquals(
             key,
-            XrayClientConfigFactory.settingsKey(
-                profile.copy(security = (profile.security as XraySecurity.Reality).copy(
-                    fingerprint = XrayFingerprintSetting.Fixed(XrayFingerprint.CHROME),
-                )),
+                XrayClientConfigFactory.settingsKey(
+                profile.withRealityFingerprint { XrayFingerprintSetting.Fixed(XrayFingerprint.CHROME) },
                 settings(false),
             ),
         )
@@ -44,29 +42,28 @@ class XraySettingsKeyTest {
     @Test
     fun `auto key ignores last working while fixed keys track the fingerprint`() {
         val profile = profile()
-        val reality = profile.security as XraySecurity.Reality
 
         assertEquals(
             XrayClientConfigFactory.settingsKey(profile, settings(false)),
             XrayClientConfigFactory.settingsKey(
-                profile.copy(security = reality.copy(fingerprint = XrayFingerprintSetting.Auto(XrayFingerprint.CHROME))),
+                profile.withRealityFingerprint { XrayFingerprintSetting.Auto(XrayFingerprint.CHROME) },
                 settings(false),
             ),
         )
         assertNotEquals(
             XrayClientConfigFactory.settingsKey(profile, settings(false)),
             XrayClientConfigFactory.settingsKey(
-                profile.copy(security = reality.copy(fingerprint = XrayFingerprintSetting.Fixed(XrayFingerprint.FIREFOX))),
+                profile.withRealityFingerprint { XrayFingerprintSetting.Fixed(XrayFingerprint.FIREFOX) },
                 settings(false),
             ),
         )
         assertNotEquals(
             XrayClientConfigFactory.settingsKey(
-                profile.copy(security = reality.copy(fingerprint = XrayFingerprintSetting.Fixed(XrayFingerprint.FIREFOX))),
+                profile.withRealityFingerprint { XrayFingerprintSetting.Fixed(XrayFingerprint.FIREFOX) },
                 settings(false),
             ),
             XrayClientConfigFactory.settingsKey(
-                profile.copy(security = reality.copy(fingerprint = XrayFingerprintSetting.Fixed(XrayFingerprint.SAFARI))),
+                profile.withRealityFingerprint { XrayFingerprintSetting.Fixed(XrayFingerprint.SAFARI) },
                 settings(false),
             ),
         )
@@ -112,9 +109,11 @@ class XraySettingsKeyTest {
         val profile = profile().copy(
             muxEnabled = true,
             fragmentEnabled = true,
-            security = (profile().security as XraySecurity.Reality).copy(
-                fingerprint = XrayFingerprintSetting.Fixed(XrayFingerprint.CHROME),
-            ),
+            endpoints = profile().endpoints.map { endpoint ->
+                endpoint.copy(security = (endpoint.security as XraySecurity.Reality).copy(
+                    fingerprint = XrayFingerprintSetting.Fixed(XrayFingerprint.CHROME),
+                ))
+            },
         )
 
         assertNotEquals(
@@ -166,7 +165,7 @@ class XraySettingsKeyTest {
 
         assertEquals(64, key.length)
         assertTrueLowercaseHex(key)
-        assertFalse(key.contains(profile.credential))
+        assertFalse(key.contains(profile.endpoints.first().credential))
     }
 
     private fun assertTrueLowercaseHex(value: String) {
@@ -176,14 +175,7 @@ class XraySettingsKeyTest {
     private fun profile() = XrayVpnProfile(
         id = "server-1",
         name = "test",
-        serverAddress = "proxy.example",
-        serverPort = 443,
-        credential = "123e4567-e89b-12d3-a456-426614174000",
-        security = XraySecurity.Reality(
-            serverName = "www.example.com",
-            publicKey = "public-key",
-            shortId = "abcd",
-        ),
+        endpoints = listOf(testEndpoint()),
         addedAtMillis = 0L,
     )
 

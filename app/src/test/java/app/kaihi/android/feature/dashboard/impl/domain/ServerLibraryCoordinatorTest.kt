@@ -5,6 +5,8 @@ import app.kaihi.android.feature.dashboard.impl.data.StoredServerListPreferences
 import app.kaihi.android.core.vpn.XraySubscription
 import app.kaihi.android.core.vpn.XraySubscriptionStore
 import app.kaihi.android.core.vpn.XrayVpnProfile
+import app.kaihi.android.core.vpn.testEndpoint
+import app.kaihi.android.core.vpn.realityFingerprint
 import app.kaihi.android.core.vpn.spec.XrayFingerprint
 import app.kaihi.android.core.vpn.spec.XrayFingerprintSetting
 import app.kaihi.android.core.vpn.spec.XraySecurity
@@ -25,7 +27,7 @@ class ServerLibraryCoordinatorTest {
 
         assertEquals(
             XrayFingerprintSetting.Auto(XrayFingerprint.SAFARI),
-            store.profile().security.let { (it as XraySecurity.Reality).fingerprint },
+            store.profile().realityFingerprint,
         )
     }
 
@@ -36,7 +38,7 @@ class ServerLibraryCoordinatorTest {
 
         coordinator.recordWorkingFingerprint(SERVER_ID, XrayFingerprint.SAFARI)
 
-        assertEquals(fixed, (store.profile().security as XraySecurity.Reality).fingerprint)
+        assertEquals(fixed, store.profile().realityFingerprint)
     }
 
     @Test
@@ -46,17 +48,14 @@ class ServerLibraryCoordinatorTest {
 
         coordinator.recordWorkingFingerprint(SERVER_ID, XrayFingerprint.SAFARI)
 
-        assertEquals(auto, (store.profile().security as XraySecurity.Reality).fingerprint)
+        assertEquals(auto, store.profile().realityFingerprint)
     }
 
     private suspend fun TestScope.coordinator(setting: XrayFingerprintSetting): Pair<ServerLibraryCoordinator, XraySubscriptionStore> {
         val profile = XrayVpnProfile(
             id = SERVER_ID,
             name = "test",
-            serverAddress = "proxy.example",
-            serverPort = 443,
-            credential = "123e4567-e89b-12d3-a456-426614174000",
-            security = XraySecurity.Reality("www.example.com", "public-key", "abcd", setting),
+            endpoints = listOf(testEndpoint(security = XraySecurity.Reality("www.example.com", "public-key", "abcd", setting))),
             addedAtMillis = 0L,
         )
         val storage = InMemoryAppStorage()

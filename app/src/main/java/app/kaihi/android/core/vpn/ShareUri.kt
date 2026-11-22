@@ -6,14 +6,17 @@ import app.kaihi.android.core.vpn.spec.XrayProtocol
 import app.kaihi.android.core.vpn.spec.preferred
 import java.net.URLEncoder
 
-fun XrayVpnProfile.toShareUri(): String = buildString {
-    val isVless = protocol == XrayProtocol.VLESS
+fun XrayVpnProfile.toShareUri(): String = endpoints.joinToString("\n") { it.toShareUri(name) }
+
+fun XrayEndpoint.toShareUri(name: String): String = buildString {
+    val endpoint = this@toShareUri
+    val isVless = endpoint.protocol == XrayProtocol.VLESS
     append(if (isVless) "vless://" else "trojan://")
-    append(if (isVless) credential else credential.urlEncode())
+    append(if (isVless) endpoint.credential else endpoint.credential.urlEncode())
     append('@')
-    append(serverAddress)
+    append(endpoint.address)
     append(':')
-    append(serverPort)
+    append(endpoint.port)
     append(if (isVless) "?encryption=none" else "?")
 
     var firstQueryParameter = !isVless
@@ -23,7 +26,7 @@ fun XrayVpnProfile.toShareUri(): String = buildString {
         firstQueryParameter = false
     }
 
-    when (val security = security) {
+    when (val security = endpoint.security) {
         is XraySecurity.Reality -> {
             parameter("security", "reality")
             parameter("sni", security.serverName)
@@ -38,13 +41,13 @@ fun XrayVpnProfile.toShareUri(): String = buildString {
         }
     }
 
-    when (val transport = transport) {
+    when (val transport = endpoint.transport) {
         is XrayTransport.Xhttp -> {
             parameter("type", "xhttp")
             parameter("path", transport.path)
             parameter("mode", transport.mode.wireValue)
-            val host = (security as? XraySecurity.Reality)?.serverName
-                ?: (security as? XraySecurity.Tls)?.serverName
+            val host = (endpoint.security as? XraySecurity.Reality)?.serverName
+                ?: (endpoint.security as? XraySecurity.Tls)?.serverName
             host?.let { parameter("host", it) }
         }
         is XrayTransport.Raw -> {

@@ -27,10 +27,13 @@ class XraySubscriptionStoreTest {
             username = "root",
             expectedFingerprint = "SHA256:oldfingerprint",
         ),
-        serverAddress = "203.0.113.9",
-        serverPort = 443,
-        credential = "a1b2c3d4-e5f6-4890-abcd-ef1234567890",
-        security = XraySecurity.Reality(serverName = "www.example.com", publicKey = "key", shortId = "ab"),
+        endpoints = listOf(
+            testEndpoint(
+                address = "203.0.113.9",
+                credential = "a1b2c3d4-e5f6-4890-abcd-ef1234567890",
+                security = XraySecurity.Reality(serverName = "www.example.com", publicKey = "key", shortId = "ab"),
+            ),
+        ),
         addedAtMillis = 1_700_000_000_000L,
     )
 
@@ -45,24 +48,26 @@ class XraySubscriptionStoreTest {
     @Test
     fun `Trojan profile string representation redacts its credential`() {
         val password = "p@ss word"
-        val profile = legacyProfile.copy(protocol = XrayProtocol.TROJAN, credential = password)
+        val profile = legacyProfile.copy(
+            endpoints = listOf(legacyProfile.endpoints.first().copy(protocol = XrayProtocol.TROJAN, credential = password)),
+        )
 
         assertFalse(profile.toString().contains(password))
     }
 
     @Test
-    fun `stored UUID field without protocol decodes as a VLESS credential`() {
+    fun `stored endpoint without protocol decodes as a VLESS credential`() {
         val encoded = XrayJson.default.encodeToString(XrayVpnProfile.serializer(), legacyProfile)
-        val stored = JsonObject(
-            XrayJson.default.parseToJsonElement(encoded).jsonObject - "protocol",
-        ).toString()
-        assertTrue(stored.contains("\"uuid\":"))
+        val stored = XrayJson.default.parseToJsonElement(encoded).jsonObject.toString()
+        assertTrue(stored.contains("\"endpoints\":"))
+        assertTrue(stored.contains("\"credential\":"))
+        assertFalse(stored.contains("\"uuid\":"))
         assertFalse(stored.contains("\"protocol\":"))
 
         val decoded = XrayJson.default.decodeFromString(XrayVpnProfile.serializer(), stored)
 
-        assertEquals(XrayProtocol.VLESS, decoded.protocol)
-        assertEquals(legacyProfile.credential, decoded.credential)
+        assertEquals(XrayProtocol.VLESS, decoded.endpoints.first().protocol)
+        assertEquals(legacyProfile.endpoints.first().credential, decoded.endpoints.first().credential)
     }
 
     @Test

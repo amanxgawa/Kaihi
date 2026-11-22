@@ -14,6 +14,9 @@ import app.kaihi.android.core.vpn.XraySubscriptionSource
 import app.kaihi.android.core.vpn.XraySubscriptionStore
 import app.kaihi.android.core.vpn.XraySubscriptionUserInfo
 import app.kaihi.android.core.vpn.XrayVpnProfile
+import app.kaihi.android.core.vpn.XrayEndpoint
+import app.kaihi.android.core.vpn.isSameServerAs
+import app.kaihi.android.core.vpn.testEndpoint
 import app.kaihi.android.core.vpn.spec.XhttpMode
 import app.kaihi.android.core.vpn.spec.XrayFingerprint
 import app.kaihi.android.core.vpn.spec.XrayFingerprintSetting
@@ -46,7 +49,7 @@ class RemoteSubscriptionRefresherTest {
                 shortId = "aa11",
                 fingerprint = XrayFingerprintSetting.Fixed(XrayFingerprint.FIREFOX),
             ),
-            transport = XrayTransport.Raw(),
+            transport = XrayTransport.Xhttp("/provider", XhttpMode.PACKET_UP),
             addedAtMillis = 123L,
             countryCode = "US",
             muxEnabled = true,
@@ -64,7 +67,7 @@ class RemoteSubscriptionRefresherTest {
         assertEquals(RemoteSubscriptionRefreshOutcome.Success(1), outcome)
         assertEquals("saved-id", updated.id)
         assertEquals("New name", updated.name)
-        assertEquals("node.example", updated.serverAddress)
+        assertEquals("node.example", updated.endpoints.first().address)
         assertEquals(
             XraySecurity.Reality(
                 serverName = "cover.example",
@@ -72,14 +75,116 @@ class RemoteSubscriptionRefresherTest {
                 shortId = "0011",
                 fingerprint = XrayFingerprintSetting.Fixed(XrayFingerprint.FIREFOX),
             ),
-            updated.security,
+            updated.endpoints.first().security,
         )
-        assertEquals(XrayTransport.Xhttp("/provider", XhttpMode.PACKET_UP), updated.transport)
+        assertEquals(XrayTransport.Xhttp("/provider", XhttpMode.PACKET_UP), updated.endpoints.first().transport)
         assertEquals(123L, updated.addedAtMillis)
         assertEquals("US", updated.countryCode)
         assertTrue(updated.muxEnabled)
         assertEquals(17, updated.muxConcurrency)
         assertTrue(updated.fragmentEnabled)
+    }
+
+    @Test
+    fun `overlapping endpoints keep saved choices and take refreshed endpoints`() {
+        val a = endpoint("a.example.com")
+        val b = endpoint("b.example.com")
+        val c = endpoint("c.example.com")
+        val existing = profile("x", "NL", a.address, a.credential, muxEnabled = true)
+            .copy(endpoints = listOf(a, b))
+        val refreshed = profile("new", "NL 2", b.address, b.credential)
+            .copy(endpoints = listOf(b, c))
+
+        val updated = mergeRefreshedProfiles(listOf(refreshed), listOf(existing)).single()
+
+        assertEquals("x", updated.id)
+        assertTrue(updated.muxEnabled)
+        assertEquals(listOf(b, c), updated.endpoints)
+        assertEquals("NL 2", updated.name)
+    }
+
+    @Test
+    fun `name fallback keeps saved id when all endpoints change`() = runTest {
+        val a = endpoint("a.example.com")
+        val existing = profile("y", "DE", a.address, a.credential)
+        val store = newStore(listOf(subscription(servers = listOf(existing))))
+        val refresher = RemoteSubscriptionRefresher(
+            store,
+            fetcher(success(realityLink(a.credential, "c.example.com", "DE"))),
+        )
+
+        refresher.refresh(SUBSCRIPTION_ID, nowMillis = NOW)
+
+        val updated = store.current().single().servers.single()
+        assertEquals("y", updated.id)
+        assertEquals("c.example.com", updated.endpoints.single().address)
+    }
+
+    @Test
+    fun `later parsed row sharing any endpoint is dropped`() {
+        val a = endpoint("a.example.com")
+        val b = endpoint("b.example.com")
+        val existing = profile("x", "NL", a.address, a.credential).copy(endpoints = listOf(a))
+        val first = existing.copy(id = "new-first", name = "First")
+        val second = existing.copy(id = "new-second", name = "Second", endpoints = listOf(a, b))
+
+        val updated = mergeRefreshedProfiles(listOf(first, second), listOf(existing))
+
+        assertEquals(1, updated.size)
+        assertEquals("x", updated.single().id)
+        assertEquals("First", updated.single().name)
+        assertEquals(listOf(a), updated.single().endpoints)
+    }
+
+    @Test
+    fun `endpoint claims precede name fallback claims`() = runTest {
+        val a = endpoint("a.example.com")
+        val existing = profile("x", "NL", a.address, a.credential)
+        val store = newStore(listOf(subscription(servers = listOf(existing))))
+        val refresher = RemoteSubscriptionRefresher(
+            store,
+            fetcher(success(
+                realityLink(a.credential, "c.example.com", "NL"),
+                realityLink(a.credential, a.address, "Other"),
+            )),
+        )
+
+        refresher.refresh(SUBSCRIPTION_ID, nowMillis = NOW)
+
+        val updated = store.current().single().servers
+        assertEquals(listOf("NL", "Other"), updated.map { it.name })
+        assertFalse(updated[0].id == "x")
+        assertEquals("x", updated[1].id)
+    }
+
+    @Test
+    fun `same address and credential over different transports are separate servers`() = runTest {
+        val a = endpoint("a.example.com")
+        assertFalse(a.isSameServerAs(a.copy(transport = XrayTransport.Xhttp())))
+        val raw = realityLink(a.credential, a.address, "Raw")
+        val xhttp = raw.replace("#Raw", "&type=xhttp#XHTTP")
+        val existing = profile("x", "NL", a.address, a.credential)
+        val store = newStore(listOf(subscription(servers = listOf(existing))))
+        val refresher = RemoteSubscriptionRefresher(store, fetcher(success(raw, xhttp)))
+
+        val outcome = refresher.refresh(SUBSCRIPTION_ID, nowMillis = NOW)
+
+        assertEquals(RemoteSubscriptionRefreshOutcome.Success(2), outcome)
+        val updated = store.current().single().servers
+        assertEquals("x", updated[0].id)
+        assertFalse(updated[1].id == "x")
+    }
+
+    @Test
+    fun `name fallback claims each stored row at most once`() {
+        val a = endpoint("a.example.com")
+        val existing = profile("y", "DE", a.address, a.credential)
+        val first = existing.copy(id = "new-first", endpoints = listOf(endpoint("b.example.com")))
+        val second = existing.copy(id = "new-second", endpoints = listOf(endpoint("c.example.com")))
+
+        val updated = mergeRefreshedProfiles(listOf(first, second), listOf(existing))
+
+        assertEquals(listOf("y", "new-second"), updated.map { it.id })
     }
 
     @Test
@@ -99,7 +204,7 @@ class RemoteSubscriptionRefresherTest {
 
         assertEquals(RemoteSubscriptionRefreshOutcome.Success(2), outcome)
         assertEquals("saved-a", servers.first().id)
-        assertEquals(listOf("node-a.example", "node-c.example"), servers.map { it.serverAddress })
+        assertEquals(listOf("node-a.example", "node-c.example"), servers.map { it.endpoints.first().address })
         assertEquals(listOf("Provider A", "Provider C"), servers.map { it.name })
     }
 
@@ -202,6 +307,13 @@ class RemoteSubscriptionRefresherTest {
         assertTrue(remote(lastUpdated = now - 86_400_000L, intervalHours = null).isStale(now))
     }
 
+    private fun endpoint(address: String): XrayEndpoint = testEndpoint(
+        address = address,
+        credential = "11111111-1111-4111-8111-111111111111",
+        security = XraySecurity.Reality("cover.example", PUBLIC_KEY, "0011"),
+        transport = XrayTransport.Raw(),
+    )
+
     private fun success(vararg links: String, metadata: SubscriptionMetadata = SubscriptionMetadata()) =
         SubscriptionFetchResult.Success(links.toList(), metadata, truncated = false)
 
@@ -244,11 +356,7 @@ class RemoteSubscriptionRefresherTest {
     ) = XrayVpnProfile(
         id = id,
         name = name,
-        serverAddress = address,
-        serverPort = 443,
-        credential = credential,
-        security = security,
-        transport = transport,
+        endpoints = listOf(testEndpoint(address = address, credential = credential, security = security, transport = transport)),
         addedAtMillis = addedAtMillis,
         countryCode = countryCode,
         muxEnabled = muxEnabled,

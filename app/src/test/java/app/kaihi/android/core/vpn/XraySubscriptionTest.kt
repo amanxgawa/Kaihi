@@ -20,10 +20,12 @@ class XraySubscriptionTest {
     private val server = XrayVpnProfile(
         id = "server-1",
         name = "Imported server",
-        serverAddress = "server.example",
-        serverPort = 443,
-        credential = "123e4567-e89b-12d3-a456-426614174000",
-        security = XraySecurity.Tls(serverName = "server.example"),
+        endpoints = listOf(
+            testEndpoint(
+                address = "server.example",
+                security = XraySecurity.Tls(serverName = "server.example"),
+            ),
+        ),
         addedAtMillis = 1_700_000_000_000L,
     )
 

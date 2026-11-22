@@ -4,6 +4,7 @@ import app.kaihi.android.core.vpn.XrayJson
 import app.kaihi.android.core.vpn.XrayProtectionState
 import app.kaihi.android.core.vpn.XrayServerProtection
 import app.kaihi.android.core.vpn.XrayVpnProfile
+import app.kaihi.android.core.vpn.testEndpoint
 import app.kaihi.android.core.vpn.spec.XraySecurity
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.JsonObject
@@ -46,13 +47,16 @@ class XrayServerProtectionSerializationTest {
     private fun profile(protection: XrayServerProtection?) = XrayVpnProfile(
         id = "profile-id",
         name = "Test server",
-        serverAddress = "server.example",
-        serverPort = 443,
-        credential = "00000000-0000-4000-8000-000000000001",
-        security = XraySecurity.Reality(
-            serverName = "mask.example",
-            publicKey = "public-key",
-            shortId = "short-id",
+        endpoints = listOf(
+            testEndpoint(
+                address = "server.example",
+                credential = "00000000-0000-4000-8000-000000000001",
+                security = XraySecurity.Reality(
+                    serverName = "mask.example",
+                    publicKey = "public-key",
+                    shortId = "short-id",
+                ),
+            ),
         ),
         addedAtMillis = 1L,
         serverProtection = protection,

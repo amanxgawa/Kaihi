@@ -4,6 +4,11 @@ import app.kaihi.android.core.vpn.XraySubscription
 import app.kaihi.android.core.vpn.XraySubscriptionSource
 import app.kaihi.android.core.vpn.XraySubscriptionUserInfo
 import app.kaihi.android.core.vpn.XrayVpnProfile
+import app.kaihi.android.core.vpn.XrayEndpoint
+import app.kaihi.android.core.vpn.testEndpoint
+import app.kaihi.android.core.vpn.copyEndpoints
+import app.kaihi.android.core.vpn.spec.XrayFlow
+import app.kaihi.android.core.vpn.spec.XrayProtocol
 import app.kaihi.android.core.vpn.spec.XraySecurity
 import app.kaihi.android.core.vpn.spec.XrayTransport
 import app.kaihi.android.feature.dashboard.impl.domain.model.ServerLibrary
@@ -26,10 +31,88 @@ class DashboardStateMappersTest {
         )
 
         cases.forEach { (transport, expected) ->
-            val settings = profile.copy(transport = transport).toSettingsUi()
+            val settings = profile.copyEndpoints { it.copy(transport = transport) }.toSettingsUi()
 
             assertEquals("Mux support for $transport", expected, settings.supportsMux)
         }
+    }
+
+    @Test
+    fun `server settings support mux only when every endpoint supports it`() {
+        val profile = profileWithEndpoints(
+            testEndpoint(transport = XrayTransport.Raw()),
+            testEndpoint(transport = XrayTransport.Xhttp()),
+        )
+
+        assertTrue(profile.toSettingsUi().supportsMux)
+
+        val mixedProfile = profile.copy(
+            endpoints = listOf(
+                testEndpoint(transport = XrayTransport.Raw()),
+                testEndpoint(transport = XrayTransport.WebSocket()),
+            ),
+        )
+        assertFalse(mixedProfile.toSettingsUi().supportsMux)
+    }
+
+    @Test
+    fun `server settings are xhttp only when every endpoint is xhttp`() {
+        val xhttpProfile = profileWithEndpoints(
+            testEndpoint(transport = XrayTransport.Xhttp()),
+            testEndpoint(transport = XrayTransport.Xhttp()),
+        )
+        val mixedProfile = xhttpProfile.copy(
+            endpoints = listOf(
+                testEndpoint(transport = XrayTransport.Xhttp()),
+                testEndpoint(transport = XrayTransport.Raw()),
+            ),
+        )
+
+        assertTrue(xhttpProfile.toSettingsUi().isXhttp)
+        assertFalse(mixedProfile.toSettingsUi().isXhttp)
+    }
+
+    @Test
+    fun `one endpoint stack label is unchanged`() {
+        assertEquals(
+            "VLESS · XHTTP · REALITY",
+            profileWithEndpoints(testEndpoint()).stackLabel(),
+        )
+    }
+
+    @Test
+    fun `identical endpoint stack label includes endpoint count`() {
+        val endpoint = testEndpoint(transport = XrayTransport.Raw(flow = XrayFlow.VISION))
+
+        assertEquals(
+            "VLESS · RAW · VISION · REALITY · ×3",
+            profileWithEndpoints(endpoint, endpoint, endpoint).stackLabel(),
+        )
+    }
+
+    @Test
+    fun `different endpoint stack labels are joined in endpoint order`() {
+        assertEquals(
+            "VLESS · XHTTP · REALITY / Trojan · WebSocket · TLS · ×2",
+            profileWithEndpoints(
+                testEndpoint(),
+                testEndpoint(
+                    protocol = XrayProtocol.TROJAN,
+                    security = XraySecurity.Tls("cover.example"),
+                    transport = XrayTransport.WebSocket(),
+                ),
+            ).stackLabel(),
+        )
+    }
+
+    @Test
+    fun `details map every endpoint address`() {
+        val details = profileWithEndpoints(
+            testEndpoint(address = "a.example.com", port = 443),
+            testEndpoint(address = "b.example.com", port = 8443),
+        ).toDetailsUi()
+
+        assertEquals(listOf("a.example.com:443", "b.example.com:8443"), details.addresses)
     }
 
     @Test
@@ -37,10 +120,7 @@ class DashboardStateMappersTest {
         val profile = XrayVpnProfile(
             id = "server-imported",
             name = "\uD83C\uDDF3\uD83C\uDDF1 Amsterdam",
-            serverAddress = "server.example",
-            serverPort = 443,
-            credential = "123e4567-e89b-12d3-a456-426614174000",
-            security = XraySecurity.Tls("cover.example"),
+            endpoints = listOf(testEndpoint(address = "server.example", security = XraySecurity.Tls("cover.example"))),
             addedAtMillis = 0L,
         )
         val subscription = XraySubscription(
@@ -123,13 +203,17 @@ class DashboardStateMappersTest {
             XrayVpnProfile(
                 id = "server-$id",
                 name = "Server",
-                serverAddress = "server.example",
-                serverPort = 443,
-                credential = "123e4567-e89b-12d3-a456-426614174000",
-                security = XraySecurity.Tls("cover.example"),
+                endpoints = listOf(testEndpoint(address = "server.example", security = XraySecurity.Tls("cover.example"))),
                 addedAtMillis = 0L,
             ),
         ),
         source = source,
+    )
+
+    private fun profileWithEndpoints(vararg endpoints: XrayEndpoint) = XrayVpnProfile(
+        id = "server-multi",
+        name = "Server",
+        endpoints = endpoints.toList(),
+        addedAtMillis = 0L,
     )
 }

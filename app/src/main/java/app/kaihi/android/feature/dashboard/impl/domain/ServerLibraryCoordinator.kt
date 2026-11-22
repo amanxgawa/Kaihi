@@ -3,11 +3,12 @@ package app.kaihi.android.feature.dashboard.impl.domain
 import app.kaihi.android.core.vpn.XraySubscriptionStore
 import app.kaihi.android.core.vpn.XrayVpnProfile
 import app.kaihi.android.core.vpn.findServer
+import app.kaihi.android.core.vpn.realityFingerprint
 import app.kaihi.android.core.vpn.spec.XrayFingerprint
 import app.kaihi.android.core.vpn.spec.XrayFingerprintSetting
-import app.kaihi.android.core.vpn.spec.XraySecurity
 import app.kaihi.android.core.vpn.withServerUpdated
 import app.kaihi.android.core.vpn.withSubscriptionUpdated
+import app.kaihi.android.core.vpn.withRealityFingerprint
 import app.kaihi.android.core.vpn.withoutServer
 import app.kaihi.android.core.vpn.withoutSubscription
 import app.kaihi.android.feature.dashboard.impl.domain.model.ServerLibrary
@@ -53,20 +54,19 @@ internal class ServerLibraryCoordinator @Inject constructor(
     }
 
     suspend fun setFingerprint(serverId: String, fingerprint: XrayFingerprintSetting) = updateServer(serverId) { server ->
-        val reality = server.security as? XraySecurity.Reality ?: return@updateServer server
-        server.copy(security = reality.copy(fingerprint = fingerprint))
+        if (server.realityFingerprint == null) return@updateServer server
+        server.withRealityFingerprint { fingerprint }
     }
 
     suspend fun recordWorkingFingerprint(serverId: String, fingerprint: XrayFingerprint) {
         val current = subscriptionStore.subscriptions.first().findServer(serverId) ?: return
-        val reality = current.security as? XraySecurity.Reality ?: return
-        val auto = reality.fingerprint as? XrayFingerprintSetting.Auto ?: return
+        val auto = current.realityFingerprint as? XrayFingerprintSetting.Auto ?: return
         if (auto.lastWorking == fingerprint) return
         updateServer(serverId) { server ->
-            val reality = server.security as? XraySecurity.Reality ?: return@updateServer server
-            val auto = reality.fingerprint as? XrayFingerprintSetting.Auto ?: return@updateServer server
-            if (auto.lastWorking == fingerprint) return@updateServer server
-            server.copy(security = reality.copy(fingerprint = auto.copy(lastWorking = fingerprint)))
+            if (server.realityFingerprint !is XrayFingerprintSetting.Auto) return@updateServer server
+            server.withRealityFingerprint { setting ->
+                if (setting is XrayFingerprintSetting.Auto) setting.copy(lastWorking = fingerprint) else setting
+            }
         }
     }
 

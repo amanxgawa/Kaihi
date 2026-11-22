@@ -8,8 +8,9 @@ import app.kaihi.android.core.vpn.XraySubscriptionSource
 import app.kaihi.android.core.vpn.XraySubscriptionStore
 import app.kaihi.android.core.vpn.XrayVpnProfile
 import app.kaihi.android.core.vpn.parseShareLink
-import app.kaihi.android.core.vpn.spec.XrayProtocol
-import app.kaihi.android.core.vpn.spec.XraySecurity
+import app.kaihi.android.core.vpn.realityFingerprint
+import app.kaihi.android.core.vpn.sharesEndpointWith
+import app.kaihi.android.core.vpn.withRealityFingerprint
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -62,7 +63,7 @@ internal class RemoteSubscriptionRefresher @Inject constructor(
             val refreshedAtMillis = nowMillis ?: System.currentTimeMillis()
             val parsedProfiles = success.links.mapNotNull { link ->
                 (parseShareLink(link, refreshedAtMillis) as? ShareLinkResult.Success)?.profile
-            }.distinctBy { it.identity() }
+            }
             if (parsedProfiles.isEmpty()) return RemoteSubscriptionRefreshOutcome.NothingImportable
 
             var outcome: RemoteSubscriptionRefreshOutcome = RemoteSubscriptionRefreshOutcome.SubscriptionUnavailable
@@ -72,10 +73,7 @@ internal class RemoteSubscriptionRefresher @Inject constructor(
                 if (current == null || currentSource == null || currentSource.url != source.url) {
                     subscriptions
                 } else {
-                    val existingByIdentity = current.servers.associateByFirst { it.identity() }
-                    val mergedServers = parsedProfiles.map { profile ->
-                        existingByIdentity[profile.identity()]?.let(profile::keepUserChoices) ?: profile
-                    }
+                    val mergedServers = mergeRefreshedProfiles(parsedProfiles, current.servers)
                     val updatedSource = currentSource.copy(
                         title = success.metadata.title,
                         userInfo = success.metadata.userInfo,
@@ -109,34 +107,58 @@ internal fun XraySubscriptionSource.Remote.isStale(nowMillis: Long): Boolean {
     return nowMillis - updatedAt >= intervalMillis
 }
 
-private fun XrayVpnProfile.identity() = ServerIdentity(protocol, serverAddress, serverPort, credential)
-
-private data class ServerIdentity(
-    val protocol: XrayProtocol,
-    val address: String,
-    val port: Int,
-    val credential: String,
-)
-
-private fun List<XrayVpnProfile>.associateByFirst(key: (XrayVpnProfile) -> ServerIdentity): Map<ServerIdentity, XrayVpnProfile> {
-    val result = LinkedHashMap<ServerIdentity, XrayVpnProfile>()
-    forEach { result.putIfAbsent(key(it), it) }
-    return result
+internal fun mergeRefreshedProfiles(
+    parsedProfiles: List<XrayVpnProfile>,
+    existingProfiles: List<XrayVpnProfile>,
+): List<XrayVpnProfile> {
+    val uniqueProfiles = mutableListOf<XrayVpnProfile>()
+    parsedProfiles.forEach { profile ->
+        if (uniqueProfiles.none { it.sharesEndpointWith(profile) }) uniqueProfiles += profile
+    }
+    val claimed = BooleanArray(existingProfiles.size)
+    val matches = arrayOfNulls<XrayVpnProfile>(uniqueProfiles.size)
+    uniqueProfiles.forEachIndexed { index, profile ->
+        val match = existingProfiles.indices.firstOrNull {
+            !claimed[it] && profile.sharesEndpointWith(existingProfiles[it])
+        }
+        if (match != null) {
+            claimed[match] = true
+            matches[index] = existingProfiles[match]
+        }
+    }
+    // Reserve every endpoint match before falling back to names.
+    uniqueProfiles.forEachIndexed { index, profile ->
+        if (matches[index] == null) {
+            val match = existingProfiles.indices.firstOrNull {
+                !claimed[it] && profile.name == existingProfiles[it].name
+            }
+            if (match != null) {
+                claimed[match] = true
+                matches[index] = existingProfiles[match]
+            }
+        }
+    }
+    return uniqueProfiles.mapIndexed { index, profile ->
+        matches[index]?.let(profile::keepUserChoices) ?: profile
+    }
 }
 
-private fun XrayVpnProfile.keepUserChoices(existing: XrayVpnProfile): XrayVpnProfile = copy(
-    id = existing.id,
-    security = when {
-        security is XraySecurity.Reality && existing.security is XraySecurity.Reality ->
-            security.copy(fingerprint = existing.security.fingerprint)
-        else -> security
-    },
-    addedAtMillis = existing.addedAtMillis,
-    countryCode = existing.countryCode,
-    muxEnabled = existing.muxEnabled,
-    muxConcurrency = existing.muxConcurrency,
-    fragmentEnabled = existing.fragmentEnabled,
-)
+private fun XrayVpnProfile.keepUserChoices(existing: XrayVpnProfile): XrayVpnProfile {
+    val existingFingerprint = existing.realityFingerprint
+    val profile = if (existingFingerprint == null) {
+        this
+    } else {
+        withRealityFingerprint { existingFingerprint }
+    }
+    return profile.copy(
+        id = existing.id,
+        addedAtMillis = existing.addedAtMillis,
+        countryCode = existing.countryCode,
+        muxEnabled = existing.muxEnabled,
+        muxConcurrency = existing.muxConcurrency,
+        fragmentEnabled = existing.fragmentEnabled,
+    )
+}
 
 private const val DEFAULT_UPDATE_INTERVAL_HOURS = 24
 private const val MILLIS_PER_HOUR = 60L * 60L * 1000L

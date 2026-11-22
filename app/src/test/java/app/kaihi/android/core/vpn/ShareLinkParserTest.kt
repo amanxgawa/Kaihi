@@ -21,10 +21,10 @@ class ShareLinkParserTest {
         val result = parseShareLink(realityLink("&fp=ChRoMe") + "#Edge%20Node", 123L)
         val profile = success(result)
 
-        assertEquals("a1b2c3d4-e5f6-7890-abcd-ef1234567890", profile.credential)
+        assertEquals("a1b2c3d4-e5f6-7890-abcd-ef1234567890", profile.firstEndpoint.credential)
         assertEquals("Edge Node", profile.name)
-        assertEquals("example.com", profile.serverAddress)
-        assertEquals(443, profile.serverPort)
+        assertEquals("example.com", profile.firstEndpoint.address)
+        assertEquals(443, profile.firstEndpoint.port)
         assertEquals(
             XraySecurity.Reality(
                 serverName = "www.example.com",
@@ -32,9 +32,9 @@ class ShareLinkParserTest {
                 shortId = "a1b2",
                 fingerprint = XrayFingerprintSetting.Auto(XrayFingerprint.CHROME),
             ),
-            profile.security,
+            profile.firstEndpoint.security,
         )
-        assertEquals(XrayTransport.Raw(), profile.transport)
+        assertEquals(XrayTransport.Raw(), profile.firstEndpoint.transport)
         assertNull(profile.ssh)
         assertEquals(123L, profile.addedAtMillis)
         assertNull(profile.countryCode)
@@ -50,9 +50,9 @@ class ShareLinkParserTest {
             "&flow=xtls-rprx-vision#Panel%20node"
         val profile = success(parseShareLink(link, 7L))
 
-        assertEquals("203.0.113.8", profile.serverAddress)
+        assertEquals("203.0.113.8", profile.firstEndpoint.address)
         assertEquals("Panel node", profile.name)
-        assertEquals(XrayTransport.Raw(XrayFlow.VISION), profile.transport)
+        assertEquals(XrayTransport.Raw(XrayFlow.VISION), profile.firstEndpoint.transport)
     }
 
     @Test
@@ -64,7 +64,7 @@ class ShareLinkParserTest {
         val profile = success(parseShareLink(link, 9L))
 
         assertEquals("EU 🌐", profile.name)
-        assertEquals(XrayTransport.Xhttp("/edge/connect", XhttpMode.PACKET_UP), profile.transport)
+        assertEquals(XrayTransport.Xhttp("/edge/connect", XhttpMode.PACKET_UP), profile.firstEndpoint.transport)
     }
 
     @Test
@@ -73,8 +73,8 @@ class ShareLinkParserTest {
             "&type=ws&path=%2Fws%3Fed%3D2048&host=cdn.example.com#WS"
         val profile = success(parseShareLink(link, 0L))
 
-        assertEquals(XrayTransport.WebSocket("/ws?ed=2048", "cdn.example.com"), profile.transport)
-        assertEquals(XraySecurity.Tls("cdn.example.com"), profile.security)
+        assertEquals(XrayTransport.WebSocket("/ws?ed=2048", "cdn.example.com"), profile.firstEndpoint.transport)
+        assertEquals(XraySecurity.Tls("cdn.example.com"), profile.firstEndpoint.security)
     }
 
     @Test
@@ -83,7 +83,7 @@ class ShareLinkParserTest {
             "&type=ws&path=%2Fws&host=#x"
         val profile = success(parseShareLink(link, 0L))
 
-        assertEquals(XrayTransport.WebSocket("/ws", null), profile.transport)
+        assertEquals(XrayTransport.WebSocket("/ws", null), profile.firstEndpoint.transport)
     }
 
     @Test
@@ -92,7 +92,7 @@ class ShareLinkParserTest {
             "&type=ws&path=&host=#x"
         val profile = success(parseShareLink(link, 0L))
 
-        assertEquals(XrayTransport.WebSocket("/", null), profile.transport)
+        assertEquals(XrayTransport.WebSocket("/", null), profile.firstEndpoint.transport)
     }
 
     @Test
@@ -101,7 +101,7 @@ class ShareLinkParserTest {
             "&type=grpc&serviceName=&authority=&mode=gun#x"
         val profile = success(parseShareLink(link, 0L))
 
-        assertEquals(XrayTransport.Grpc("", false, null), profile.transport)
+        assertEquals(XrayTransport.Grpc("", false, null), profile.firstEndpoint.transport)
     }
 
     @Test
@@ -110,8 +110,8 @@ class ShareLinkParserTest {
             parseShareLink("trojan://pw@h.example.com:443?type=httpupgrade&path=&host=#x", 0L),
         )
 
-        assertEquals(XrayTransport.HttpUpgrade("/", null), profile.transport)
-        assertEquals(XraySecurity.Tls("h.example.com"), profile.security)
+        assertEquals(XrayTransport.HttpUpgrade("/", null), profile.firstEndpoint.transport)
+        assertEquals(XraySecurity.Tls("h.example.com"), profile.firstEndpoint.security)
     }
 
     @Test
@@ -120,9 +120,9 @@ class ShareLinkParserTest {
             parseShareLink("trojan://pw@cdn.example.com:443?security=tls&type=httpupgrade&path=%2Fup#HU", 0L),
         )
 
-        assertEquals(XrayProtocol.TROJAN, profile.protocol)
-        assertEquals(XrayTransport.HttpUpgrade("/up", null), profile.transport)
-        assertEquals(XraySecurity.Tls("cdn.example.com"), profile.security)
+        assertEquals(XrayProtocol.TROJAN, profile.firstEndpoint.protocol)
+        assertEquals(XrayTransport.HttpUpgrade("/up", null), profile.firstEndpoint.transport)
+        assertEquals(XraySecurity.Tls("cdn.example.com"), profile.firstEndpoint.security)
     }
 
     @Test
@@ -131,10 +131,10 @@ class ShareLinkParserTest {
             "&pbk=$PUBLIC_KEY&sid=ab12&type=grpc&serviceName=gun-svc&mode=multi&authority=grpc.example.com#G"
         val profile = success(parseShareLink(link, 0L))
 
-        assertEquals(XrayTransport.Grpc("gun-svc", multiMode = true, authority = "grpc.example.com"), profile.transport)
+        assertEquals(XrayTransport.Grpc("gun-svc", multiMode = true, authority = "grpc.example.com"), profile.firstEndpoint.transport)
         assertEquals(
             XraySecurity.Reality(serverName = "grpc.example.com", publicKey = PUBLIC_KEY, shortId = "ab12"),
-            profile.security,
+            profile.firstEndpoint.security,
         )
     }
 
@@ -144,7 +144,7 @@ class ShareLinkParserTest {
             listOf("", "&mode=gun", "&mode=").forEach { mode ->
                 val profile = success(parseShareLink("$base&type=grpc$mode", 0L))
 
-                assertEquals(XrayTransport.Grpc("", false, null), profile.transport)
+                assertEquals(XrayTransport.Grpc("", false, null), profile.firstEndpoint.transport)
             }
         }
     }
@@ -155,7 +155,7 @@ class ShareLinkParserTest {
             listOf("ws" to XrayTransport.WebSocket(), "httpupgrade" to XrayTransport.HttpUpgrade()).forEach { (type, expected) ->
                 val profile = success(parseShareLink("$prefix@example.com:443?security=tls&type=$type&flow=", 0L))
 
-                assertEquals(expected, profile.transport)
+                assertEquals(expected, profile.firstEndpoint.transport)
             }
         }
     }
@@ -197,7 +197,7 @@ class ShareLinkParserTest {
         listOf("pkg.Service/method_1.2-3", "a".repeat(256)).forEach { serviceName ->
             val profile = success(parseShareLink(realityLink("&type=grpc&serviceName=$serviceName"), 0L))
 
-            assertEquals(XrayTransport.Grpc(serviceName), profile.transport)
+            assertEquals(XrayTransport.Grpc(serviceName), profile.firstEndpoint.transport)
         }
     }
 
@@ -233,9 +233,9 @@ class ShareLinkParserTest {
             ),
         )
 
-        assertEquals("custom-id_7", custom.credential)
-        assertEquals("2001:db8::7", ipv6.serverAddress)
-        assertEquals(XraySecurity.Tls("cover.example"), ipv6.security)
+        assertEquals("custom-id_7", custom.firstEndpoint.credential)
+        assertEquals("2001:db8::7", ipv6.firstEndpoint.address)
+        assertEquals(XraySecurity.Tls("cover.example"), ipv6.firstEndpoint.security)
     }
 
     @Test
@@ -253,7 +253,7 @@ class ShareLinkParserTest {
             val profile = success(
                 parseShareLink("vless://$UUID@[$address]:443?security=tls&sni=cover.example", 1L),
             )
-            assertEquals(address, profile.serverAddress)
+            assertEquals(address, profile.firstEndpoint.address)
         }
     }
 
@@ -279,7 +279,7 @@ class ShareLinkParserTest {
         val link = realityLink().replaceFirst("vless://", "VLESS://")
             .replace("example.com:443", "192.0.2.4:443")
 
-        assertEquals("192.0.2.4", success(parseShareLink(link, 0L)).serverAddress)
+        assertEquals("192.0.2.4", success(parseShareLink(link, 0L)).firstEndpoint.address)
     }
 
     @Test
@@ -289,7 +289,7 @@ class ShareLinkParserTest {
             parseShareLink(realityLink(id = mixedCase) + "#%00%20A%F0%9F%99%82%7F%20", 0L),
         )
 
-        assertEquals(UUID, profile.credential)
+        assertEquals(UUID, profile.firstEndpoint.credential)
         assertEquals("A🙂", profile.name)
 
         val longName = "x".repeat(63) + "🙂z"
@@ -309,7 +309,7 @@ class ShareLinkParserTest {
     fun `uses TLS host as SNI fallback only when it is a hostname`() {
         val fallback = success(parseShareLink("vless://$UUID@example.com:443?security=tls", 0L))
 
-        assertEquals(XraySecurity.Tls("example.com"), fallback.security)
+        assertEquals(XraySecurity.Tls("example.com"), fallback.firstEndpoint.security)
         assertInvalid(parseShareLink("vless://$UUID@203.0.113.8:443?security=tls", 0L))
     }
 
@@ -319,7 +319,7 @@ class ShareLinkParserTest {
             parseShareLink(realityLink("&type=xhttp&path=%2Fone+two") + "#x", 0L),
         )
 
-        assertEquals(XrayTransport.Xhttp("/one+two", XhttpMode.AUTO), profile.transport)
+        assertEquals(XrayTransport.Xhttp("/one+two", XhttpMode.AUTO), profile.firstEndpoint.transport)
     }
 
     @Test
@@ -339,7 +339,7 @@ class ShareLinkParserTest {
         )
         val tls = success(parseShareLink("vless://$UUID@example.com:443?security=tls&sni=", 3L))
 
-        assertEquals(XrayTransport.Xhttp("/", XhttpMode.AUTO), xhttp.transport)
+        assertEquals(XrayTransport.Xhttp("/", XhttpMode.AUTO), xhttp.firstEndpoint.transport)
         assertEquals(
             XraySecurity.Reality(
                 serverName = "www.example.com",
@@ -347,10 +347,10 @@ class ShareLinkParserTest {
                 shortId = "",
                 fingerprint = XrayFingerprintSetting.Auto(),
             ),
-            xhttp.security,
+            xhttp.firstEndpoint.security,
         )
-        assertEquals(XrayTransport.Raw(), raw.transport)
-        assertEquals(XraySecurity.Tls("example.com"), tls.security)
+        assertEquals(XrayTransport.Raw(), raw.firstEndpoint.transport)
+        assertEquals(XraySecurity.Tls("example.com"), tls.firstEndpoint.security)
     }
 
     @Test
@@ -376,16 +376,19 @@ class ShareLinkParserTest {
         val expected = XrayVpnProfile(
             id = parsed.id,
             name = "Panel TCP",
-            serverAddress = "203.0.113.8",
-            serverPort = 443,
-            credential = UUID,
-            security = XraySecurity.Reality(
-                serverName = "cdn.example.com",
-                publicKey = PUBLIC_KEY,
-                shortId = "",
-                fingerprint = XrayFingerprintSetting.Auto(),
+            endpoints = listOf(
+                testEndpoint(
+                    address = "203.0.113.8",
+                    credential = UUID,
+                    security = XraySecurity.Reality(
+                        serverName = "cdn.example.com",
+                        publicKey = PUBLIC_KEY,
+                        shortId = "",
+                        fingerprint = XrayFingerprintSetting.Auto(),
+                    ),
+                    transport = XrayTransport.Raw(XrayFlow.VISION),
+                ),
             ),
-            transport = XrayTransport.Raw(XrayFlow.VISION),
             addedAtMillis = 17L,
         )
 
@@ -401,16 +404,20 @@ class ShareLinkParserTest {
         val expected = XrayVpnProfile(
             id = parsed.id,
             name = "Panel XHTTP",
-            serverAddress = "node.example",
-            serverPort = 8443,
-            credential = UUID,
-            security = XraySecurity.Reality(
-                serverName = "mask.example",
-                publicKey = PUBLIC_KEY,
-                shortId = "",
-                fingerprint = XrayFingerprintSetting.Auto(),
+            endpoints = listOf(
+                testEndpoint(
+                    address = "node.example",
+                    port = 8443,
+                    credential = UUID,
+                    security = XraySecurity.Reality(
+                        serverName = "mask.example",
+                        publicKey = PUBLIC_KEY,
+                        shortId = "",
+                        fingerprint = XrayFingerprintSetting.Auto(),
+                    ),
+                    transport = XrayTransport.Xhttp("/", XhttpMode.AUTO),
+                ),
             ),
-            transport = XrayTransport.Xhttp("/", XhttpMode.AUTO),
             addedAtMillis = 23L,
         )
 
@@ -421,7 +428,7 @@ class ShareLinkParserTest {
     fun `uses automatic fingerprint when the value is missing unknown or randomized`() {
         listOf("", "&fp=not-a-fingerprint", "&fp=random", "&fp=randomized").forEach { fp ->
             val profile = success(parseShareLink(realityLink(fp), 0L))
-            assertEquals(XrayFingerprintSetting.Auto(), (profile.security as XraySecurity.Reality).fingerprint)
+            assertEquals(XrayFingerprintSetting.Auto(), profile.realityFingerprint)
         }
     }
 
@@ -455,10 +462,10 @@ class ShareLinkParserTest {
             "#%F0%9F%87%B3%F0%9F%87%B1%20NL-TN-01"
         val profile = success(parseShareLink(link, 1L))
 
-        assertEquals(XrayProtocol.TROJAN, profile.protocol)
-        assertEquals("s3cr3t@pw", profile.credential)
-        assertEquals("nl.example.com", profile.serverAddress)
-        assertEquals(443, profile.serverPort)
+        assertEquals(XrayProtocol.TROJAN, profile.firstEndpoint.protocol)
+        assertEquals("s3cr3t@pw", profile.firstEndpoint.credential)
+        assertEquals("nl.example.com", profile.firstEndpoint.address)
+        assertEquals(443, profile.firstEndpoint.port)
         assertEquals(
             XraySecurity.Reality(
                 serverName = "nl.example.com",
@@ -466,23 +473,23 @@ class ShareLinkParserTest {
                 shortId = "ab12",
                 fingerprint = XrayFingerprintSetting.Auto(XrayFingerprint.FIREFOX),
             ),
-            profile.security,
+            profile.firstEndpoint.security,
         )
-        assertEquals(XrayTransport.Raw(), profile.transport)
+        assertEquals(XrayTransport.Raw(), profile.firstEndpoint.transport)
         assertEquals("🇳🇱 NL-TN-01", profile.name)
 
         val ignoredEncryption = success(
             parseShareLink("trojan://pw@example.com:443?security=tls&encryption=ignored", 2L),
         )
-        assertEquals(XrayProtocol.TROJAN, ignoredEncryption.protocol)
+        assertEquals(XrayProtocol.TROJAN, ignoredEncryption.firstEndpoint.protocol)
     }
 
     @Test
     fun `Trojan without security defaults to TLS using the hostname as SNI`() {
         val profile = success(parseShareLink("trojan://pw@example.com:443#x", 0L))
 
-        assertEquals(XrayProtocol.TROJAN, profile.protocol)
-        assertEquals(XraySecurity.Tls("example.com"), profile.security)
+        assertEquals(XrayProtocol.TROJAN, profile.firstEndpoint.protocol)
+        assertEquals(XraySecurity.Tls("example.com"), profile.firstEndpoint.security)
     }
 
     @Test
@@ -518,7 +525,7 @@ class ShareLinkParserTest {
     fun `accepts a case-insensitive Trojan scheme and keeps vmess unsupported`() {
         assertEquals(
             XrayProtocol.TROJAN,
-            success(parseShareLink("TROJAN://pw@example.com:443", 0L)).protocol,
+            success(parseShareLink("TROJAN://pw@example.com:443", 0L)).firstEndpoint.protocol,
         )
         assertUnsupported(parseShareLink("vmess://$UUID@example.com:443", 0L), UnsupportedReason.PROTOCOL)
         assertInvalid(parseShareLink("ftp://example.com/path", 0L))
@@ -627,11 +634,7 @@ class ShareLinkParserTest {
     private fun profile(name: String, security: XraySecurity, transport: XrayTransport) = XrayVpnProfile(
         id = "profile-id",
         name = name,
-        serverAddress = "203.0.113.8",
-        serverPort = 443,
-        credential = UUID,
-        security = security,
-        transport = transport,
+        endpoints = listOf(testEndpoint(credential = UUID, security = security, transport = transport)),
         addedAtMillis = 42L,
     )
 

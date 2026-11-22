@@ -8,7 +8,9 @@ fun List<XraySubscription>.findServer(serverId: String): XrayVpnProfile? =
     firstNotNullOfOrNull { subscription -> subscription.servers.firstOrNull { it.id == serverId } }
 
 fun List<XraySubscription>.findServerByAddress(serverAddress: String): XrayVpnProfile? =
-    firstNotNullOfOrNull { subscription -> subscription.servers.firstOrNull { it.serverAddress == serverAddress } }
+    firstNotNullOfOrNull { subscription ->
+        subscription.servers.firstOrNull { server -> server.endpoints.any { it.address == serverAddress } }
+    }
 
 fun List<XraySubscription>.findSubscription(subscriptionId: String): XraySubscription? =
     firstOrNull { it.id == subscriptionId }
@@ -22,7 +24,7 @@ fun List<XraySubscription>.withDeployedServer(
     targetSubscriptionId: String?,
     newSubscription: () -> XraySubscription,
 ): List<XraySubscription> {
-    findServerByAddress(server.serverAddress)?.let { existing ->
+    findServerByAddress(server.endpoints.first().address)?.let { existing ->
         val existingSubscription = find { subscription -> subscription.servers.any { it.id == existing.id } }
         if (existingSubscription?.source == XraySubscriptionSource.Deployed) {
             return withServerUpdated(existing.id) { server.copy(id = existing.id, name = existing.name) }

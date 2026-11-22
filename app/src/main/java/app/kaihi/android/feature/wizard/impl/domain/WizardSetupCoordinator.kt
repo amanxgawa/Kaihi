@@ -8,6 +8,7 @@ import app.kaihi.android.core.ssh.execute
 import app.kaihi.android.core.ssh.model.SshAuth
 import app.kaihi.android.core.ssh.model.SshConfig
 import app.kaihi.android.core.vpn.XrayControl
+import app.kaihi.android.core.vpn.XrayEndpoint
 import app.kaihi.android.core.vpn.TunnelSettingsSource
 import app.kaihi.android.core.vpn.XraySubscription
 import app.kaihi.android.core.vpn.XraySubscriptionStore
@@ -82,13 +83,17 @@ internal class WizardSetupCoordinator @Inject constructor(
                 username = draft.sshUsername,
                 expectedFingerprint = draft.sshExpectedFingerprint,
             ),
-            serverAddress = draft.serverAddress,
-            serverPort = XrayServerConfigFactory.DEFAULT_SERVER_PORT,
-            credential = draft.uuid,
-            security = XraySecurity.Reality(
-                serverName = draft.realityServerName,
-                publicKey = draft.realityPublicKey,
-                shortId = draft.realityShortId,
+            endpoints = listOf(
+                XrayEndpoint(
+                    address = draft.serverAddress,
+                    port = XrayServerConfigFactory.DEFAULT_SERVER_PORT,
+                    credential = draft.uuid,
+                    security = XraySecurity.Reality(
+                        serverName = draft.realityServerName,
+                        publicKey = draft.realityPublicKey,
+                        shortId = draft.realityShortId,
+                    ),
+                ),
             ),
             addedAtMillis = System.currentTimeMillis(),
             countryCode = draft.countryCode,
@@ -102,7 +107,7 @@ internal class WizardSetupCoordinator @Inject constructor(
                     XraySubscription(id = subscriptionId, name = generateNickname(subscriptionId), servers = emptyList())
                 }
             }
-            Result.success(requireNotNull(stored.findServerByAddress(deployed.serverAddress)))
+            Result.success(requireNotNull(stored.findServerByAddress(deployed.endpoints.first().address)))
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {

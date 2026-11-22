@@ -16,16 +16,43 @@ class ShareUriTest {
         XrayVpnProfile(
             id = "server-1",
             name = name,
-            serverAddress = "203.0.113.1",
-            serverPort = 443,
-            credential = "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-            security = XraySecurity.Reality(
-                serverName = realityServerName,
-                publicKey = "publicKeyValue",
-                shortId = "shortIdValue",
+            endpoints = listOf(
+                testEndpoint(
+                    address = "203.0.113.1",
+                    credential = "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                    security = XraySecurity.Reality(
+                        serverName = realityServerName,
+                        publicKey = "publicKeyValue",
+                        shortId = "shortIdValue",
+                    ),
+                ),
             ),
             addedAtMillis = 0L,
         )
+
+    @Test
+    fun `multiple endpoints export separate links with the row name and round trip`() {
+        val a = testEndpoint(
+            address = "a.example.com",
+            credential = "11111111-1111-4111-8111-111111111111",
+            security = XraySecurity.Reality(
+                serverName = "cover.example",
+                publicKey = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+                shortId = "0011",
+                fingerprint = XrayFingerprintSetting.Auto(XrayFingerprint.FIREFOX),
+            ),
+            transport = XrayTransport.Raw(),
+        )
+        val c = a.copy(address = "c.example.com")
+        val original = profile(name = "NL").copy(endpoints = listOf(a, c))
+
+        val lines = original.toShareUri().lines()
+
+        assertEquals(2, lines.size)
+        val parsed = lines.map { (parseShareLink(it, 1L) as ShareLinkResult.Success).profile }
+        assertEquals(listOf(listOf(a), listOf(c)), parsed.map { it.endpoints })
+        assertEquals(listOf("NL", "NL"), parsed.map { it.name })
+    }
 
     @Test
     fun `includes host, port, and uuid unencoded`() {
@@ -48,17 +75,16 @@ class ShareUriTest {
     @Test
     fun `exports the preferred concrete fingerprint for auto and fixed settings`() {
         val base = profile()
-        val reality = base.security as XraySecurity.Reality
-        val auto = base.copy(
-            security = reality.copy(
+        val auto = base.copyEndpoints {
+            it.copy(security = (it.security as XraySecurity.Reality).copy(
                 fingerprint = XrayFingerprintSetting.Auto(),
-            ),
-        )
-        val fixed = base.copy(
-            security = reality.copy(
+            ))
+        }
+        val fixed = base.copyEndpoints {
+            it.copy(security = (it.security as XraySecurity.Reality).copy(
                 fingerprint = XrayFingerprintSetting.Fixed(XrayFingerprint.SAFARI),
-            ),
-        )
+            ))
+        }
 
         assertTrue(auto.toShareUri().contains("&fp=firefox"))
         assertTrue(fixed.toShareUri().contains("&fp=safari"))
@@ -96,17 +122,20 @@ class ShareUriTest {
         val original = XrayVpnProfile(
             id = "trojan-1",
             name = "Trojan node",
-            serverAddress = "example.com",
-            serverPort = 443,
-            protocol = XrayProtocol.TROJAN,
-            credential = "p@ss word",
-            security = XraySecurity.Reality(
-                serverName = "example.com",
-                publicKey = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
-                shortId = "ab12",
-                fingerprint = XrayFingerprintSetting.Auto(XrayFingerprint.FIREFOX),
+            endpoints = listOf(
+                testEndpoint(
+                    address = "example.com",
+                    protocol = XrayProtocol.TROJAN,
+                    credential = "p@ss word",
+                    security = XraySecurity.Reality(
+                        serverName = "example.com",
+                        publicKey = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+                        shortId = "ab12",
+                        fingerprint = XrayFingerprintSetting.Auto(XrayFingerprint.FIREFOX),
+                    ),
+                    transport = XrayTransport.Raw(),
+                ),
             ),
-            transport = XrayTransport.Raw(),
             addedAtMillis = 10L,
         )
         val uri = original.toShareUri()
@@ -115,7 +144,7 @@ class ShareUriTest {
         assertFalse(uri.contains("encryption="))
         assertFalse(uri.contains("flow="))
 
-        val validPasswordProfile = original.copy(credential = "p@ssword")
+        val validPasswordProfile = original.copyEndpoints { it.copy(credential = "p@ssword") }
         val parsed = (parseShareLink(validPasswordProfile.toShareUri(), 11L) as ShareLinkResult.Success).profile
         assertEquals(validPasswordProfile.copy(id = parsed.id, addedAtMillis = parsed.addedAtMillis), parsed)
     }
@@ -123,63 +152,71 @@ class ShareUriTest {
     @Test
     fun `WebSocket exports an encoded path and optional host and round trips`() {
         listOf(null, "cdn.example.com").forEach { host ->
-            val original = profile().copy(
-                security = XraySecurity.Tls("cdn.example.com"),
-                transport = XrayTransport.WebSocket("/ws?ed=2048", host),
-            )
+            val original = profile().copyEndpoints {
+                it.copy(
+                    security = XraySecurity.Tls("cdn.example.com"),
+                    transport = XrayTransport.WebSocket("/ws?ed=2048", host),
+                )
+            }
             val uri = original.toShareUri()
             val expectedHost = host?.let { "&host=$it" }.orEmpty()
 
             assertTrue(uri.contains("&type=ws&path=%2Fws%3Fed%3D2048$expectedHost#"))
-            assertEquals(original.transport, (parseShareLink(uri, 1L) as ShareLinkResult.Success).profile.transport)
+            assertEquals(original.firstEndpoint.transport, (parseShareLink(uri, 1L) as ShareLinkResult.Success).profile.firstEndpoint.transport)
         }
     }
 
     @Test
     fun `HTTPUpgrade exports a path and optional host and round trips for Trojan`() {
         listOf(null, "cdn.example.com").forEach { host ->
-            val original = profile().copy(
-                protocol = XrayProtocol.TROJAN,
-                credential = "pw",
-                security = XraySecurity.Tls("cdn.example.com"),
-                transport = XrayTransport.HttpUpgrade("/up", host),
-            )
+            val original = profile().copyEndpoints {
+                it.copy(
+                    protocol = XrayProtocol.TROJAN,
+                    credential = "pw",
+                    security = XraySecurity.Tls("cdn.example.com"),
+                    transport = XrayTransport.HttpUpgrade("/up", host),
+                )
+            }
             val uri = original.toShareUri()
             val expectedHost = host?.let { "&host=$it" }.orEmpty()
 
             assertTrue(uri.contains("&type=httpupgrade&path=%2Fup$expectedHost#"))
-            assertEquals(original.transport, (parseShareLink(uri, 1L) as ShareLinkResult.Success).profile.transport)
+            assertEquals(original.firstEndpoint.transport, (parseShareLink(uri, 1L) as ShareLinkResult.Success).profile.firstEndpoint.transport)
         }
     }
 
     @Test
     fun `gRPC exports encoded service name multi mode and authority and round trips`() {
-        val original = profile().copy(
-            security = XraySecurity.Reality(
-                serverName = "grpc.example.com",
-                publicKey = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
-                shortId = "ab12",
-            ),
-            transport = XrayTransport.Grpc("gun-svc/method", true, "grpc.example.com"),
-        )
+        val original = profile().copyEndpoints {
+            it.copy(
+                security = XraySecurity.Reality(
+                    serverName = "grpc.example.com",
+                    publicKey = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+                    shortId = "ab12",
+                ),
+                transport = XrayTransport.Grpc("gun-svc/method", true, "grpc.example.com"),
+            )
+        }
         val uri = original.toShareUri()
 
         assertTrue(uri.contains("&type=grpc&serviceName=gun-svc%2Fmethod&mode=multi&authority=grpc.example.com#"))
-        assertEquals(original.transport, (parseShareLink(uri, 1L) as ShareLinkResult.Success).profile.transport)
+        assertEquals(original.firstEndpoint.transport, (parseShareLink(uri, 1L) as ShareLinkResult.Success).profile.firstEndpoint.transport)
     }
 
     @Test
     fun `gRPC omits empty service name gun mode and absent authority and round trips`() {
-        val original = profile().copy(
-            security = XraySecurity.Tls("grpc.example.com"),
-            transport = XrayTransport.Grpc(),
-        )
+        val original = profile().copyEndpoints {
+            it.copy(
+                security = XraySecurity.Tls("grpc.example.com"),
+                transport = XrayTransport.Grpc(),
+            )
+        }
         val uri = original.toShareUri()
 
         assertTrue(uri.contains("&type=grpc#"))
         assertFalse(uri.contains("serviceName="))
         assertFalse(uri.contains("mode="))
         assertFalse(uri.contains("authority="))
-        assertEquals(original.transport, (parseShareLink(uri, 1L) as ShareLinkResult.Success).profile.transport)
+        assertEquals(original.firstEndpoint.transport, (parseShareLink(uri, 1L) as ShareLinkResult.Success).profile.firstEndpoint.transport)
     }
 }

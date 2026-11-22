@@ -3,6 +3,7 @@ package app.kaihi.android.feature.dashboard.impl.ui.mvi
 import app.kaihi.android.core.vpn.XrayVpnProfile
 import app.kaihi.android.core.vpn.XraySubscriptionSource
 import app.kaihi.android.core.vpn.XraySubscription
+import app.kaihi.android.core.vpn.realityFingerprint
 import app.kaihi.android.core.vpn.spec.XraySecurity
 import app.kaihi.android.core.vpn.spec.XrayTransport
 import app.kaihi.android.feature.dashboard.impl.domain.model.ServerLibrary
@@ -73,30 +74,32 @@ internal fun XraySubscription.toEditorUi(): SubscriptionEditorUi {
 }
 
 internal fun XrayVpnProfile.toDetailsUi(): ServerDetailsUi {
-    val reality = security as? XraySecurity.Reality
+    val endpoint = endpoints.first()
+    val reality = endpoint.security as? XraySecurity.Reality
     return ServerDetailsUi(
         id = id,
         name = name.withoutLeadingFlag(),
         flag = flagFor(countryCode, name),
         stack = stackLabel(),
-        address = "$serverAddress:$serverPort",
-        maskingAs = reality?.serverName ?: (security as? XraySecurity.Tls)?.serverName,
+        addresses = endpoints.map { "${it.address}:${it.port}" }.toImmutableList(),
+        maskingAs = reality?.serverName ?: (endpoint.security as? XraySecurity.Tls)?.serverName,
         addedAtMillis = addedAtMillis,
         isDeployed = ssh != null,
     )
 }
 
 internal fun XrayVpnProfile.toSettingsUi(): ServerSettingsUi {
-    val reality = security as? XraySecurity.Reality
     return ServerSettingsUi(
         id = id,
         name = name,
-        fingerprint = reality?.fingerprint,
-        supportsMux = transport is XrayTransport.Raw || transport is XrayTransport.Xhttp,
+        fingerprint = realityFingerprint,
+        supportsMux = endpoints.all {
+            it.transport is XrayTransport.Raw || it.transport is XrayTransport.Xhttp
+        },
         muxEnabled = muxEnabled,
         muxConcurrency = muxConcurrency,
         fragmentEnabled = fragmentEnabled,
-        isXhttp = transport is XrayTransport.Xhttp,
+        isXhttp = endpoints.all { it.transport is XrayTransport.Xhttp },
     )
 }
 

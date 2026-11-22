@@ -28,6 +28,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import app.kaihi.android.R
 import app.kaihi.android.feature.dashboard.impl.ui.model.ServerDetailsUi
@@ -82,8 +83,11 @@ internal fun ServerDetailsSheet(
 
             Column(verticalArrangement = Arrangement.spacedBy(dimens.s)) {
                 ServerInfoRow(
-                    label = stringResource(R.string.dashboard_server_info_server),
-                    value = details.address,
+                    label = pluralStringResource(
+                        R.plurals.dashboard_server_info_servers,
+                        details.addresses.size,
+                    ),
+                    value = details.addresses.joinToString("\n"),
                     monospace = true,
                 )
                 details.maskingAs?.let { maskingAs ->

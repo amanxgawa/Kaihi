@@ -12,10 +12,13 @@ class XraySubscriptionsExtTest {
     private fun server(id: String, address: String, credential: String = "uuid-$id") = XrayVpnProfile(
         id = id,
         name = "Server $id",
-        serverAddress = address,
-        serverPort = 443,
-        credential = credential,
-        security = XraySecurity.Reality(serverName = "www.example.com", publicKey = "key", shortId = "ab"),
+        endpoints = listOf(
+            testEndpoint(
+                address = address,
+                credential = credential,
+                security = XraySecurity.Reality(serverName = "www.example.com", publicKey = "key", shortId = "ab"),
+            ),
+        ),
         addedAtMillis = 0L,
     )
 
@@ -38,7 +41,7 @@ class XraySubscriptionsExtTest {
         assertEquals(listOf("b"), result.findSubscription("work")!!.servers.map { it.id })
         val stored = result.findServer("a")!!
         assertEquals("Server a", stored.name)
-        assertEquals("rotated-uuid", stored.credential)
+        assertEquals("rotated-uuid", stored.endpoints.first().credential)
         assertNull(result.findServer("fresh-id"))
     }
 
@@ -50,6 +53,15 @@ class XraySubscriptionsExtTest {
 
         assertEquals(1, result.size)
         assertEquals(listOf("a", "b"), result.single().servers.map { it.id })
+    }
+
+    @Test
+    fun `finds a server by an address in its second endpoint`() {
+        val server = server("multi", "198.51.100.1").copy(
+            endpoints = server("multi", "198.51.100.1").endpoints + testEndpoint(address = "198.51.100.2"),
+        )
+
+        assertEquals(server, listOf(subscription("group", server)).findServerByAddress("198.51.100.2"))
     }
 
     @Test
